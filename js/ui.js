@@ -18,16 +18,12 @@ function showScreen(screenId) {
 
   // Update navigation buttons
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.remove('nav-active', 'text-indigo-600');
-    btn.classList.add('text-slate-400');
-    const icon = btn.querySelector('div');
-    if (icon) icon.classList.remove('bg-indigo-50');
+    btn.classList.remove('nav-active');
   });
 
   const activeBtn = document.querySelector(`.nav-btn[data-screen="${screenId}"]`);
   if (activeBtn) {
-    activeBtn.classList.add('nav-active', 'text-indigo-600');
-    activeBtn.classList.remove('text-slate-400');
+    activeBtn.classList.add('nav-active');
   }
 
   // Top Capsule visibility - Only show on home and expenses
@@ -598,6 +594,14 @@ async function editParticipant(participantId) {
 
 // Initialize UI
 function initUI() {
+  // Navigation
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const screenId = btn.getAttribute('data-screen');
+    if (screenId) {
+      btn.addEventListener('click', () => showScreen(screenId));
+    }
+  });
+
   // Center FAB
   document.getElementById('fab').addEventListener('click', showCreateTripModal);
   
@@ -619,161 +623,15 @@ function initUI() {
       e.stopPropagation();
       aiDropdown.classList.toggle('hidden');
     };
-    document.addEventListener('click', () => aiDropdown.classList.add('hidden'));
-  }
-
-  // Dropdown toggles
+    document.addEventListener('click', () => aiDropdown.classList.add  // Dropdown toggles
   const expenseToggle = document.getElementById('expense-summary-toggle');
   if (expenseToggle) {
     expenseToggle.addEventListener('click', toggleExpenseSummaryDropdown);
   }
 
-  // Menu button - Export/Import
-  document.getElementById('menu-btn').addEventListener('click', () => {
-    const content = `
-        <h3 class="text-xl font-bold mb-6 text-slate-800">Settings</h3>
-        <div class="space-y-3">
-            <button id="install-btn" class="hidden w-full p-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-between group transition-all">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    </div>
-                    <span class="font-bold">Install TripSplit App</span>
-                </div>
-                <svg class="w-5 h-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
-            <button id="export-btn" class="w-full p-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl flex items-center justify-between group transition-all">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    </div>
-                    <span class="font-bold text-slate-700">Export CSV</span>
-                </div>
-                <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
-            <button id="import-btn" class="w-full p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl flex items-center justify-between group transition-all">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    </div>
-                    <span class="font-bold text-slate-700">Import CSV</span>
-                </div>
-                <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
-            <div class="pt-4 mt-4 border-t border-slate-100">
-                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">Google Sheets Integration</p>
-                <div class="space-y-3">
-                    <button id="export-sheets-btn" class="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-100 group transition-all">
-                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <span class="font-bold">Download for Google Sheets</span>
-                    </button>
-                    <p class="text-[10px] text-slate-400 text-center leading-relaxed">Downloads a .csv file. Simply drag and drop this file directly into any Google Sheet.</p>
-                </div>
-            </div>
-            <div class="pt-4 mt-4 border-t border-slate-100">
-                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">App Data Backup (Local)</p>
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="export-json-btn" class="p-4 bg-indigo-600 text-white rounded-2xl flex flex-col items-center justify-center space-y-2 hover:bg-indigo-700 transition-all">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                        <span class="text-xs font-bold">Backup .json</span>
-                    </button>
-                    <button id="import-json-btn" class="p-4 bg-slate-800 text-white rounded-2xl flex flex-col items-center justify-center space-y-2 hover:bg-slate-900 transition-all">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        <span class="text-xs font-bold">Restore .json</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <button onclick="hideModal()" class="w-full mt-6 py-4 font-bold text-slate-400">Close</button>
-    `;
-    showModal(content);
-    
-    // Show install button if prompt is available
-    const installBtn = document.getElementById('install-btn');
-    if (deferredPrompt) {
-        installBtn.classList.remove('hidden');
-        installBtn.onclick = async () => {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            deferredPrompt = null;
-            installBtn.classList.add('hidden');
-            hideModal();
-        };
-    }
-    
-    document.getElementById('export-btn').onclick = () => {
-        exportDataToCSV().then(csvData => {
-            const blob = new Blob([csvData], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tripsplit-backup-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            hideModal();
-        });
-    };
-    
-    document.getElementById('import-btn').onclick = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.csv';
-        input.onchange = e => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = async () => {
-                try {
-                    await importDataFromCSV(reader.result);
-                    loadHomeData();
-                    loadTrips();
-                    alert('Data imported successfully from CSV!');
-                    hideModal();
-                } catch (error) {
-                    alert('Error importing CSV: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    };
-
-    document.getElementById('export-json-btn').onclick = () => {
-        exportDataToJSON().then(jsonData => {
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tripsplit-app-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            hideModal();
-        });
-    };
-
-    document.getElementById('import-json-btn').onclick = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = e => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = async () => {
-                try {
-                    await importDataFromJSON(reader.result);
-                    loadHomeData();
-                    loadTrips();
-                    alert('App data restored successfully from JSON!');
-                    hideModal();
-                } catch (error) {
-                    alert('Error restoring JSON: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    };
-  });
+  // Menu button - Show Settings
+  const menuBtn = document.getElementById('menu-btn');
+  if (menuBtn) menuBtn.addEventListener('click', showSettings);
 
   // Modal overlay click to close
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
@@ -788,44 +646,173 @@ function initUI() {
     syncInput.value = localStorage.getItem('tripsplit_sync_url') || '';
   }
 
-  // Sync Now button
-  const syncBtn = document.getElementById('sync-now-btn');
-  if (syncBtn) {
-    syncBtn.onclick = async () => {
-        const url = localStorage.getItem('tripsplit_sync_url');
-        if (!url) {
-            alert('Please provide a Google Apps Script URL first.');
-            return;
-        }
-
-        syncBtn.disabled = true;
-        syncBtn.querySelector('span').textContent = 'Syncing...';
-        
-        try {
-            const data = await exportDataToJSON();
-            const response = await fetch(url, {
-                method: 'POST',
-                mode: 'no-cors', // Apps Script web app requirements
-                headers: { 'Content-Type': 'application/json' },
-                body: data
-            });
-            
-            // With no-cors, we can't see the response body, but if it doesn't throw, it likely sent.
-            alert('Data pushed to Google Sheet! (Check your sheet for updates)');
-        } catch (error) {
-            console.error('Sync failed:', error);
-            alert('Sync failed. Please check your URL and internet connection.');
-        } finally {
-            syncBtn.disabled = false;
-            syncBtn.querySelector('span').textContent = 'Sync to Google Sheet';
-        }
-    };
-  }
-
   // Load initial data
   loadHomeData();
   loadTrips();
   loadTripsCapsules();
+}
+
+function showSettings() {
+  const content = `
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-slate-800">Settings</h3>
+        <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Safety Warning Note -->
+      <div class="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start space-x-3">
+        <div class="mt-0.5 text-amber-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <p class="text-[11px] text-amber-800 leading-relaxed">
+            <span class="font-bold">Important:</span> Your data is stored locally. Don't clear your browser cache before downloading a backup to avoid losing your trips.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+          <button id="install-btn" class="hidden w-full p-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-between group transition-all">
+              <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  </div>
+                  <span class="font-bold">Install TripSplit App</span>
+              </div>
+              <svg class="w-5 h-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+          <button id="export-btn" class="w-full p-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl flex items-center justify-between group transition-all">
+              <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  </div>
+                  <span class="font-bold text-slate-700">Export CSV</span>
+              </div>
+              <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+          <button id="import-btn" class="w-full p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl flex items-center justify-between group transition-all">
+              <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                  </div>
+                  <span class="font-bold text-slate-700">Import CSV</span>
+              </div>
+              <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+          <div class="pt-4 mt-4 border-t border-slate-100">
+              <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">Google Sheets Integration</p>
+              <div class="space-y-3">
+                  <button id="export-sheets-btn" class="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-100 group transition-all">
+                      <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                      <span class="font-bold">Download for Google Sheets</span>
+                  </button>
+                  <p class="text-[10px] text-slate-400 text-center leading-relaxed">Downloads a .csv file. Simply drag and drop this file directly into any Google Sheet.</p>
+              </div>
+          </div>
+          <div class="pt-4 mt-4 border-t border-slate-100">
+              <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">App Data Backup (Local)</p>
+              <div class="grid grid-cols-2 gap-3">
+                  <button id="export-json-btn" class="p-4 bg-indigo-600 text-white rounded-2xl flex flex-col items-center justify-center space-y-2 hover:bg-indigo-700 transition-all">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                      <span class="text-xs font-bold">Backup .json</span>
+                  </button>
+                  <button id="import-json-btn" class="p-4 bg-slate-800 text-white rounded-2xl flex flex-col items-center justify-center space-y-2 hover:bg-slate-900 transition-all">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                      <span class="text-xs font-bold">Restore .json</span>
+                  </button>
+              </div>
+          </div>
+      </div>
+      <button onclick="hideModal()" class="w-full mt-6 py-4 font-bold text-slate-400">Close</button>
+  `;
+  showModal(content);
+  
+  // Attach Listeners
+  const installBtn = document.getElementById('install-btn');
+  if (deferredPrompt) {
+      installBtn.classList.remove('hidden');
+      installBtn.onclick = async () => {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          installBtn.classList.add('hidden');
+          hideModal();
+      };
+  }
+
+  document.getElementById('export-sheets-btn').onclick = showExportSelectionModal;
+  
+  document.getElementById('export-btn').onclick = () => {
+      exportDataToCSV().then(csvData => {
+          const blob = new Blob([csvData], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tripsplit-backup-${new Date().toISOString().split('T')[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+          hideModal();
+      });
+  };
+  
+  document.getElementById('import-btn').onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.onchange = e => {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = async () => {
+              try {
+                  await importDataFromCSV(reader.result);
+                  loadHomeData();
+                  loadTrips();
+                  alert('Data imported successfully!');
+                  hideModal();
+              } catch (error) {
+                  alert('Error importing CSV: ' + error.message);
+              }
+          };
+          reader.readAsText(file);
+      };
+      input.click();
+  };
+  
+  document.getElementById('export-json-btn').onclick = () => {
+      exportDataToJSON().then(jsonData => {
+          const blob = new Blob([jsonData], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tripsplit-app-backup-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          hideModal();
+      });
+  };
+
+  document.getElementById('import-json-btn').onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = e => {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = async () => {
+              try {
+                  await importDataFromJSON(reader.result);
+                  loadHomeData();
+                  loadTrips();
+                  alert('App data restored successfully!');
+                  hideModal();
+              } catch (error) {
+                  alert('Error restoring JSON: ' + error.message);
+              }
+          };
+          reader.readAsText(file);
+      };
+      input.click();
+  };
 }
 
 function showExportSelectionModal() {
