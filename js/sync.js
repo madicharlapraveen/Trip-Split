@@ -33,6 +33,43 @@ function setDeviceName(newName) {
     localStorage.setItem('tripsplit_device_name', newName);
 }
 
+// User Profile Management
+async function saveUserProfile(profile) {
+    const deviceId = getDeviceId();
+    const { data, error } = await supabase
+        .from('profiles')
+        .upsert({ 
+            device_id: deviceId, 
+            name: profile.name, 
+            email: profile.email, 
+            mobile: profile.mobile 
+        });
+    
+    if (error) throw error;
+    localStorage.setItem('tripsplit_device_name', profile.name);
+    localStorage.setItem('tripsplit_user_profile', JSON.stringify(profile));
+    return data;
+}
+
+async function getUserProfile() {
+    const local = localStorage.getItem('tripsplit_user_profile');
+    if (local) return JSON.parse(local);
+    
+    const deviceId = getDeviceId();
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('device_id', deviceId)
+        .single();
+    
+    if (data) {
+        localStorage.setItem('tripsplit_user_profile', JSON.stringify(data));
+        localStorage.setItem('tripsplit_device_name', data.name);
+        return data;
+    }
+    return null;
+}
+
 // Generate a random share ID (e.g., GOA-8492)
 function generateShareId(tripName) {
     const safeName = tripName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
