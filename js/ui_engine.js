@@ -746,6 +746,11 @@ function showSettings() {
                       <span class="text-xs font-bold">Restore .json</span>
                   </button>
               </div>
+          <div class="pt-6 mt-6 border-t border-slate-100 text-center">
+              <p class="text-xs text-slate-400 mb-2">Want advanced apps or custom features?</p>
+              <a href="https://aispace.co.in/" target="_blank" rel="noopener" class="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                  Contact Ai Space →
+              </a>
           </div>
       </div>
       <button onclick="hideModal()" class="w-full mt-6 py-4 font-bold text-slate-400">Close</button>
