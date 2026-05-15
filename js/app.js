@@ -66,6 +66,7 @@ async function initApp() {
   await loadHomeData();
   await loadTrips();
   await loadTripsCapsules();
+  showScreen('home');
 
   // Handle header scroll effect
   window.addEventListener('scroll', () => {
