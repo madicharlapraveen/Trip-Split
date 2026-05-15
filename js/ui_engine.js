@@ -28,7 +28,7 @@ function showScreen(screenId) {
     activeBtn.classList.add('nav-active');
   }
 
-  // Top Capsule visibility - Only show on home and expenses
+  // Top Capsule visibility - Only show on home and list
   const capsuleContainer = document.getElementById('trips-capsule-container');
   if (screenId === 'home' || screenId === 'expenses') {
     capsuleContainer.classList.remove('hidden');
@@ -41,6 +41,7 @@ function showScreen(screenId) {
   if (screenId === 'home') loadHomeData();
   if (screenId === 'expenses') loadExpenses();
   if (screenId === 'plan') loadTripNotes();
+  if (screenId === 'split') calculateSplit();
   if (screenId === 'history' || screenId === 'trips') loadTrips();
 
   currentScreen = screenId;
