@@ -107,7 +107,6 @@ async function selectTrip(tripId) {
 
 // Trip operations
 async function deleteTrip(tripId) {
-  if (confirm('Are you sure you want to delete this trip? This will also delete all associated participants and expenses.')) {
     const participants = await getParticipants(tripId);
     const expenses = await getExpenses(tripId);
 
@@ -127,7 +126,6 @@ async function deleteTrip(tripId) {
 
     loadHomeData();
     loadTrips();
-  }
 }
 
 async function duplicateTrip(tripId) {

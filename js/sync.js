@@ -227,43 +227,6 @@ async function joinTripFromCloud(shareId) {
 
 // --- UI Handlers ---
 
-async function handleCloudSync() {
-    if (!currentTripId) return alert('Select a trip first.');
-    const btnText = document.getElementById('cloud-status-text');
-    const originalText = btnText.innerText;
-    btnText.innerText = 'Syncing...';
-    try {
-        const shareId = await syncTripToCloud(currentTripId);
-        btnText.innerText = 'Success!';
-        alert(`Trip Synced!\nShare Code: ${shareId}`);
-        setTimeout(() => { btnText.innerText = originalText; hideModal(); }, 2000);
-    } catch (e) {
-        btnText.innerText = 'Error';
-        alert('Sync failed: ' + e.message);
-        setTimeout(() => btnText.innerText = originalText, 2000);
-    }
-}
-
-async function handleJoinTrip() {
-    const shareId = prompt('Enter the Trip Share Code (e.g. GOA-1234):');
-    if (!shareId) return;
-    
-    try {
-        const newTripId = await joinTripFromCloud(shareId.trim().toUpperCase());
-        currentTripId = newTripId;
-        subscribeToTripUpdates(shareId.trim().toUpperCase());
-        
-        // Show success and refresh
-        if (window.showToast) window.showToast('Successfully joined the trip!', 'success');
-        hideModal();
-        loadHomeData();
-        loadTripsCapsules();
-        showScreen('home');
-    } catch (e) {
-        if (window.showToast) window.showToast('Failed to join trip: ' + e.message, 'error');
-        else alert('Failed to join trip: ' + e.message);
-    }
-}
 
 async function handleManagePermissions() {
     if (!currentTripId) return;

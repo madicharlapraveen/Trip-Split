@@ -40,7 +40,8 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 
 ### 📂 /js (Logic)
 *   [app.js](file:///e:/Trip%20Split/js/app.js): Orchestrates app lifecycle, splash screen timing, and PWA install prompts.
-*   [ui.js](file:///e:/Trip%20Split/js/ui.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and CSV/JSON export/import.
+*   [ui_engine.js](file:///e:/Trip%20Split/js/ui_engine.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and the premium glassmorphism settings hub.
+*   [sync.js](file:///e:/Trip%20Split/js/sync.js): **The Cloud Bridge.** Handles Supabase authentication, real-time WebSockets, push notification subscriptions, and cloud-to-local data merging.
 *   [db.js](file:///e:/Trip%20Split/js/db.js): Data access layer. Handles all `localStorage` CRUD operations for Trips, Expenses, and Participants.
 *   [split.js](file:///e:/Trip%20Split/js/split.js): Core mathematics. Calculates settlement logic, bill splitting, and per-person balances.
 *   [planner.js](file:///e:/Trip%20Split/js/planner.js): Manages the itinerary timeline ("Bubbles & Plates" UI) and visit toggles.
@@ -98,6 +99,13 @@ The entire app state is a JSON object stored under a single key.
 1.  `split.js` aggregates all expenses for the selected trip.
 2.  Calculates total spent vs. per-person share.
 3.  Generates a list of "who owes whom" to reach zero balance.
+
+### 🌐 Real-Time Cloud Sync & Collaboration
+1.  **Identity:** Users set their profile (Name, Email) which is saved to the `profiles` table.
+2.  **Sync:** Tapping "Live Sync" pushes local trip data to Supabase (`sync_trip` RPC) and generates a unique Share ID (e.g., `GOA-8492`).
+3.  **Join:** Friends enter the Share ID in Settings > Join Trip. The app fetches the cloud bundle (`get_trip_data` RPC) and merges it locally.
+4.  **WebSockets:** `subscribeToTripUpdates()` listens for changes. If another user edits an expense, the app updates silently and triggers a push notification.
+5.  **Permissions:** Trip owners can manage editors via the `permissions` table, toggling roles between `viewer` and `editor`.
 
 ---
 
