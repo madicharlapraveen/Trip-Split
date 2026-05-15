@@ -5,11 +5,14 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 ---
 
 ## 🚀 1. Tech Stack & Architecture
-*   **Core**: HTML5, Vanilla JavaScript (ES6+), CSS3.
-*   **PWA**: Service Workers for offline support and manifest-driven mobile installation.
-*   **Storage**: Persistent local storage via `localStorage` (Key: `tripsplit_data`). No backend/database required (Privacy-First).
-*   **AI**: Integrated Google Gemini AI for automated trip itinerary generation.
+*   **Core**: HTML5, Vanilla JavaScript (ES6+), Vanilla CSS3.
+*   **PWA**: Service Workers (v4) for offline support and manifest-driven mobile installation.
+*   **Database**: Supabase (Postgres) for real-time synchronization and cloud persistence.
+*   **Storage**: Local-first architecture using `localStorage` (Key: `tripsplit_data`) with background cloud syncing.
+*   **Real-Time**: Supabase WebSockets (Channels) for instant collaboration across devices.
 *   **Deployment**: Automated GitHub-to-Netlify workflow via `netlify.toml`.
+*   **Identity**: Device-based identity with optional profile linking (Name, Email, Mobile).
+*   **AI**: Integrated Google Gemini AI for automated trip itinerary generation.
 
 ---
 

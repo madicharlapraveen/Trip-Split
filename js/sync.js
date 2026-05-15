@@ -16,6 +16,35 @@ function getDeviceId() {
     return deviceId;
 }
 
+// Push Notification Logic
+async function subscribeToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push notifications not supported');
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            // Replace with actual VAPID key in production
+            applicationServerKey: 'BEl62RE_E7MP9S2ASbe76AwJ6E23u6Iq2Zp9I9u0R_G28tA7mR-I9q0R_G28tA7mR-I9q0R_G28tA7mR-I' 
+        });
+
+        const deviceId = getDeviceId();
+        const { error } = await supabase
+            .from('push_subscriptions')
+            .upsert({ device_id: deviceId, subscription: subscription });
+
+        if (error) throw error;
+        console.log('Push subscription saved to cloud');
+        return true;
+    } catch (error) {
+        console.error('Failed to subscribe to push:', error);
+        return false;
+    }
+}
+
 function getDeviceName() {
     let name = localStorage.getItem('tripsplit_device_name');
     if (!name) {

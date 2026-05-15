@@ -844,6 +844,13 @@ async function showSettings() {
                           <span class="text-sm font-bold">Join Using Trip ID</span>
                       </div>
                   </button>
+                  <button onclick="handlePushEnable()" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-between transition-all">
+                      <div class="flex items-center space-x-3">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                          <span class="text-sm font-bold">App Push Notifications</span>
+                      </div>
+                      <span id="push-status-label" class="text-[10px] font-bold px-2 py-1 bg-white/50 rounded-lg">Enable</span>
+                  </button>
              <!-- Data Management -->
           <section>
               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Data Management</p>
@@ -1145,6 +1152,28 @@ async function handleCloudSync() {
             statusText.className = 'text-[10px] font-bold px-2 py-1 bg-rose-100 text-rose-700 rounded-lg';
         }
         alert('Sync error: ' + error.message);
+    }
+}
+
+async function handlePushEnable() {
+    const label = document.getElementById('push-status-label');
+    if (label) label.textContent = 'Wait...';
+    
+    try {
+        const success = await subscribeToPush();
+        if (success) {
+            if (label) {
+                label.textContent = 'Active';
+                label.className = 'text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg';
+            }
+            if (window.showToast) window.showToast('Push Notifications Enabled!', 'success');
+        } else {
+            if (label) label.textContent = 'Error';
+            alert('Could not enable notifications. Please check browser permissions.');
+        }
+    } catch (error) {
+        if (label) label.textContent = 'Error';
+        console.error(error);
     }
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v3';
+const CACHE_NAME = 'tripsplit-v4';
 const urlsToCache = [
   './',
   './index.html',
@@ -46,4 +46,33 @@ self.addEventListener('activate', event => {
       );
     })
   );
+});
+
+// Push Notification Handler
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : { 
+        title: 'TripSplit Update', 
+        body: 'Something happened in your trip!' 
+    };
+
+    const options = {
+        body: data.body,
+        icon: './assets/icon-192.png',
+        badge: './assets/icon-192.png',
+        vibrate: [100, 50, 100],
+        data: {
+            url: data.url || './'
+        }
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
 });
