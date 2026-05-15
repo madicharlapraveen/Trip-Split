@@ -11,6 +11,10 @@ let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
 
 function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    // Auto-sync if connected to cloud
+    if (typeof triggerBackgroundSync === 'function') {
+        triggerBackgroundSync();
+    }
 }
 
 // Trip operations

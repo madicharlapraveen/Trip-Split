@@ -40,9 +40,59 @@ function generateShareId(tripName) {
     return `${safeName}-${randomNum}`;
 }
 
-// --- Sync Functions ---
+// --- Sync Functions & WebSockets ---
+let realtimeSubscription = null;
+let syncTimeout = null;
+let isApplyingCloudUpdate = false;
 
-async function syncTripToCloud(tripId) {
+window.triggerBackgroundSync = function(actionDesc = "Updated trip") {
+    if (!currentTripId || isApplyingCloudUpdate) return;
+    getTrip(currentTripId).then(trip => {
+        if (trip && trip.share_id) {
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => {
+                syncTripToCloud(currentTripId, actionDesc).catch(e => console.log("Auto-sync block (expected if viewer):", e.message));
+            }, 1000); // 1s debounce
+        }
+    });
+};
+
+window.subscribeToTripUpdates = function(shareId) {
+    if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
+    
+    realtimeSubscription = supabase.channel('public:trips:share_id=eq.' + shareId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: `share_id=eq.${shareId}` }, async (payload) => {
+            const cloudTripRecord = payload.new;
+            if (!cloudTripRecord || !cloudTripRecord.trip_data) return;
+            
+            const actorName = cloudTripRecord.last_actor_name || 'Someone';
+            const myDeviceName = getDeviceName();
+            
+            // If we didn't cause this update, show a notification and apply it
+            if (actorName !== myDeviceName) {
+                isApplyingCloudUpdate = true;
+                
+                // Show Mobile-Style Push Notification
+                if (window.showToast) {
+                    window.showToast(`${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`, 'info');
+                }
+                
+                await saveCloudTripBundle(cloudTripRecord.trip_data);
+                
+                // If the user is currently viewing this trip, refresh the UI silently
+                if (currentTripId === cloudTripRecord.trip_data.trip.id) {
+                    if (currentScreen === 'expenses') loadExpenses();
+                    if (currentScreen === 'split') calculateSplit();
+                    if (currentScreen === 'home') { loadHomeData(); loadTripsCapsules(); }
+                }
+                
+                isApplyingCloudUpdate = false;
+            }
+        })
+        .subscribe();
+};
+
+async function syncTripToCloud(tripId, actionDesc = "Updated trip") {
     try {
         const trip = await getTrip(tripId);
         if (!trip) throw new Error("Trip not found locally.");
@@ -64,14 +114,21 @@ async function syncTripToCloud(tripId) {
         }
 
         const deviceId = getDeviceId();
+        const deviceName = getDeviceName();
         
         const { data, error } = await supabase.rpc('sync_trip', {
             p_share_id: trip.share_id,
             p_device_id: deviceId,
-            p_trip_data: tripBundle
+            p_trip_data: tripBundle,
+            p_actor_name: deviceName,
+            p_action_desc: actionDesc
         });
 
         if (error) throw new Error(error.message);
+        
+        // Ensure we are listening for others
+        subscribeToTripUpdates(trip.share_id);
+        
         return trip.share_id;
     } catch (e) {
         console.error("Sync failed:", e);
@@ -128,13 +185,17 @@ async function handleJoinTrip() {
     try {
         const newTripId = await joinTripFromCloud(shareId.trim().toUpperCase());
         currentTripId = newTripId;
-        alert('Successfully joined the trip!');
+        subscribeToTripUpdates(shareId.trim().toUpperCase());
+        
+        // Show success and refresh
+        if (window.showToast) window.showToast('Successfully joined the trip!', 'success');
         hideModal();
         loadHomeData();
         loadTripsCapsules();
         showScreen('home');
     } catch (e) {
-        alert('Failed to join trip: ' + e.message);
+        if (window.showToast) window.showToast('Failed to join trip: ' + e.message, 'error');
+        else alert('Failed to join trip: ' + e.message);
     }
 }
 

@@ -139,20 +139,43 @@ async function calculateSplit() {
   } else {
     settlementContainer.innerHTML = '<div class="space-y-4"></div>';
     const list = settlementContainer.querySelector('div');
+    
+    const currentTrip = await getTrip(currentTripId);
+    const pending = currentTrip.pending_settlements || [];
+    
     settlements.forEach(settlement => {
+      const isPending = pending.find(p => p.from === settlement.from && p.to === settlement.to);
+      const isOwner = currentTrip.is_owner || false; // Owner tag added during sync
+      
+      let actionHtml = '';
+      if (isPending) {
+          if (isOwner) {
+              actionHtml = `<button onclick="confirmSettlement('${isPending.id}')" class="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/30">Confirm</button>`;
+          } else {
+              actionHtml = `<span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-[10px] font-bold rounded-lg border border-amber-500/30 animate-pulse">Pending...</span>`;
+          }
+      } else {
+          actionHtml = `<button onclick="requestSettlement('${settlement.from}', '${settlement.to}', ${settlement.amount})" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold rounded-lg transition-all">Pay Now</button>`;
+      }
+
       const item = document.createElement('div');
-      item.className = 'flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10';
+      item.className = 'flex flex-col p-4 bg-white/5 rounded-2xl border border-white/10 space-y-3';
       item.innerHTML = `
-        <div class="flex items-center space-x-3">
-            <div class="text-right">
-                <p class="text-xs font-bold text-white">${settlement.from}</p>
-                <p class="text-[8px] text-slate-400 uppercase">Pays to</p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="text-right">
+                    <p class="text-xs font-bold text-white">${settlement.from}</p>
+                    <p class="text-[8px] text-slate-400 uppercase">Pays to</p>
+                </div>
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M3 12h18"></path></svg>
+                <p class="text-xs font-bold text-indigo-400">${settlement.to}</p>
             </div>
-            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M3 12h18"></path></svg>
-            <p class="text-xs font-bold text-indigo-400">${settlement.to}</p>
+            <div class="text-right">
+                <p class="text-lg font-black text-emerald-400">₹${settlement.amount.toFixed(0)}</p>
+            </div>
         </div>
-        <div class="text-right">
-            <p class="text-lg font-black text-emerald-400">₹${settlement.amount.toFixed(0)}</p>
+        <div class="flex justify-end pt-2 border-t border-white/10">
+            ${actionHtml}
         </div>
       `;
       list.appendChild(item);
@@ -168,6 +191,53 @@ async function calculateSplit() {
     balances,
     settlements
   };
+}
+
+// Settlement Action Functions
+window.requestSettlement = async function(from, to, amount) {
+    const trip = await getTrip(currentTripId);
+    if (!trip.pending_settlements) trip.pending_settlements = [];
+    trip.pending_settlements.push({ id: Date.now().toString(), from, to, amount, status: 'pending' });
+    await updateTrip(currentTripId, trip);
+    
+    if (window.showToast) window.showToast(`Payment request sent to owner for approval`, 'success');
+    if (typeof triggerBackgroundSync === 'function') triggerBackgroundSync(`${from} paid ${to}`);
+    calculateSplit(); // refresh UI
+}
+
+window.confirmSettlement = async function(requestId) {
+    const trip = await getTrip(currentTripId);
+    if (!trip || !trip.pending_settlements) return;
+    
+    const requestIndex = trip.pending_settlements.findIndex(p => p.id === requestId);
+    if (requestIndex === -1) return;
+    
+    const req = trip.pending_settlements[requestIndex];
+    
+    // To balance the ledger, we add an Expense where "from" pays "amount" and it is split ONLY to "to"
+    const settlementExpense = {
+        tripId: currentTripId,
+        id: Date.now(),
+        description: `Settlement: ${req.from} → ${req.to}`,
+        amount: req.amount,
+        paidBy: req.from,
+        splitMethod: 'exact',
+        splits: { [req.to]: req.amount },
+        date: new Date().toISOString().split('T')[0],
+        isSettlement: true
+    };
+    
+    const data = JSON.parse(localStorage.getItem('tripsplit_data'));
+    data.expenses.push(settlementExpense);
+    localStorage.setItem('tripsplit_data', JSON.stringify(data));
+    
+    // Remove the request
+    trip.pending_settlements.splice(requestIndex, 1);
+    await updateTrip(currentTripId, trip);
+    
+    if (window.showToast) window.showToast(`Payment confirmed!`, 'success');
+    if (typeof triggerBackgroundSync === 'function') triggerBackgroundSync(`Confirmed payment from ${req.from}`);
+    calculateSplit(); // refresh UI
 }
 
 // Load split data when split screen is shown

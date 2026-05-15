@@ -67,6 +67,14 @@ async function initApp() {
   await loadTrips();
   await loadTripsCapsules();
   showScreen('home');
+  
+  // Attach WebSocket if cloud connected
+  if (currentTripId) {
+    const activeTrip = trips.find(t => t.id === currentTripId);
+    if (activeTrip && activeTrip.share_id && typeof subscribeToTripUpdates === 'function') {
+        subscribeToTripUpdates(activeTrip.share_id);
+    }
+  }
 
   // Handle header scroll effect
   window.addEventListener('scroll', () => {
@@ -89,6 +97,12 @@ async function selectTrip(tripId) {
   await loadTripNotes();
   await loadTripsCapsules();
   showScreen('home');
+  
+  // Attach WebSocket if cloud connected
+  const trip = await getTrip(tripId);
+  if (trip && trip.share_id && typeof subscribeToTripUpdates === 'function') {
+      subscribeToTripUpdates(trip.share_id);
+  }
 }
 
 // Trip operations

@@ -63,6 +63,37 @@ function hideModal() {
   document.body.style.overflow = ''; // Restore scroll
 }
 
+// Toast Notification
+window.showToast = function(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    const bg = type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 
+               type === 'error' ? 'bg-rose-50 border-rose-100 text-rose-800' : 
+               'bg-white/90 border-slate-100 text-slate-800 backdrop-blur-xl shadow-2xl';
+               
+    toast.className = `p-4 rounded-2xl border flex items-start space-x-3 transition-all duration-500 transform translate-y-[-100%] opacity-0 ${bg}`;
+    toast.innerHTML = `
+        <div class="text-xl">${icon}</div>
+        <div class="flex-1 mt-0.5 font-bold text-xs leading-relaxed">${message}</div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+    });
+    
+    // Remove after 4s
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-100%]');
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
+
 // Trip selection modal
 function showTripSelectionModal() {
   getTrips().then(trips => {
