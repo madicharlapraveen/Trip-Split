@@ -178,8 +178,8 @@ function showAddParticipantModal() {
           <input type="tel" id="participant-phone" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="+91...">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Family Size</label>
-          <input type="number" id="participant-family" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" value="0">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Family/Group Size (Self + others)</label>
+          <input type="number" id="participant-family" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="1" value="1">
         </div>
       </div>
       <div class="flex space-x-3 pt-4">
@@ -194,7 +194,7 @@ function showAddParticipantModal() {
     e.preventDefault();
     const name = document.getElementById('participant-name').value.trim();
     const phone = document.getElementById('participant-phone').value.trim();
-    const familyCount = parseInt(document.getElementById('participant-family').value) || 0;
+    const familyCount = parseInt(document.getElementById('participant-family').value) || 1;
 
     if (name) {
       await addParticipant({ tripId: currentTripId, name, phone, familyCount });
@@ -229,9 +229,19 @@ function showAddExpenseModal() {
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Amount (₹)</label>
-            <input type="number" id="expense-amount" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" placeholder="0.00" required>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Price (₹)</label>
+            <input type="number" id="expense-total" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" placeholder="0.00" oninput="calculateRemaining()" required>
           </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Advance Paid (₹)</label>
+            <input type="number" id="expense-advance" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="0" oninput="calculateRemaining()">
+          </div>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-400 uppercase">Remaining to Pay</span>
+            <span id="remaining-amount" class="font-black text-rose-500">₹0.00</span>
+        </div>
+        </div>
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Category</label>
             <select id="expense-category" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
@@ -276,7 +286,8 @@ function showAddExpenseModal() {
     document.getElementById('add-expense-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('expense-title').value.trim();
-      const amount = parseFloat(document.getElementById('expense-amount').value);
+      const totalAmount = parseFloat(document.getElementById('expense-total').value);
+      const advancePay = parseFloat(document.getElementById('expense-advance').value) || 0;
       let category = document.getElementById('expense-category').value;
       const paidBy = Number(document.getElementById('expense-paid-by').value);
 
@@ -285,8 +296,8 @@ function showAddExpenseModal() {
         category = manual || 'Others';
       }
 
-      if (title && amount > 0) {
-        await addExpense({ tripId: currentTripId, title, amount, category, paidBy });
+      if (title && totalAmount > 0) {
+        await addExpense({ tripId: currentTripId, title, amount: totalAmount, totalAmount, advancePay, category, paidBy });
         hideModal();
         loadHomeData();
         loadExpenses();
@@ -478,8 +489,15 @@ async function loadExpenses() {
             </div>
         </div>
         <div class="text-right">
-          <p class="font-black text-xl text-slate-900">₹${expense.amount.toFixed(2)}</p>
+          <p class="font-black text-xl text-slate-900">₹${(expense.totalAmount || expense.amount).toFixed(2)}</p>
           <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(expense.createdAt).toLocaleDateString()}</p>
+          ${expense.advancePay ? `
+            <div class="mt-2 text-[10px] font-bold">
+                <span class="text-emerald-500">PAID: ₹${expense.advancePay.toFixed(0)}</span>
+                <span class="mx-1 text-slate-300">|</span>
+                <span class="text-rose-500">REM: ₹${((expense.totalAmount || expense.amount) - expense.advancePay).toFixed(0)}</span>
+            </div>
+          ` : ''}
         </div>
       </div>
       <div class="flex space-x-4 pt-4 border-t border-slate-50">
@@ -898,4 +916,53 @@ function saveSyncURL() {
         localStorage.setItem('tripsplit_sync_url', url);
         alert('Sync URL saved successfully!');
     }
+}
+
+function showEditPlaceModal(index) {
+    getTrip(currentTripId).then(trip => {
+        const item = trip.itinerary[index];
+        const content = `
+            <h3 class="text-xl font-bold mb-6 text-slate-800">Edit Stop</h3>
+            <form id="edit-place-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Place Name</label>
+                    <input type="text" id="edit-place-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${item.placeName}" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Time / Day</label>
+                    <input type="text" id="edit-place-time" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${item.time || ''}">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Notes</label>
+                    <textarea id="edit-place-notes" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="2">${item.notes || ''}</textarea>
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" class="flex-1 btn-primary py-4">Save Changes</button>
+                    <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
+                </div>
+            </form>
+        `;
+        showModal(content);
+
+        document.getElementById('edit-place-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const placeName = document.getElementById('edit-place-name').value.trim();
+            const time = document.getElementById('edit-place-time').value.trim();
+            const notes = document.getElementById('edit-place-notes').value.trim();
+
+            if (placeName) {
+                const itinerary = trip.itinerary;
+                itinerary[index] = { ...itinerary[index], placeName, time, notes };
+                await updateTrip(currentTripId, { itinerary });
+                hideModal();
+                loadTripNotes();
+            }
+        });
+    });
+}
+function calculateRemaining() {
+    const total = parseFloat(document.getElementById('expense-total').value) || 0;
+    const advance = parseFloat(document.getElementById('expense-advance').value) || 0;
+    const rem = document.getElementById('remaining-amount');
+    if (rem) rem.textContent = '₹' + (total - advance).toFixed(2);
 }

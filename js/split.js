@@ -15,13 +15,13 @@ async function calculateSplit() {
   }
 
   // Calculate total expense and total participants (including family)
-  const totalExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const totalParticipants = participants.reduce((sum, p) => sum + 1 + p.familyCount, 0);
+  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount), 0);
+  const totalParticipants = participants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
   const perPersonShare = totalParticipants > 0 ? totalExpense / totalParticipants : 0;
 
   // Calculate balances
   const balances = participants.map(participant => {
-    const expectedShare = perPersonShare * (1 + participant.familyCount);
+    const expectedShare = perPersonShare * (participant.familyCount || 1);
     const balance = participant.totalSpent - expectedShare;
     return {
       ...participant,

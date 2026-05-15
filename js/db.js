@@ -68,6 +68,7 @@ async function duplicateTripFromDB(id) {
 async function addParticipant(participant) {
     const newParticipant = {
         ...participant,
+        familyCount: participant.familyCount || 1, // Default to 1 (self)
         id: Date.now() + Math.floor(Math.random() * 1000),
         totalSpent: 0
     };
@@ -179,29 +180,60 @@ async function exportTripToCSV(tripId) {
 
     const participants = await getParticipants(tripId);
     const expenses = await getExpenses(tripId);
+    const itinerary = trip.itinerary || [];
 
-    const headers = ['DataType', 'TripID', 'TripName', 'ItemTitle', 'Amount', 'Category', 'PaidBy', 'ParticipantName', 'Phone', 'FamilySize', 'Notes', 'Date'];
-    let csvRows = [headers.join(',')];
+    // Calculate Split for Summary
+    const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount), 0);
+    const totalParticipants = participants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
+    const perPersonShare = totalParticipants > 0 ? totalExpense / totalParticipants : 0;
 
     const escapeCSV = (str) => {
         if (!str) return '""';
         return `"${String(str).replace(/"/g, '""')}"`;
     };
 
-    // Row 1: The Trip
-    csvRows.push(['Trip', trip.id, escapeCSV(trip.tripName), '""', '""', '""', '""', '""', '""', '""', escapeCSV(trip.notes), escapeCSV(trip.createdAt)].join(','));
+    let csvContent = [];
 
-    // Rows: Participants
+    // 1. TRIP INFO
+    csvContent.push('SECTION,TRIP SUMMARY');
+    csvContent.push(`Trip Name,${escapeCSV(trip.tripName)}`);
+    csvContent.push(`Total Budget/Spent,₹${totalExpense.toFixed(2)}`);
+    csvContent.push(`Total Participants (incl. Family),${totalParticipants}`);
+    csvContent.push(`Standard Share Per Head,₹${perPersonShare.toFixed(2)}`);
+    csvContent.push('');
+
+    // 2. PARTICIPANT BREAKDOWN
+    csvContent.push('SECTION,PARTICIPANTS & BALANCES');
+    csvContent.push('Name,Family Size,Total Spent,Expected Share,Balance,Status');
     participants.forEach(p => {
-        csvRows.push(['Participant', '""', '""', '""', '""', '""', p.id, escapeCSV(p.name), escapeCSV(p.phone), p.familyCount, '""', '""'].join(','));
+        const expectedShare = perPersonShare * (p.familyCount || 1);
+        const balance = p.totalSpent - expectedShare;
+        const status = balance >= 0 ? 'Receives' : 'Owes';
+        csvContent.push(`${escapeCSV(p.name)},${p.familyCount || 1},₹${p.totalSpent.toFixed(2)},₹${expectedShare.toFixed(2)},₹${Math.abs(balance).toFixed(2)},${status}`);
     });
+    csvContent.push('');
 
-    // Rows: Expenses
+    // 3. EXPENSES
+    csvContent.push('SECTION,EXPENSE LOG');
+    csvContent.push('Date,Title,Category,Total Amount,Advance Paid,Remaining,Paid By');
     expenses.forEach(e => {
-        csvRows.push(['Expense', '""', '""', escapeCSV(e.title), e.amount, escapeCSV(e.category), e.paidBy, '""', '""', '""', '""', escapeCSV(e.createdAt)].join(','));
+        const payer = participants.find(p => p.id === e.paidBy);
+        const payerName = payer ? payer.name : 'Unknown';
+        const total = e.totalAmount || e.amount;
+        const advance = e.advancePay || 0;
+        const remaining = total - advance;
+        csvContent.push(`${escapeCSV(new Date(e.createdAt).toLocaleDateString())},${escapeCSV(e.title)},${escapeCSV(e.category)},₹${total.toFixed(2)},₹${advance.toFixed(2)},₹${remaining.toFixed(2)},${escapeCSV(payerName)}`);
+    });
+    csvContent.push('');
+
+    // 4. PLAN/ITINERARY
+    csvContent.push('SECTION,TRIP PLAN');
+    csvContent.push('Order,Place Name,Time/Day,Status,Notes');
+    itinerary.forEach((item, index) => {
+        csvContent.push(`${index + 1},${escapeCSV(item.placeName)},${escapeCSV(item.time)},${item.visited ? 'Visited' : 'Planned'},${escapeCSV(item.notes)}`);
     });
 
-    return csvRows.join('\n');
+    return csvContent.join('\n');
 }
 
 async function importDataFromCSV(csvString) {
