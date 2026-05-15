@@ -13,6 +13,19 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     deferredPrompt = e;
     console.log('PWA install prompt captured');
+    
+    // Show header install button
+    const headerInstallBtn = document.getElementById('install-header-btn');
+    if (headerInstallBtn) {
+        headerInstallBtn.classList.remove('hidden');
+        headerInstallBtn.onclick = async () => {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            headerInstallBtn.classList.add('hidden');
+        };
+    }
   });
 });
 
@@ -29,6 +42,16 @@ async function initApp() {
     }
   }
 
+  // Splash Screen Logic
+  setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+      splash.style.opacity = '0';
+      splash.style.visibility = 'hidden';
+      setTimeout(() => splash.remove(), 700); // Remove after fade transition
+    }
+  }, 2000);
+
   // Initialize Modules
   if (typeof initUI === 'function') initUI();
   if (typeof initPlanner === 'function') initPlanner();
@@ -37,37 +60,7 @@ async function initApp() {
   // Load initial data
   await loadHomeData();
   await loadTrips();
-
-  // Navigation listeners for dynamic content
-  const navSplit = document.getElementById('nav-split');
-  if (navSplit) navSplit.addEventListener('click', () => {
-    showScreen('split-screen');
-    loadSplitData();
-  });
-
-  const navPlan = document.getElementById('nav-plan');
-  if (navPlan) navPlan.addEventListener('click', () => {
-    showScreen('plan-screen');
-    loadTripNotes();
-  });
-  
-  const navHome = document.getElementById('nav-home');
-  if (navHome) navHome.addEventListener('click', () => {
-    showScreen('home-screen');
-    loadHomeData();
-  });
-
-  const navExpenses = document.getElementById('nav-expenses');
-  if (navExpenses) navExpenses.addEventListener('click', () => {
-    showScreen('expenses-screen');
-    loadExpenses();
-  });
-
-  const navHistory = document.getElementById('nav-history');
-  if (navHistory) navHistory.addEventListener('click', () => {
-    showScreen('history-screen');
-    loadTrips();
-  });
+  await loadTripsCapsules();
 
   // Handle header scroll effect
   window.addEventListener('scroll', () => {
@@ -80,13 +73,19 @@ async function initApp() {
   });
 }
 
+function showSettings() {
+    document.getElementById('menu-btn').click();
+}
+
 // Trip selection
 async function selectTrip(tripId) {
   currentTripId = tripId;
   hideModal();
   await loadHomeData();
   await loadExpenses();
-  showScreen('home-screen');
+  await loadTripNotes();
+  await loadTripsCapsules();
+  showScreen('home');
 }
 
 // Trip operations

@@ -9,30 +9,9 @@ async function loadTripNotes() {
     const itineraryList = document.getElementById('itinerary-list');
     itineraryList.innerHTML = '';
 
-    // 1. Add AI Assistant Card (Smart Import)
-    const aiCard = document.createElement('div');
-    aiCard.className = 'ai-assistant-card animate-fade-in';
-    aiCard.innerHTML = `
-        <div class="flex flex-col">
-            <div class="mb-4">
-                <h4 class="font-bold text-lg mb-1">Gemini AI Assistant</h4>
-                <p class="text-sm opacity-80">Use your personal Gemini account to build your roadmap instantly.</p>
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="askGeminiForPlan()" class="flex-1 bg-white text-indigo-600 py-3 rounded-2xl font-bold text-xs hover:bg-indigo-50 transition-all shadow-lg flex items-center justify-center space-x-2">
-                    <span>✨ Step 1: Plan</span>
-                </button>
-                <button onclick="importGeminiPlan()" class="flex-1 bg-indigo-500/30 text-white border border-white/30 py-3 rounded-2xl font-bold text-xs hover:bg-indigo-500/50 transition-all flex items-center justify-center space-x-2">
-                    <span>📥 Step 2: Import</span>
-                </button>
-            </div>
-        </div>
-    `;
-    itineraryList.appendChild(aiCard);
-
     if (itinerary.length === 0) {
         const emptyState = document.createElement('div');
-        emptyState.className = 'flex flex-col items-center justify-center py-20 text-slate-400 space-y-4 ml-[-30px]';
+        emptyState.className = 'flex flex-col items-center justify-center py-20 text-slate-400 space-y-4';
         emptyState.innerHTML = `
             <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>

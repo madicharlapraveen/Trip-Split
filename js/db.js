@@ -144,25 +144,61 @@ async function deleteExpenseFromDB(id) {
 // CSV Export/Import functions
 async function exportDataToCSV() {
     // Header for combined CSV
-    const headers = ['dataType', 'id', 'tripId', 'tripName', 'notes', 'name', 'phone', 'familyCount', 'title', 'amount', 'category', 'paidBy', 'createdAt'];
+    const headers = ['DataType', 'TripID', 'TripName', 'ItemTitle', 'Amount', 'Category', 'PaidBy', 'ParticipantName', 'Phone', 'FamilySize', 'Notes', 'Date'];
     let csvRows = [headers.join(',')];
+
+    const escapeCSV = (str) => {
+        if (!str) return '""';
+        return `"${String(str).replace(/"/g, '""')}"`;
+    };
 
     // Export Trips
     data.trips.forEach(trip => {
-        const row = ['trip', trip.id, '', trip.tripName, `"${(trip.notes || '').replace(/"/g, '""')}"`, '', '', '', '', '', '', '', trip.createdAt];
+        const row = ['Trip', trip.id, escapeCSV(trip.tripName), '""', '""', '""', '""', '""', '""', '""', escapeCSV(trip.notes), escapeCSV(trip.createdAt)];
         csvRows.push(row.join(','));
     });
 
     // Export Participants
     data.participants.forEach(p => {
-        const row = ['participant', p.id, p.tripId, '', '', '', `"${(p.name || '').replace(/"/g, '""')}"`, `"${(p.phone || '').replace(/"/g, '""')}"`, p.familyCount, '', '', '', ''];
+        const row = ['Participant', '""', '""', '""', '""', '""', p.id, escapeCSV(p.name), escapeCSV(p.phone), p.familyCount, '""', '""'];
         csvRows.push(row.join(','));
     });
 
     // Export Expenses
     data.expenses.forEach(e => {
-        const row = ['expense', e.id, e.tripId, '', '', '', '', '', '', `"${(e.title || '').replace(/"/g, '""')}"`, e.amount, e.category, e.paidBy, e.createdAt];
+        const row = ['Expense', '""', '""', escapeCSV(e.title), e.amount, escapeCSV(e.category), e.paidBy, '""', '""', '""', '""', escapeCSV(e.createdAt)];
         csvRows.push(row.join(','));
+    });
+
+    return csvRows.join('\n');
+}
+
+async function exportTripToCSV(tripId) {
+    const trip = await getTrip(tripId);
+    if (!trip) return '';
+
+    const participants = await getParticipants(tripId);
+    const expenses = await getExpenses(tripId);
+
+    const headers = ['DataType', 'TripID', 'TripName', 'ItemTitle', 'Amount', 'Category', 'PaidBy', 'ParticipantName', 'Phone', 'FamilySize', 'Notes', 'Date'];
+    let csvRows = [headers.join(',')];
+
+    const escapeCSV = (str) => {
+        if (!str) return '""';
+        return `"${String(str).replace(/"/g, '""')}"`;
+    };
+
+    // Row 1: The Trip
+    csvRows.push(['Trip', trip.id, escapeCSV(trip.tripName), '""', '""', '""', '""', '""', '""', '""', escapeCSV(trip.notes), escapeCSV(trip.createdAt)].join(','));
+
+    // Rows: Participants
+    participants.forEach(p => {
+        csvRows.push(['Participant', '""', '""', '""', '""', '""', p.id, escapeCSV(p.name), escapeCSV(p.phone), p.familyCount, '""', '""'].join(','));
+    });
+
+    // Rows: Expenses
+    expenses.forEach(e => {
+        csvRows.push(['Expense', '""', '""', escapeCSV(e.title), e.amount, escapeCSV(e.category), e.paidBy, '""', '""', '""', '""', escapeCSV(e.createdAt)].join(','));
     });
 
     return csvRows.join('\n');

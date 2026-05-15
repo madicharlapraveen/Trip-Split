@@ -99,21 +99,94 @@ body {
 
 /* Navigation Styles */
 .nav-active {
-    color: var(--primary);
+    color: var(--primary) !important;
     position: relative;
 }
 
 .nav-active::after {
     content: '';
     position: absolute;
-    bottom: -4px;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 6px;
     height: 6px;
     background: var(--primary);
     border-radius: 50%;
+    box-shadow: 0 0 10px var(--primary);
 }
 
-/* Hide scrollbar */
+/* Trip Capsules */
+#trips-capsule-container::-webkit-scrollbar { display: none; }
+#trips-capsule-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+}
+
+/* Bottom Nav Premium */
+.bottom-nav {
+    border-radius: 32px 32px 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.bottom-nav .max-w-md {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.bottom-nav .max-w-md::-webkit-scrollbar { display: none; }
+
+/* Hide scrollbar utility */
+#install-header-btn {
+    animation: bounce-subtle 3s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+#install-header-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        to bottom right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 40%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(45deg);
+    animation: shimmer 4s infinite;
+}
+
+@keyframes bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-150%) rotate(45deg); }
+    100% { transform: translateX(150%) rotate(45deg); }
+}
+
+@keyframes splash-pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fade-in-up {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

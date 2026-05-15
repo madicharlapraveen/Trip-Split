@@ -10,7 +10,7 @@ function showScreen(screenId) {
   });
 
   // Show selected screen
-  const screen = document.getElementById(screenId);
+  const screen = document.getElementById(`${screenId}-screen`);
   if (screen) {
     screen.classList.remove('hidden');
     screen.classList.add('animate-fade-in');
@@ -24,15 +24,28 @@ function showScreen(screenId) {
     if (icon) icon.classList.remove('bg-indigo-50');
   });
 
-  const activeBtn = document.getElementById(`nav-${screenId.replace('-screen', '')}`);
+  const activeBtn = document.querySelector(`.nav-btn[data-screen="${screenId}"]`);
   if (activeBtn) {
     activeBtn.classList.add('nav-active', 'text-indigo-600');
     activeBtn.classList.remove('text-slate-400');
-    const icon = activeBtn.querySelector('div');
-    if (icon) icon.classList.add('bg-indigo-50');
   }
 
-  currentScreen = screenId.replace('-screen', '');
+  // Top Capsule visibility - Only show on home and expenses
+  const capsuleContainer = document.getElementById('trips-capsule-container');
+  if (screenId === 'home' || screenId === 'expenses') {
+    capsuleContainer.classList.remove('hidden');
+    loadTripsCapsules();
+  } else {
+    capsuleContainer.classList.add('hidden');
+  }
+
+  // Load screen-specific data
+  if (screenId === 'home') loadHomeData();
+  if (screenId === 'expenses') loadExpenses();
+  if (screenId === 'plan') loadTripNotes();
+  if (screenId === 'history' || screenId === 'trips') loadTrips();
+
+  currentScreen = screenId;
 }
 
 // Modal functions
@@ -125,6 +138,25 @@ function showCreateTripModal() {
       loadTrips();
       showTripSelectionModal();
     }
+  });
+}
+async function loadTripsCapsules() {
+  const trips = await getTrips();
+  const container = document.getElementById('trips-capsule-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  trips.forEach(trip => {
+    const isActive = currentTripId === trip.id;
+    const capsule = document.createElement('button');
+    capsule.onclick = () => selectTrip(trip.id);
+    capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all ${
+      isActive 
+      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-105' 
+      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+    }`;
+    capsule.textContent = trip.tripName;
+    container.appendChild(capsule);
   });
 }
 
@@ -566,12 +598,35 @@ async function editParticipant(participantId) {
 
 // Initialize UI
 function initUI() {
-  // FAB and other buttons
-  document.getElementById('fab').addEventListener('click', showTripSelectionModal);
-  document.getElementById('add-expense-btn').addEventListener('click', showAddExpenseModal);
+  // Center FAB
+  document.getElementById('fab').addEventListener('click', showCreateTripModal);
+  
+  // Action FABs
+  document.getElementById('add-place-fab').addEventListener('click', showAddPlaceModal);
+  document.getElementById('add-expense-fab').addEventListener('click', showAddExpenseModal);
+
+  // Export for Google Sheets
+  const exportSheetsBtn = document.getElementById('export-sheets-btn');
+  if (exportSheetsBtn) {
+    exportSheetsBtn.onclick = showExportSelectionModal;
+  }
+
+  // Gemini AI Menu
+  const aiMenuBtn = document.getElementById('ai-menu-btn');
+  const aiDropdown = document.getElementById('ai-dropdown');
+  if (aiMenuBtn && aiDropdown) {
+    aiMenuBtn.onclick = (e) => {
+      e.stopPropagation();
+      aiDropdown.classList.toggle('hidden');
+    };
+    document.addEventListener('click', () => aiDropdown.classList.add('hidden'));
+  }
 
   // Dropdown toggles
-  document.getElementById('expense-summary-toggle').addEventListener('click', toggleExpenseSummaryDropdown);
+  const expenseToggle = document.getElementById('expense-summary-toggle');
+  if (expenseToggle) {
+    expenseToggle.addEventListener('click', toggleExpenseSummaryDropdown);
+  }
 
   // Menu button - Export/Import
   document.getElementById('menu-btn').addEventListener('click', () => {
@@ -606,7 +661,17 @@ function initUI() {
                 <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
             <div class="pt-4 mt-4 border-t border-slate-100">
-                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">App Data Backup (Recommended)</p>
+                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">Google Sheets Integration</p>
+                <div class="space-y-3">
+                    <button id="export-sheets-btn" class="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-100 group transition-all">
+                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span class="font-bold">Download for Google Sheets</span>
+                    </button>
+                    <p class="text-[10px] text-slate-400 text-center leading-relaxed">Downloads a .csv file. Simply drag and drop this file directly into any Google Sheet.</p>
+                </div>
+            </div>
+            <div class="pt-4 mt-4 border-t border-slate-100">
+                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">App Data Backup (Local)</p>
                 <div class="grid grid-cols-2 gap-3">
                     <button id="export-json-btn" class="p-4 bg-indigo-600 text-white rounded-2xl flex flex-col items-center justify-center space-y-2 hover:bg-indigo-700 transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
@@ -717,7 +782,127 @@ function initUI() {
     }
   });
 
+  // Populate Sync URL if exists
+  const syncInput = document.getElementById('sync-url-input');
+  if (syncInput) {
+    syncInput.value = localStorage.getItem('tripsplit_sync_url') || '';
+  }
+
+  // Sync Now button
+  const syncBtn = document.getElementById('sync-now-btn');
+  if (syncBtn) {
+    syncBtn.onclick = async () => {
+        const url = localStorage.getItem('tripsplit_sync_url');
+        if (!url) {
+            alert('Please provide a Google Apps Script URL first.');
+            return;
+        }
+
+        syncBtn.disabled = true;
+        syncBtn.querySelector('span').textContent = 'Syncing...';
+        
+        try {
+            const data = await exportDataToJSON();
+            const response = await fetch(url, {
+                method: 'POST',
+                mode: 'no-cors', // Apps Script web app requirements
+                headers: { 'Content-Type': 'application/json' },
+                body: data
+            });
+            
+            // With no-cors, we can't see the response body, but if it doesn't throw, it likely sent.
+            alert('Data pushed to Google Sheet! (Check your sheet for updates)');
+        } catch (error) {
+            console.error('Sync failed:', error);
+            alert('Sync failed. Please check your URL and internet connection.');
+        } finally {
+            syncBtn.disabled = false;
+            syncBtn.querySelector('span').textContent = 'Sync to Google Sheet';
+        }
+    };
+  }
+
   // Load initial data
   loadHomeData();
   loadTrips();
+  loadTripsCapsules();
+}
+
+function showExportSelectionModal() {
+  getTrips().then(trips => {
+    let content = `
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-slate-800">Export for Sheets</h3>
+        <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-6 font-bold uppercase tracking-widest">Select what to download:</p>
+      <div class="space-y-3">
+        <button onclick="downloadCSV('all')" class="w-full text-left p-5 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100 flex justify-between items-center group transition-all">
+            <div>
+                <p class="font-bold">Backup All Trips</p>
+                <p class="text-[10px] opacity-70">Complete history and all data</p>
+            </div>
+            <svg class="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+        </button>
+        
+        <div class="pt-4 border-t border-slate-100">
+            <p class="text-[10px] text-slate-400 mb-3 font-bold uppercase tracking-widest">Single Trip Export:</p>
+            <div class="space-y-2 max-h-[40vh] overflow-y-auto no-scrollbar">
+    `;
+    
+    trips.forEach(trip => {
+      content += `
+        <button onclick="downloadCSV(${trip.id})" class="w-full text-left p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl border-2 border-transparent hover:border-emerald-100 transition-all group">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="font-bold text-slate-800 group-hover:text-emerald-700">${trip.tripName}</p>
+              <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${new Date(trip.createdAt).toLocaleDateString()}</p>
+            </div>
+            <svg class="w-5 h-5 text-slate-300 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          </div>
+        </button>`;
+    });
+
+    content += `
+            </div>
+        </div>
+      </div>
+      <button onclick="hideModal()" class="w-full mt-6 py-4 font-bold text-slate-400">Close</button>
+    `;
+    showModal(content);
+  });
+}
+
+async function downloadCSV(tripId) {
+    let csvData;
+    let filename;
+    
+    if (tripId === 'all') {
+        csvData = await exportDataToCSV();
+        filename = `tripsplit-all-backup-${new Date().toISOString().split('T')[0]}.csv`;
+    } else {
+        csvData = await exportTripToCSV(tripId);
+        const trip = await getTrip(tripId);
+        const safeName = (trip ? trip.tripName : 'trip').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        filename = `tripsplit-trip-${safeName}-${new Date().toISOString().split('T')[0]}.csv`;
+    }
+
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    hideModal();
+}
+
+function saveSyncURL() {
+    const url = document.getElementById('sync-url-input').value.trim();
+    if (url) {
+        localStorage.setItem('tripsplit_sync_url', url);
+        alert('Sync URL saved successfully!');
+    }
 }
