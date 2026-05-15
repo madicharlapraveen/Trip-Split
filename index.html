@@ -257,8 +257,12 @@
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 px-4 pb-8 pt-4 pointer-events-none">
-        <div class="max-w-md mx-auto pointer-events-auto">
+    <nav class="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
+        <!-- Backdrop Blur Layer -->
+        <div class="absolute inset-0 bg-slate-100/90 backdrop-blur-md pointer-events-none -z-10"></div>
+        
+        <div class="px-4 pb-4 pt-4">
+            <div class="max-w-md mx-auto pointer-events-auto">
             <div class="bottom-nav-container relative">
                 <!-- Fixed Navigation Area -->
                 <div class="nav-grid-area">
@@ -297,6 +301,7 @@
                     BY Ai Space
                 </a>
             </div>
+        </div>
         </div>
     </nav>
 
