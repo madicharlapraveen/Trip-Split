@@ -256,13 +256,10 @@
         </div>
     </main>
 
-    <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 pointer-events-none">
-        <!-- Glossy Backdrop Blur Layer -->
-        <div class="absolute inset-0 bg-white/60 backdrop-blur-xl border-t border-white/60 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pointer-events-none -z-10"></div>
-        
-        <div class="px-4 pb-4 pt-4">
-            <div class="max-w-md mx-auto pointer-events-auto">
+    <!-- Bottom Navigation Area -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 flex flex-col pointer-events-none">
+        <!-- Floating Dock -->
+        <nav class="w-full max-w-md mx-auto px-4 pointer-events-auto">
             <div class="bottom-nav-container relative">
                 <!-- Fixed Navigation Area -->
                 <div class="nav-grid-area">
@@ -295,15 +292,18 @@
                     </button>
                 </div>
             </div>
-            <!-- Branding (Below Dock) -->
-            <div class="text-center mt-3">
+        </nav>
+
+        <!-- Branding Strip with Blur -->
+        <div class="relative w-full mt-3 pointer-events-auto">
+            <div class="absolute inset-0 bg-white/60 backdrop-blur-xl border-t border-white/60 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] pointer-events-none -z-10"></div>
+            <div class="text-center py-2 pb-3">
                 <a href="https://aispace.co.in/" target="_blank" rel="noopener" class="text-[8px] font-black text-slate-400 hover:text-indigo-500 transition-colors uppercase tracking-[0.4em]">
                     BY Ai Space
                 </a>
             </div>
         </div>
-        </div>
-    </nav>
+    </div>
 
     <!-- Scripts -->
     <script src="js/db.js?v=2"></script>
