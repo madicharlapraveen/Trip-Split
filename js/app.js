@@ -156,22 +156,30 @@ async function editExpense(expenseId) {
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Amount (₹)</label>
-          <input type="number" id="expense-amount" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="${expense.amount}" required>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Price (₹)</label>
+          <input type="number" id="expense-total-edit" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="${expense.totalPay || expense.amount}" oninput="calculateRemainingEdit()" required>
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Category</label>
-          <select id="expense-category" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
-            <option value="Others" ${!['Food','Fuel','Hotel','Shopping','Tickets','Emergency','Miscellaneous'].includes(expense.category) ? 'selected' : ''}>Others</option>
-            <option value="Food" ${expense.category === 'Food' ? 'selected' : ''}>Food</option>
-            <option value="Fuel" ${expense.category === 'Fuel' ? 'selected' : ''}>Fuel</option>
-            <option value="Hotel" ${expense.category === 'Hotel' ? 'selected' : ''}>Hotel</option>
-            <option value="Shopping" ${expense.category === 'Shopping' ? 'selected' : ''}>Shopping</option>
-            <option value="Tickets" ${expense.category === 'Tickets' ? 'selected' : ''}>Tickets</option>
-            <option value="Emergency" ${expense.category === 'Emergency' ? 'selected' : ''}>Emergency</option>
-            <option value="Miscellaneous" ${expense.category === 'Miscellaneous' ? 'selected' : ''}>Miscellaneous</option>
-          </select>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Advance Paid (₹)</label>
+          <input type="number" id="expense-advance-edit" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="${expense.advancePay || 0}" oninput="calculateRemainingEdit()">
         </div>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-400 uppercase">Remaining to Pay</span>
+          <span id="remaining-amount-edit" class="font-black text-rose-500">₹${((expense.totalPay || expense.amount) - (expense.advancePay || 0)).toFixed(2)}</span>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Category</label>
+        <select id="expense-category" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
+          <option value="Others" ${!['Food','Fuel','Hotel','Shopping','Tickets','Emergency','Miscellaneous'].includes(expense.category) ? 'selected' : ''}>Others</option>
+          <option value="Food" ${expense.category === 'Food' ? 'selected' : ''}>Food</option>
+          <option value="Fuel" ${expense.category === 'Fuel' ? 'selected' : ''}>Fuel</option>
+          <option value="Hotel" ${expense.category === 'Hotel' ? 'selected' : ''}>Hotel</option>
+          <option value="Shopping" ${expense.category === 'Shopping' ? 'selected' : ''}>Shopping</option>
+          <option value="Tickets" ${expense.category === 'Tickets' ? 'selected' : ''}>Tickets</option>
+          <option value="Emergency" ${expense.category === 'Emergency' ? 'selected' : ''}>Emergency</option>
+          <option value="Miscellaneous" ${expense.category === 'Miscellaneous' ? 'selected' : ''}>Miscellaneous</option>
+        </select>
       </div>
       <div id="edit-manual-category-container" class="${['Food','Fuel','Hotel','Shopping','Tickets','Emergency','Miscellaneous'].includes(expense.category) ? 'hidden' : ''}">
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Category Name</label>
@@ -201,7 +209,9 @@ async function editExpense(expenseId) {
     document.getElementById('edit-expense-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('expense-title').value.trim();
-      const amount = parseFloat(document.getElementById('expense-amount').value);
+      const totalPay = parseFloat(document.getElementById('expense-total-edit').value);
+      const advancePay = parseFloat(document.getElementById('expense-advance-edit').value) || 0;
+      const amount = totalPay; // Maintain compatibility
       let category = document.getElementById('expense-category').value;
       const paidBy = Number(document.getElementById('expense-paid-by').value);
 
@@ -210,8 +220,8 @@ async function editExpense(expenseId) {
         category = manual || 'Others';
       }
 
-      if (title && amount > 0) {
-      await updateExpense(expenseId, { title, amount, category, paidBy });
+      if (title && totalPay > 0) {
+      await updateExpense(expenseId, { title, amount, totalPay, advancePay, category, paidBy });
       hideModal();
       loadHomeData();
       loadExpenses();
@@ -238,4 +248,11 @@ async function deleteParticipant(participantId) {
     await deleteParticipantFromDB(participantId);
     loadHomeData();
   }
+}
+
+function calculateRemainingEdit() {
+    const total = parseFloat(document.getElementById('expense-total-edit').value) || 0;
+    const advance = parseFloat(document.getElementById('expense-advance-edit').value) || 0;
+    const rem = document.getElementById('remaining-amount-edit');
+    if (rem) rem.textContent = '₹' + (total - advance).toFixed(2);
 }

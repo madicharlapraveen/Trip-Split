@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tripsplit-v1';
+const CACHE_NAME = 'tripsplit-v2';
 const urlsToCache = [
   './',
   './index.html',
   './css/style.css',
   './js/app.js',
   './js/db.js',
-  './js/ui.js',
+  './js/ui_engine.js',
   './js/split.js',
   './js/planner.js',
   './js/share.js',
