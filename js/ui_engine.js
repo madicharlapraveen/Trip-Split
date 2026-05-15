@@ -361,6 +361,15 @@ async function loadHomeData() {
   const expenses = await getExpenses(currentTripId);
 
   document.getElementById('current-trip-name').textContent = trip ? trip.tripName : 'No trip selected';
+  const subtext = document.getElementById('trip-dates');
+  if (subtext) {
+      if (trip) {
+          subtext.textContent = trip.notes || 'Manage your travel expenses';
+      } else {
+          subtext.textContent = 'Select or create a trip to start';
+      }
+  }
+
   const totalExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   document.getElementById('total-expense').textContent = `₹${totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 

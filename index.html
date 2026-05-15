@@ -107,8 +107,21 @@
                             </div>
                         </div>
                         
+                        <!-- Actions & Share -->
+                        <div class="mt-6 flex items-center justify-between">
+                            <div id="home-sync-container">
+                                <button onclick="handleCloudSync()" class="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all text-[10px] font-bold uppercase tracking-widest">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                    <span>Sync & Share</span>
+                                </button>
+                            </div>
+                            <button onclick="showScreen('split')" class="p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            </button>
+                        </div>
+                        
                         <!-- Budget Progress Bar -->
-                        <div id="budget-progress-container" class="hidden">
+                        <div id="budget-progress-container" class="hidden mt-6">
                             <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest mb-1.5 text-indigo-200">
                                 <span id="budget-status-text">Budget Progress</span>
                                 <span id="budget-percentage">0%</span>
