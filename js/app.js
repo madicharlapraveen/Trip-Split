@@ -58,6 +58,11 @@ async function initApp() {
   if (typeof initShare === 'function') initShare();
 
   // Load initial data
+  const trips = await getTrips();
+  if (trips.length > 0 && !currentTripId) {
+    currentTripId = trips[0].id;
+  }
+
   await loadHomeData();
   await loadTrips();
   await loadTripsCapsules();
@@ -73,9 +78,6 @@ async function initApp() {
   });
 }
 
-function showSettings() {
-    document.getElementById('menu-btn').click();
-}
 
 // Trip selection
 async function selectTrip(tripId) {

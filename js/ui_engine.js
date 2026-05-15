@@ -1,9 +1,11 @@
 // ui.js - UI management functions
+console.log('ui.js loading...');
 
 let currentScreen = 'home';
 
 // Navigation functions
 function showScreen(screenId) {
+  console.log('Switching to screen:', screenId);
   // Hide all screens
   document.querySelectorAll('main > section').forEach(section => {
     section.classList.add('hidden');
@@ -594,6 +596,7 @@ async function editParticipant(participantId) {
 
 // Initialize UI
 function initUI() {
+  console.log('Initializing UI listeners...');
   // Navigation
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const screenId = btn.getAttribute('data-screen');
@@ -623,7 +626,10 @@ function initUI() {
       e.stopPropagation();
       aiDropdown.classList.toggle('hidden');
     };
-    document.addEventListener('click', () => aiDropdown.classList.add  // Dropdown toggles
+    document.addEventListener('click', () => aiDropdown.classList.add('hidden'));
+  }
+
+  // Dropdown toggles
   const expenseToggle = document.getElementById('expense-summary-toggle');
   if (expenseToggle) {
     expenseToggle.addEventListener('click', toggleExpenseSummaryDropdown);
