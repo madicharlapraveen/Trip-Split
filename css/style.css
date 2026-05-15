@@ -236,17 +236,13 @@ input[type="checkbox"], input[type="radio"] {
     overflow: hidden;
 }
 
-.nav-scroll-area {
-    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+.nav-grid-area {
     flex: 1;
-    overflow-x: auto;
     display: flex;
     align-items: center;
+    justify-content: space-around;
     height: 100%;
-    padding: 0 1.5rem;
-    gap: 1.5rem;
-    scroll-behavior: smooth;
+    padding: 0 0.5rem;
 }
 
 .nav-btn {
