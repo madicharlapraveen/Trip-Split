@@ -1125,7 +1125,6 @@ function showEditPlaceModal(index) {
         });
     });
 }
-}
 
 async function handleCloudSync() {
     if (!currentTripId) {
