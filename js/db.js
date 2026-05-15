@@ -41,6 +41,24 @@ async function updateTrip(id, updates) {
     }
 }
 
+async function saveCloudTripBundle(bundle) {
+    if (!bundle || !bundle.trip) return;
+    
+    const tripId = bundle.trip.id;
+    
+    // Remove existing local data for this trip
+    data.trips = data.trips.filter(t => t.id !== tripId);
+    data.participants = data.participants.filter(p => p.tripId !== tripId);
+    data.expenses = data.expenses.filter(e => e.tripId !== tripId);
+    
+    // Insert new cloud data
+    data.trips.push(bundle.trip);
+    if (bundle.participants) data.participants.push(...bundle.participants);
+    if (bundle.expenses) data.expenses.push(...bundle.expenses);
+    
+    saveData();
+}
+
 async function deleteTripFromDB(id) {
     data.trips = data.trips.filter(t => t.id !== id);
     data.participants = data.participants.filter(p => p.tripId !== id);

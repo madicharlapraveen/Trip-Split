@@ -697,6 +697,30 @@ function showSettings() {
       </div>
 
       <div class="space-y-3">
+          <div class="pt-2 pb-4 border-b border-slate-100">
+              <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3">Cloud Sync & Share</p>
+              <div class="space-y-2">
+                  <button onclick="handleCloudSync()" class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-between group transition-all">
+                      <div class="flex items-center space-x-3">
+                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                          <span class="text-sm font-bold">Sync Trip to Cloud</span>
+                      </div>
+                      <span id="cloud-status-text" class="text-[10px] font-bold px-2 py-1 bg-white/50 rounded-lg">Push</span>
+                  </button>
+                  <button onclick="handleJoinTrip()" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-between transition-all">
+                      <div class="flex items-center space-x-3">
+                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                          <span class="text-sm font-bold">Join Cloud Trip</span>
+                      </div>
+                  </button>
+                  <button onclick="handleManagePermissions()" class="w-full p-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-between transition-all hidden" id="manage-perms-btn">
+                      <div class="flex items-center space-x-3">
+                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                          <span class="text-sm font-bold">Manage Editors</span>
+                      </div>
+                  </button>
+              </div>
+          </div>
           <button id="install-btn" class="hidden w-full p-4 bg-indigo-600 text-white rounded-2xl flex items-center justify-between group transition-all">
               <div class="flex items-center space-x-3">
                   <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
