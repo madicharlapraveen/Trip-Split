@@ -50,7 +50,7 @@ async function initApp() {
       splash.style.visibility = 'hidden';
       setTimeout(() => splash.remove(), 700); // Remove after fade transition
     }
-  }, 2000);
+  }, 1500);
 
   // Initialize Modules
   if (typeof initUI === 'function') initUI();
