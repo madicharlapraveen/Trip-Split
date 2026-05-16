@@ -44,7 +44,50 @@ function showScreen(screenId) {
   if (screenId === 'split') calculateSplit();
   if (screenId === 'history' || screenId === 'trips') loadTrips();
 
+  // Update Center FAB context
+  updateCenterFAB(screenId);
+
   currentScreen = screenId;
+}
+
+function updateCenterFAB(screenId) {
+  const fab = document.getElementById('fab');
+  if (!fab) return;
+
+  // Clear previous icon
+  fab.innerHTML = '';
+  
+  // Define icons and actions based on screen
+  let iconHTML = '';
+  let action = () => {};
+
+  switch(screenId) {
+    case 'expenses':
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      action = showAddExpenseModal;
+      break;
+    case 'plan':
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+      action = () => {
+        const dropdown = document.getElementById('ai-dropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
+      };
+      break;
+    case 'history':
+    case 'trips':
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      action = showCreateTripModal;
+      break;
+    default:
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      action = showCreateTripModal;
+  }
+
+  fab.innerHTML = iconHTML;
+  // Use a fresh listener to avoid accumulation
+  const newFab = fab.cloneNode(true);
+  fab.parentNode.replaceChild(newFab, fab);
+  newFab.addEventListener('click', action);
 }
 
 // Modal functions
@@ -386,6 +429,15 @@ async function loadHomeData() {
   const budget = trip ? (trip.estimatedBudget || 0) : 0;
   document.getElementById('display-budget').textContent = `₹${budget.toLocaleString('en-IN')}`;
   
+  // Update profile header
+  getUserProfile().then(profile => {
+    const profileDiv = document.getElementById('header-profile');
+    if (profileDiv && profile) {
+        profileDiv.textContent = profile.name.charAt(0).toUpperCase();
+        profileDiv.classList.remove('hidden');
+    }
+  });
+
   const budgetContainer = document.getElementById('budget-progress-container');
   if (budget > 0) {
       budgetContainer.classList.remove('hidden');
@@ -757,8 +809,8 @@ function initUI() {
     }
   });
 
-  // Center FAB
-  document.getElementById('fab').addEventListener('click', showCreateTripModal);
+  // Center FAB - Initial state
+  updateCenterFAB(currentScreen);
   
   // Action FABs
   document.getElementById('add-place-fab').addEventListener('click', showAddPlaceModal);
