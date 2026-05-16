@@ -9,178 +9,159 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="assets/icon-192.png" type="image/png">
     
-    <!-- Tailwind CSS (Production Optimized) -->
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <script>window.currentTripId = null;</script>
 </head>
-<body class="bg-slate-50 text-slate-900 selection:bg-indigo-100">
+<body>
     <!-- Splash Screen -->
-    <div id="splash-screen" class="fixed inset-0 z-[100] bg-indigo-600 flex flex-col items-center justify-center transition-all duration-700">
-        <div class="relative">
-            <div class="absolute inset-0 bg-white/20 blur-3xl rounded-full animate-pulse"></div>
-            <div class="relative w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-2xl animate-splash-reveal overflow-hidden p-2">
-                <img src="assets/icon-192.png" alt="TripSplit" class="w-full h-full object-contain">
-            </div>
+    <div id="splash-screen" style="position: fixed; inset: 0; z-index: 1000; background: #6366f1; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.7s;">
+        <div style="width: 100px; height: 100px; background: white; border-radius: 24px; display: flex; items-center; justify-content: center; padding: 10px;">
+            <img src="assets/icon-192.png" alt="TripSplit" style="width: 100%; height: 100%; object-fit: contain;">
         </div>
-        <h1 class="mt-8 text-white text-3xl font-black tracking-tighter animate-fade-in">TripSplit</h1>
-        <div class="mt-4 w-48 h-1 bg-white/20 rounded-full overflow-hidden">
-            <div class="h-full bg-white w-2/3 animate-progress-loading"></div>
-        </div>
+        <h1 style="color: white; margin-top: 20px; font-weight: 800; font-size: 2rem;">TripSplit</h1>
     </div>
 
-    <!-- Main Navigation Container -->
-    <div class="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative flex flex-col">
+    <!-- Main Container -->
+    <main class="max-w-2xl mx-auto px-4 pt-6 pb-32">
         <!-- Persistent Header -->
-        <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 p-4 flex justify-between items-center">
+        <header class="flex justify-between items-center mb-8 px-2">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
-                    <img src="assets/icon-192.png" alt="Logo" class="w-6 h-6 invert">
+                <div style="width: 40px; height: 40px; background: #6366f1; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <img src="assets/icon-192.png" alt="Logo" style="width: 24px; height: 24px; filter: invert(1);">
                 </div>
-                <h1 class="text-xl font-black tracking-tighter text-slate-800">TripSplit</h1>
+                <h1 style="font-weight: 800; font-size: 1.5rem;">TripSplit</h1>
             </div>
-            <div class="flex items-center space-x-3">
-                <div id="header-profile" onclick="showSettings()" class="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center font-bold text-slate-500 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-all hidden">U</div>
-                <button id="menu-btn" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                </button>
-            </div>
+            <div id="header-profile" onclick="showSettings()" style="width: 40px; height: 40px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; visibility: hidden;">U</div>
         </header>
 
-        <!-- Dynamic Content -->
-        <main class="flex-grow p-4 pb-32 overflow-x-hidden">
-            <!-- Home Screen -->
-            <section id="home-screen" class="space-y-6 animate-fade-in">
-                <!-- Hero Card -->
-                <div class="premium-card bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none overflow-hidden relative">
-                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                    <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-400/20 rounded-full blur-3xl"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="flex justify-between items-start">
-                            <div class="flex flex-col">
-                                <span class="text-indigo-100 text-xs font-bold px-3 py-1 bg-white/10 rounded-full backdrop-blur-sm w-fit uppercase tracking-widest">Active Trip</span>
-                                <div id="trip-id-pill" class="mt-2 text-[10px] font-black text-indigo-200 bg-black/20 px-3 py-1 rounded-full w-fit hidden">ID: <span id="display-share-id">---</span></div>
-                            </div>
-                            <button onclick="showEditTripModal()" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm transition-all">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </button>
-                        </div>
-                        
-                        <h2 id="current-trip-name" class="text-3xl font-bold mt-4 mb-1">No trip selected</h2>
-                        <p id="trip-dates" class="text-indigo-100 text-sm opacity-80 mb-6">Select or create a trip to start</p>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-end justify-between">
-                                <div>
-                                    <p class="text-indigo-100 text-xs uppercase tracking-wider font-semibold opacity-80">Spent So Far</p>
-                                    <p id="total-expense" class="text-4xl font-black mt-1">₹0</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-indigo-100 text-xs uppercase tracking-wider font-semibold opacity-80">Estimated Budget</p>
-                                    <p id="display-budget" class="text-xl font-bold mt-1 text-indigo-100">₹0</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Actions & Share -->
-                            <div class="mt-6 flex items-center justify-between">
-                                <div id="home-sync-container">
-                                    <button onclick="handleCloudSync()" class="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all text-[10px] font-bold uppercase tracking-widest">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                        <span>Sync & Share</span>
-                                    </button>
-                                </div>
-                                <button onclick="showScreen('split')" class="p-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                                </button>
-                            </div>
-                        </div>
+        <!-- Home Screen -->
+        <section id="home-screen" class="space-y-8 animate-fade-in">
+            <!-- Hero Card -->
+            <div class="premium-card" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: white;">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <span style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Active Trip</span>
+                        <h2 id="current-trip-name" style="font-size: 1.75rem; font-weight: 700; margin-top: 8px;">No trip selected</h2>
+                        <p id="trip-dates" style="opacity: 0.8; font-size: 0.8rem;">Select or create a trip to start</p>
+                    </div>
+                    <button onclick="showEditTripModal()" style="background: rgba(255,255,255,0.1); border: none; padding: 10px; border-radius: 12px; color: white;">
+                        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; font-weight: 600;">Total Spent</p>
+                        <p id="total-expense" style="font-size: 2.5rem; font-weight: 800;">₹0</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; font-weight: 600;">Budget</p>
+                        <p id="display-budget" style="font-size: 1.2rem; font-weight: 700;">₹0</p>
                     </div>
                 </div>
 
-                <!-- Participants Horizontal -->
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-lg font-bold text-slate-800">Participants</h3>
-                        <button onclick="showAddParticipantModal()" class="text-indigo-600 text-sm font-semibold hover:text-indigo-700">Add New</button>
-                    </div>
-                    <div id="participants-list" class="flex space-x-4 overflow-x-auto no-scrollbar pb-2 mask-linear-right"></div>
+                <div class="mt-6 pt-6 border-t border-white/10 flex justify-between items-center">
+                    <button onclick="handleCloudSync()" style="background: rgba(255,255,255,0.1); border: none; padding: 8px 16px; border-radius: 12px; color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        Cloud Sync
+                    </button>
+                    <div id="trip-id-pill" style="background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.6rem; font-weight: 800; display: none;">ID: <span id="display-share-id">---</span></div>
                 </div>
+            </div>
 
-                <!-- Quick Actions Grid -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div onclick="showAddExpenseModal()" class="premium-card p-6 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-slate-50 transition-all border-dashed border-2 group">
-                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </div>
-                        <div class="text-center">
-                            <p class="font-bold text-slate-800">Add Expense</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Record a new payment</p>
-                        </div>
+            <!-- Participants -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 style="font-size: 1.2rem; font-weight: 700;">Participants</h3>
+                    <button onclick="showAddParticipantModal()" style="color: #6366f1; font-size: 0.8rem; font-weight: 600; background: none; border: none;">Add New</button>
+                </div>
+                <div id="participants-list" class="flex space-x-4 overflow-x-auto no-scrollbar pb-2 mask-linear-right"></div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div id="quick-stats" class="grid grid-cols-2 gap-4"></div>
+            
+            <button onclick="showScreen('split')" class="w-full premium-card flex items-center justify-between group hover:bg-indigo-50 transition-all border-none">
+                <div class="flex items-center space-x-4">
+                    <div style="width: 48px; height: 48px; background: #e0e7ff; color: #4f46e5; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     </div>
-                    <div onclick="exportToCSV()" class="premium-card p-6 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-slate-50 transition-all group">
-                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a2 2 0 00-2-2H5a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v8m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
-                        </div>
-                        <div class="text-center">
-                            <p class="font-bold text-slate-800">Export Sheets</p>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Download CSV/Backup</p>
-                        </div>
+                    <div style="text-align: left;">
+                        <p style="font-weight: 700;">Settlement Results</p>
+                        <p style="font-size: 0.7rem; color: #64748b;">See who owes whom</p>
                     </div>
                 </div>
-            </section>
+                <svg style="width: 20px; height: 20px; color: #cbd5e1;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </section>
 
-            <!-- Screens (Managed by showScreen) -->
-            <section id="expenses-screen" class="hidden space-y-4 animate-fade-in"></section>
-            <section id="plan-screen" class="hidden space-y-4 animate-fade-in"></section>
-            <section id="split-screen" class="hidden space-y-6 animate-fade-in"></section>
-            <section id="trips-screen" class="hidden space-y-4 animate-fade-in"></section>
-        </main>
+        <!-- Screens -->
+        <section id="expenses-screen" class="hidden space-y-6 animate-fade-in">
+            <h2 style="font-size: 1.5rem; font-weight: 800;">Expenses</h2>
+            <div id="expenses-list" class="space-y-4"></div>
+        </section>
 
-        <!-- Dynamic Bottom Navigation -->
-        <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/80 backdrop-blur-2xl border-t border-slate-100 px-6 py-4 flex justify-between items-center z-50">
+        <section id="plan-screen" class="hidden space-y-6 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 style="font-size: 1.5rem; font-weight: 800;">Trip Itinerary</h2>
+                <button id="add-place-btn" onclick="showAddPlaceModal()" style="padding: 10px; background: #e0e7ff; color: #4f46e5; border: none; border-radius: 12px; font-weight: 600;">Add Place</button>
+            </div>
+            <div id="itinerary-list" class="relative pl-8 space-y-8"></div>
+        </section>
+
+        <section id="split-screen" class="hidden space-y-6 animate-fade-in">
+            <h2 style="font-size: 1.5rem; font-weight: 800;">Settlement Results</h2>
+            <div id="split-results" class="space-y-4"></div>
+        </section>
+
+        <section id="trips-screen" class="hidden space-y-6 animate-fade-in">
+            <h2 style="font-size: 1.5rem; font-weight: 800;">Trip History</h2>
+            <div id="trips-list" class="space-y-4"></div>
+        </section>
+
+        <!-- Modal Overlay -->
+        <div id="modal-overlay" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-6 transition-all duration-300">
+            <div id="modal-content" class="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl animate-scale-in"></div>
+        </div>
+        <div id="toast-container" class="fixed top-10 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[1000] space-y-2 pointer-events-none"></div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 z-50 bottom-nav">
+        <div class="max-w-2xl mx-auto flex justify-around items-center h-20">
             <button onclick="showScreen('home')" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 transition-all duration-300" data-screen="home">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                <span class="text-[10px] font-black uppercase tracking-widest">Home</span>
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; tracking: 0.05em;">Home</span>
             </button>
             <button onclick="showScreen('expenses')" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 transition-all duration-300" data-screen="expenses">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"></path></svg>
-                <span class="text-[10px] font-black uppercase tracking-widest">List</span>
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"></path></svg>
+                <span style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; tracking: 0.05em;">List</span>
             </button>
-            <div class="relative -top-8">
-                <button id="fab" class="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-200 transform hover:scale-110 active:scale-95 transition-all duration-300">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <div style="position: relative; top: -20px;">
+                <button id="fab" style="width: 64px; height: 64px; background: #6366f1; color: white; border: none; border-radius: 20px; display: flex; align-items: center; justify-content: center; shadow: 0 10px 20px rgba(99,102,241,0.3); transform: rotate(45deg); transition: all 0.3s;">
+                    <svg style="width: 32px; height: 32px; transform: rotate(-45deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 </button>
             </div>
             <button onclick="showScreen('plan')" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 transition-all duration-300" data-screen="plan">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                <span class="text-[10px] font-black uppercase tracking-widest">Plan</span>
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; tracking: 0.05em;">Plan</span>
             </button>
             <button onclick="showScreen('trips')" class="nav-btn flex flex-col items-center space-y-1 text-slate-400 transition-all duration-300" data-screen="trips">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span class="text-[10px] font-black uppercase tracking-widest">Trips</span>
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; tracking: 0.05em;">Trips</span>
             </button>
-        </nav>
-
-        <!-- Modal Overlay -->
-        <div id="modal-overlay" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center hidden p-4 sm:items-center">
-            <div id="modal-content" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 animate-slide-up shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"></div>
         </div>
-        <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[100] space-y-2 pointer-events-none"></div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="js/firebase_init.js"></script>
+    </nav>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/db.js?v=7"></script>
-    <script src="js/sync.js?v=7"></script>
-    <script src="js/split.js?v=7"></script>
-    <script src="js/planner.js?v=7"></script>
-    <script src="js/share.js?v=7"></script>
-    <script src="js/ai.js?v=7"></script>
-    <script src="js/ui_engine.js?v=7"></script>
-    <script src="js/app.js?v=7"></script>
+    <script src="js/db.js?v=8"></script>
+    <script src="js/sync.js?v=8"></script>
+    <script src="js/split.js?v=8"></script>
+    <script src="js/planner.js?v=8"></script>
+    <script src="js/share.js?v=8"></script>
+    <script src="js/ai.js?v=8"></script>
+    <script src="js/ui_engine.js?v=8"></script>
+    <script src="js/app.js?v=8"></script>
 </body>
 </html>

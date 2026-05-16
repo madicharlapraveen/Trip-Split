@@ -1,26 +1,11 @@
 {
   "name": "trip-split",
   "version": "1.0.0",
-  "description": "",
-  "main": "service-worker.js",
+  "description": "Premium Trip Expense Manager PWA",
   "scripts": {
-    "build:css": "tailwindcss -i ./css/input.css -o ./css/style.css --minify",
-    "watch:css": "tailwindcss -i ./css/input.css -o ./css/style.css --watch"
+    "start": "serve ."
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/leenenterprises2025-sudo/Trip-Split.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/leenenterprises2025-sudo/Trip-Split/issues"
-  },
-  "homepage": "https://github.com/leenenterprises2025-sudo/Trip-Split#readme",
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.3.0",
-    "tailwindcss": "^4.3.0"
+  "dependencies": {
+    "serve": "^14.2.1"
   }
 }
