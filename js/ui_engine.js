@@ -442,13 +442,16 @@ async function loadHomeData() {
   document.getElementById('display-budget').textContent = `₹${budget.toLocaleString('en-IN')}`;
   
   // Update profile header
-  getUserProfile().then(profile => {
-    const profileDiv = document.getElementById('header-profile');
-    if (profileDiv && profile) {
+  const profileDiv = document.getElementById('header-profile');
+  if (profileDiv) {
+    getUserProfile().then(profile => {
+      if (profile && profile.name) {
         profileDiv.textContent = profile.name.charAt(0).toUpperCase();
-        profileDiv.classList.remove('hidden');
-    }
-  });
+      } else {
+        profileDiv.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+      }
+    });
+  }
 
   const budgetContainer = document.getElementById('budget-progress-container');
   if (budget > 0) {
