@@ -10,7 +10,8 @@ let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
 };
 
 // Global State
-let currentTripId = null;
+// currentTripId is now managed on window.currentTripId via index.html
+
 
 
 function saveData() {
