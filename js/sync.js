@@ -4,7 +4,11 @@ const SUPABASE_URL = 'https://zusxxcnbjfsvpqxwhrcu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oo8cHEsC6KH2l4H2P9l5Cw_iwqtYcXn';
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+if (typeof window.supabaseClient === 'undefined') {
+    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+var supabase = window.supabaseClient;
+
 
 // Device Identity
 function getDeviceId() {
