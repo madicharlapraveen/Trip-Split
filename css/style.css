@@ -26,6 +26,40 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+.hidden { display: none !important; }
+.flex { display: flex !important; }
+.items-center { align-items: center !important; }
+.justify-between { justify-content: space-between !important; }
+.space-y-4 > * + * { margin-top: 1rem !important; }
+.space-y-6 > * + * { margin-top: 1.5rem !important; }
+.space-y-8 > * + * { margin-top: 2rem !important; }
+.grid { display: grid !important; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+.gap-4 { gap: 1rem !important; }
+.w-full { width: 100% !important; }
+.text-center { text-align: center !important; }
+.fixed { position: fixed !important; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0 !important; }
+.z-50 { z-index: 50 !important; }
+.z-\[100\] { z-index: 100 !important; }
+.backdrop-blur-sm { backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important; }
+.backdrop-blur-xl { backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important; }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important; }
+.animate-scale-in { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+.p-6 { padding: 1.5rem !important; }
+.p-8 { padding: 2rem !important; }
+.text-slate-400 { color: #94a3b8 !important; }
+.text-slate-100 { color: #f1f5f9 !important; }
+.bg-slate-900\/40 { background-color: rgba(15, 23, 42, 0.4) !important; }
+.transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms !important; }
+.duration-300 { transition-duration: 300ms !important; }
+.space-y-1 > * + * { margin-top: 0.25rem !important; }
+.max-w-sm { max-w: 24rem !important; }
+.top-10 { top: 2.5rem !important; }
+.left-1\/2 { left: 50% !important; }
+.-translate-x-1\/2 { transform: translateX(-50%) !important; }
+
 body {
     font-family: 'Outfit', sans-serif;
     background-color: var(--background);
