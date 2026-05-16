@@ -85,7 +85,7 @@ async function saveUserProfile(profile) {
     return data;
 }
 
-async function getUserProfile() {
+window.getUserProfile = async function() {
     const local = localStorage.getItem('tripsplit_user_profile');
     if (local) return JSON.parse(local);
     
