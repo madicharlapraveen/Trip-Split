@@ -388,14 +388,18 @@ function showAddExpenseModal() {
 
 // Load home data
 async function loadHomeData() {
+  const participantsList = document.getElementById('participants-list');
+  
   if (!currentTripId) {
     document.getElementById('current-trip-name').textContent = 'No trip selected';
     document.getElementById('total-expense').textContent = '₹0';
-    document.getElementById('participants-list').innerHTML = `
-        <div class="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all" onclick="showTripSelectionModal()">
-            <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            <span class="text-xs font-medium">Select Trip</span>
-        </div>`;
+    if (participantsList) {
+        participantsList.innerHTML = `
+            <div class="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all" onclick="showTripSelectionModal()">
+                <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <span class="text-xs font-medium">Select Trip</span>
+            </div>`;
+    }
     return;
   }
 
@@ -1275,4 +1279,86 @@ function calculateRemaining() {
     const advance = parseFloat(document.getElementById('expense-advance').value) || 0;
     const rem = document.getElementById('remaining-amount');
     if (rem) rem.textContent = '₹' + (total - advance).toFixed(2);
+}
+
+// Global UI Initialization
+function initUI() {
+    // Bind menu button
+    const menuBtn = document.getElementById('menu-btn');
+    if (menuBtn) {
+        menuBtn.onclick = showSettings;
+    }
+}
+
+// Settings Modal
+async function showSettings() {
+    const trip = currentTripId ? await getTrip(currentTripId) : null;
+    const profile = await getUserProfile();
+
+    const content = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-16 h-16 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-100">
+                    ${(profile ? profile.name : 'U').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">${profile ? profile.name : 'Guest User'}</h3>
+                    <p class="text-sm text-slate-400">Settings & Profile</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Trip Management</label>
+                
+                <button onclick="showEditTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </div>
+                        <span class="font-bold text-slate-700">Edit Trip Details</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                ${trip && trip.share_id ? `
+                <button onclick="showManageEditorsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        </div>
+                        <span class="font-bold text-slate-700">Manage Editors</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                ` : ''}
+
+                <button onclick="handleDeleteTripFromSettings()" class="w-full flex items-center justify-between p-4 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </div>
+                        <span class="font-bold text-rose-600">Delete Current Trip</span>
+                    </div>
+                    <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <div class="pt-6 border-t border-slate-100">
+                <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
+            </div>
+            
+            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v2.0 • Premium PWA</p>
+        </div>
+    `;
+    showModal(content);
+}
+
+// Delete helper from settings
+async function handleDeleteTripFromSettings() {
+    if (!currentTripId) return;
+    if (confirm('Are you sure you want to delete this trip and all its data? This cannot be undone.')) {
+        await deleteTrip(currentTripId);
+        currentTripId = null;
+        window.location.reload();
+    }
 }

@@ -1,8 +1,8 @@
 // app.js - Main application logic
 
 // State Management (Global)
-let currentTripId = null;
 let deferredPrompt = null;
+
 
 // Initialize app when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {

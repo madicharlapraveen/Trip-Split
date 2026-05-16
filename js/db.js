@@ -9,6 +9,10 @@ let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
     expenses: []
 };
 
+// Global State
+let currentTripId = null;
+
+
 function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     // Auto-sync if connected to cloud
