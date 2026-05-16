@@ -1220,12 +1220,13 @@ async function handleCloudSync() {
     }
 
     try {
-        await syncToCloud(currentTripId);
+        await syncTripToCloud(currentTripId);
         if (statusText) {
             statusText.textContent = 'Synced';
             statusText.className = 'text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg';
         }
         if (window.showToast) window.showToast('Trip synced to cloud!', 'success');
+        loadHomeData(); // Refresh UI to show the new ID
     } catch (error) {
         if (statusText) {
             statusText.textContent = 'Error';
