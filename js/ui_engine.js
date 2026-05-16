@@ -7,13 +7,15 @@ let currentScreen = 'home';
 function showScreen(screenId) {
   console.log('Switching to screen:', screenId);
   // Hide all screens
-  document.querySelectorAll('main > section').forEach(section => {
+  document.querySelectorAll('section[id$="-screen"]').forEach(section => {
+    section.style.display = 'none';
     section.classList.add('hidden');
   });
 
   // Show selected screen
   const screen = document.getElementById(`${screenId}-screen`);
   if (screen) {
+    screen.style.display = 'flex';
     screen.classList.remove('hidden');
     screen.classList.add('animate-fade-in');
   }
@@ -96,14 +98,20 @@ function showModal(content) {
   const modalOverlay = document.getElementById('modal-overlay');
   
   modalContent.innerHTML = content;
+  modalOverlay.style.display = 'flex';
   modalOverlay.classList.remove('hidden');
+  setTimeout(() => modalOverlay.classList.add('active'), 10);
   document.body.style.overflow = 'hidden'; // Prevent scroll
 }
 
 function hideModal() {
   const modalOverlay = document.getElementById('modal-overlay');
-  modalOverlay.classList.add('hidden');
-  document.body.style.overflow = ''; // Restore scroll
+  modalOverlay.classList.remove('active');
+  setTimeout(() => {
+    modalOverlay.classList.add('hidden');
+    modalOverlay.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }, 300);
 }
 
 // Toast Notification

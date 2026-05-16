@@ -196,8 +196,9 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 /* Floating Action Button */
 .fab {
     position: fixed;
-    bottom: 100px;
-    right: 24px;
+    bottom: 35px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 64px;
     height: 64px;
     background: var(--primary-gradient);
@@ -206,14 +207,14 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.4);
-    z-index: 40;
+    box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+    z-index: 60;
     border: none;
     cursor: pointer;
-    transition: transform 0.3s var(--transition-bouncy);
+    transition: all 0.3s var(--transition-bouncy);
 }
 
-.fab:active { transform: scale(0.9) rotate(5deg); }
+.fab:active { transform: translateX(-50%) scale(0.9) rotate(5deg); }
 .fab svg { width: 32px; height: 32px; }
 
 /* --- Navigation Dock --- */
@@ -273,15 +274,15 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 }
 
 /* Active Nav State */
-.nav-btn.active {
+.nav-btn.nav-active {
     color: var(--primary);
 }
 
-.nav-btn.active svg {
+.nav-btn.nav-active svg {
     transform: translateY(-8px);
 }
 
-.nav-btn.active span {
+.nav-btn.nav-active span {
     opacity: 1;
     transform: translateY(0);
 }
