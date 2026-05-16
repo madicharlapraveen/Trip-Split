@@ -4,8 +4,8 @@
   "description": "",
   "main": "service-worker.js",
   "scripts": {
-    "build:css": "npx tailwindcss -i ./css/input.css -o ./css/style.css --minify",
-    "watch:css": "npx tailwindcss -i ./css/input.css -o ./css/style.css --watch"
+    "build:css": "tailwindcss -i ./css/input.css -o ./css/style.css --minify",
+    "watch:css": "tailwindcss -i ./css/input.css -o ./css/style.css --watch"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/leenenterprises2025-sudo/Trip-Split#readme",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
     "tailwindcss": "^4.3.0"
   }
 }
