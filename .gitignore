@@ -1,6 +1,7 @@
-node_modules
-.firebase
-firebase-debug.log
+node_modules/
+.firebase/
+*-debug.log
 .DS_Store
-dist
+dist/
 *.local
+logs/
