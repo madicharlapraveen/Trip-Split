@@ -8,8 +8,11 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="assets/icon-192.png" type="image/png">
     
-    <!-- Link to our super cool new CSS -->
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <!-- Tailwind CDN for utility classes used by ui_engine.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Link to our super cool new CSS (Loaded after Tailwind to override it) -->
+    <link rel="stylesheet" href="css/style.css?v=11">
     <script>window.currentTripId = null;</script>
 </head>
 <body>
@@ -33,6 +36,11 @@
                 U
             </div>
         </header>
+
+        <!-- Top Trip Capsules (Injected by JS) -->
+        <div id="trips-capsule-container" class="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2" style="mask-image: linear-gradient(to right, black 85%, transparent 100%);">
+            <!-- Dynamically populated by loadTripsCapsules -->
+        </div>
 
         <!-- ================= HOME SCREEN ================= -->
         <section id="home-screen" class="flex-col gap-6 animate-slide-up">
@@ -94,6 +102,36 @@
                 </div>
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
             </button>
+
+            <!-- Budget Progress (Injected by JS) -->
+            <div id="budget-progress-container" class="hidden glass-card mt-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span id="budget-status-text" class="text-xs font-bold uppercase tracking-widest text-slate-500">Budget Progress</span>
+                    <span id="budget-percentage" class="text-sm font-bold">0%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div id="budget-progress-bar" class="h-full bg-indigo-500 transition-all duration-1000" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Expense Summary & Details -->
+            <div class="grid grid-cols-1 gap-4 mt-6">
+                <div class="glass-card">
+                    <h3 class="text-lg mb-4">Category Breakdown</h3>
+                    <div id="expense-summary" class="flex flex-col gap-4"></div>
+                </div>
+            </div>
+
+            <div class="glass-card mt-4">
+                <h3 class="text-lg mb-4">Recent Expenses</h3>
+                <div id="expense-details" class="flex flex-col gap-4"></div>
+            </div>
+
+            <!-- Detailed Participants -->
+            <div class="glass-card mt-4 mb-8">
+                <h3 class="text-lg mb-4">Participant Details</h3>
+                <div id="participants-details" class="flex flex-col gap-4"></div>
+            </div>
         </section>
 
         <!-- ================= EXPENSES SCREEN ================= -->
@@ -136,6 +174,16 @@
     <button id="fab" class="fab">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
     </button>
+
+    <!-- AI Planner Dropdown (Toggled by FAB on Plan screen) -->
+    <div id="ai-dropdown" class="hidden fixed z-50 glass-card p-2 flex flex-col gap-2" style="bottom: 180px; right: 24px; border-radius: 20px; min-width: 200px;">
+        <button class="w-full text-left p-3 rounded-xl hover:bg-indigo-50 transition-colors font-bold flex items-center gap-2 text-sm text-indigo-700" onclick="askGeminiForPlan()">
+            ✨ Get AI Plan
+        </button>
+        <button class="w-full text-left p-3 rounded-xl hover:bg-emerald-50 transition-colors font-bold flex items-center gap-2 text-sm text-emerald-700" onclick="importGeminiPlan()">
+            📥 Paste AI Plan
+        </button>
+    </div>
 
     <!-- Super Cool Floating iOS-Style Dock -->
     <nav class="nav-dock">

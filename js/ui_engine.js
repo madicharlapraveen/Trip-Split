@@ -817,8 +817,11 @@ function initUI() {
   updateCenterFAB(currentScreen);
   
   // Action FABs
-  document.getElementById('add-place-fab').addEventListener('click', showAddPlaceModal);
-  document.getElementById('add-expense-fab').addEventListener('click', showAddExpenseModal);
+  const addPlaceFab = document.getElementById('add-place-fab');
+  if (addPlaceFab) addPlaceFab.addEventListener('click', showAddPlaceModal);
+  
+  const addExpenseFab = document.getElementById('add-expense-fab');
+  if (addExpenseFab) addExpenseFab.addEventListener('click', showAddExpenseModal);
 
   // Export for Google Sheets
   const exportSheetsBtn = document.getElementById('export-sheets-btn');
