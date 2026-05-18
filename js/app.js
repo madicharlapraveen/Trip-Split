@@ -73,6 +73,14 @@ async function initApp() {
     const activeTrip = trips.find(t => t.id === currentTripId);
     if (activeTrip && activeTrip.share_id && typeof subscribeToTripUpdates === 'function') {
         subscribeToTripUpdates(activeTrip.share_id);
+    } else {
+        if (typeof updateLiveStatusIndicator === 'function') {
+            updateLiveStatusIndicator(false);
+        }
+    }
+  } else {
+    if (typeof updateLiveStatusIndicator === 'function') {
+        updateLiveStatusIndicator(false);
     }
   }
 
@@ -102,6 +110,14 @@ async function selectTrip(tripId) {
   const trip = await getTrip(tripId);
   if (trip && trip.share_id && typeof subscribeToTripUpdates === 'function') {
       subscribeToTripUpdates(trip.share_id);
+  } else {
+      if (typeof realtimeSubscription !== 'undefined' && realtimeSubscription) {
+          supabase.removeChannel(realtimeSubscription);
+          window.realtimeSubscription = null;
+      }
+      if (typeof updateLiveStatusIndicator === 'function') {
+          updateLiveStatusIndicator(false);
+      }
   }
 }
 
@@ -204,6 +220,27 @@ async function editExpense(expenseId) {
           ${participantOptions}
         </select>
       </div>
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Split With</label>
+          <div class="flex gap-2">
+            <button type="button" onclick="toggleSelectAllParticipants(true)" class="text-[10px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-wider">Select All</button>
+            <span class="text-slate-300">|</span>
+            <button type="button" onclick="toggleSelectAllParticipants(false)" class="text-[10px] font-black text-rose-500 hover:text-rose-700 uppercase tracking-wider">Clear</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto no-scrollbar p-2 bg-slate-50 rounded-2xl" id="split-participants-container">
+          ${participants.map(p => {
+            const isSplitWith = !expense.splitBetween || expense.splitBetween.includes(p.id);
+            return `
+              <label class="flex items-center space-x-2 p-2.5 bg-white rounded-xl border border-slate-100 cursor-pointer text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                <input type="checkbox" name="split-participant" value="${p.id}" ${isSplitWith ? 'checked' : ''} class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="truncate">${p.name}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
       <div class="flex space-x-3 pt-4">
         <button type="submit" class="flex-1 btn-primary py-4">Update Expense</button>
         <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
@@ -228,13 +265,21 @@ async function editExpense(expenseId) {
       let category = document.getElementById('expense-category').value;
       const paidBy = Number(document.getElementById('expense-paid-by').value);
 
+      const splitCheckboxes = document.querySelectorAll('input[name="split-participant"]:checked');
+      const splitBetween = Array.from(splitCheckboxes).map(cb => Number(cb.value));
+
+      if (splitBetween.length === 0) {
+        alert('You must select at least one person to split with.');
+        return;
+      }
+
       if (category === 'Others') {
         const manual = document.getElementById('edit-manual-category').value.trim();
         category = manual || 'Others';
       }
 
       if (title && totalPay > 0) {
-      await updateExpense(expenseId, { title, amount, totalPay, advancePay, category, paidBy });
+      await updateExpense(expenseId, { title, amount, totalPay, advancePay, category, paidBy, splitBetween });
       hideModal();
       loadHomeData();
       loadExpenses();

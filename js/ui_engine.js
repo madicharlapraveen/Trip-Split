@@ -1,11 +1,25 @@
-// ui.js - UI management functions
-console.log('ui.js loading...');
+// ui_engine.js - Consolidated PWA Modernized UI Engine
+console.log('ui_engine.js loading...');
 
+// Global App State
 let currentScreen = 'home';
+window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 
-// Navigation functions
-function showScreen(screenId) {
+// Supported Currencies List (F7)
+const CURRENCIES = [
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+    { code: 'USD', symbol: '$', name: 'US Dollar' },
+    { code: 'EUR', symbol: '€', name: 'Euro' },
+    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
+    { code: 'THB', symbol: '฿', name: 'Thai Baht' },
+    { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' }
+];
+
+// Navigation Flow
+window.showScreen = function(screenId) {
   console.log('Switching to screen:', screenId);
+  
   // Hide all screens
   document.querySelectorAll('section[id$="-screen"]').forEach(section => {
     section.style.display = 'none';
@@ -20,7 +34,7 @@ function showScreen(screenId) {
     screen.classList.add('animate-fade-in');
   }
 
-  // Update navigation buttons
+  // Update bottom navigation bar buttons
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.remove('nav-active');
   });
@@ -30,13 +44,15 @@ function showScreen(screenId) {
     activeBtn.classList.add('nav-active');
   }
 
-  // Top Capsule visibility - Only show on home and list
+  // Top Capsule Container Visibility (only home, expenses, or split tabs)
   const capsuleContainer = document.getElementById('trips-capsule-container');
-  if (screenId === 'home' || screenId === 'expenses') {
-    capsuleContainer.classList.remove('hidden');
-    loadTripsCapsules();
-  } else {
-    capsuleContainer.classList.add('hidden');
+  if (capsuleContainer) {
+    if (['home', 'expenses', 'split'].includes(screenId)) {
+      capsuleContainer.classList.remove('hidden');
+      loadTripsCapsules();
+    } else {
+      capsuleContainer.classList.add('hidden');
+    }
   }
 
   // Load screen-specific data
@@ -44,109 +60,150 @@ function showScreen(screenId) {
   if (screenId === 'expenses') loadExpenses();
   if (screenId === 'plan') loadTripNotes();
   if (screenId === 'split') calculateSplit();
-  if (screenId === 'history' || screenId === 'trips') loadTrips();
+  if (screenId === 'trips') loadTrips();
+  if (screenId === 'my') loadMyData();
 
-  // Update Center FAB context
+  // Contextual Global FAB binding
   updateCenterFAB(screenId);
 
   currentScreen = screenId;
-}
+};
 
+// Contextual Floating Action Button updates
 function updateCenterFAB(screenId) {
   const fab = document.getElementById('fab');
   if (!fab) return;
 
-  // Clear previous icon
   fab.innerHTML = '';
-  
-  // Define icons and actions based on screen
   let iconHTML = '';
   let action = () => {};
 
   switch(screenId) {
     case 'expenses':
-      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>';
       action = showAddExpenseModal;
       break;
     case 'plan':
-      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
       action = () => {
         const dropdown = document.getElementById('ai-dropdown');
         if (dropdown) dropdown.classList.toggle('hidden');
       };
       break;
-    case 'history':
     case 'trips':
-      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>';
       action = showCreateTripModal;
       break;
     default:
-      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+      iconHTML = '<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>';
       action = showCreateTripModal;
   }
 
   fab.innerHTML = iconHTML;
-  // Use a fresh listener to avoid accumulation
   const newFab = fab.cloneNode(true);
   fab.parentNode.replaceChild(newFab, fab);
   newFab.addEventListener('click', action);
 }
 
-// Modal functions
-function showModal(content) {
+// Modal Base Panels
+window.showModal = function(content) {
   const modalContent = document.getElementById('modal-content');
   const modalOverlay = document.getElementById('modal-overlay');
   
-  modalContent.innerHTML = content;
-  modalOverlay.style.display = 'flex';
-  modalOverlay.classList.remove('hidden');
-  setTimeout(() => modalOverlay.classList.add('active'), 10);
-  document.body.style.overflow = 'hidden'; // Prevent scroll
-}
+  if (modalContent && modalOverlay) {
+    modalContent.innerHTML = content;
+    modalOverlay.style.display = 'flex';
+    modalOverlay.classList.remove('hidden');
+    setTimeout(() => modalOverlay.classList.add('active'), 10);
+    document.body.style.overflow = 'hidden'; // Stop background scrolling
+  }
+};
 
-function hideModal() {
+window.hideModal = function() {
   const modalOverlay = document.getElementById('modal-overlay');
-  modalOverlay.classList.remove('active');
-  setTimeout(() => {
-    modalOverlay.classList.add('hidden');
-    modalOverlay.style.display = 'none';
-    document.body.style.overflow = 'auto';
-  }, 300);
-}
-
-// Toast Notification
-window.showToast = function(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    
-    const toast = document.createElement('div');
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
-    const bg = type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 
-               type === 'error' ? 'bg-rose-50 border-rose-100 text-rose-800' : 
-               'bg-white/90 border-slate-100 text-slate-800 backdrop-blur-xl shadow-2xl';
-               
-    toast.className = `p-4 rounded-2xl border flex items-start space-x-3 transition-all duration-500 transform translate-y-[-100%] opacity-0 ${bg}`;
-    toast.innerHTML = `
-        <div class="text-xl">${icon}</div>
-        <div class="flex-1 mt-0.5 font-bold text-xs leading-relaxed">${message}</div>
-    `;
-    
-    container.appendChild(toast);
-    
-    // Animate in
-    requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-[-100%]', 'opacity-0');
-    });
-    
-    // Remove after 4s
+  if (modalOverlay) {
+    modalOverlay.classList.remove('active');
     setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-[-100%]');
-        setTimeout(() => toast.remove(), 500);
-    }, 4000);
+      modalOverlay.classList.add('hidden');
+      modalOverlay.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }, 300);
+  }
+};
+
+// Premium Toast Alert system
+window.showToast = function(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+  const bg = type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 
+             type === 'error' ? 'bg-rose-50 border-rose-100 text-rose-800' : 
+             'bg-white/90 border-slate-100 text-slate-800 backdrop-blur-xl shadow-2xl';
+             
+  toast.className = `p-4 rounded-2xl border flex items-start space-x-3 transition-all duration-500 transform translate-y-[-100%] opacity-0 ${bg}`;
+  toast.innerHTML = `
+      <div class="text-xl">${icon}</div>
+      <div class="flex-1 mt-0.5 font-bold text-xs leading-relaxed">${message}</div>
+  `;
+  
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+      toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+  });
+  
+  setTimeout(() => {
+      toast.classList.add('opacity-0', 'translate-y-[-100%]');
+      setTimeout(() => toast.remove(), 500);
+  }, 4000);
+};
+
+// Sync status dot & sync trigger (F2)
+window.updateLiveStatusIndicator = function(isSynced) {
+  const el = document.getElementById('live-sync-indicator');
+  if (!el) return;
+  
+  const pendingSync = typeof data !== 'undefined' && data.pendingSync;
+  
+  if (!navigator.onLine) {
+    el.className = "flex items-center gap-1.5 bg-rose-500/20 text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all";
+    el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>Offline`;
+  } else if (isSynced === false || pendingSync) {
+    el.className = "flex items-center gap-1.5 bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all";
+    el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>Pending`;
+  } else {
+    el.className = "flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all";
+    el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Synced`;
+  }
+};
+
+window.addEventListener('online', () => updateLiveStatusIndicator(true));
+window.addEventListener('offline', () => updateLiveStatusIndicator(false));
+
+// Load active trip capsules at the top header
+async function loadTripsCapsules() {
+  const trips = await getTrips();
+  const container = document.getElementById('trips-capsule-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  trips.forEach(trip => {
+    const isActive = currentTripId === trip.id;
+    const capsule = document.createElement('button');
+    capsule.onclick = () => selectTrip(trip.id);
+    capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all ${
+      isActive 
+      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-105' 
+      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+    }`;
+    capsule.textContent = trip.tripName;
+    container.appendChild(capsule);
+  });
 }
 
-// Trip selection modal
-function showTripSelectionModal() {
+// Select trip modal dialog
+window.showTripSelectionModal = function() {
   getTrips().then(trips => {
     let content = `
       <div class="flex justify-between items-center mb-6">
@@ -186,9 +243,13 @@ function showTripSelectionModal() {
     }
     showModal(content);
   });
-}
+};
 
-function showCreateTripModal() {
+// Create Trip Modal with currency selector and templates option (F6, F7)
+window.showCreateTripModal = async function() {
+  const templates = typeof getTemplates === 'function' ? await getTemplates() : [];
+  const templatesOptions = templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
   const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">New Trip</h3>
     <form id="create-trip-form" class="space-y-5">
@@ -196,10 +257,30 @@ function showCreateTripModal() {
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trip Name</label>
         <input type="text" id="trip-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="E.g. Goa Trip 2024" required>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Estimated Budget (₹)</label>
-        <input type="number" id="trip-budget" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="0.00" min="0" step="0.01">
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Estimated Budget</label>
+          <input type="number" id="trip-budget" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Base Currency</label>
+          <select id="trip-currency" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all">
+            ${CURRENCIES.map(c => `<option value="${c.code}" ${c.code === 'INR' ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join('')}
+          </select>
+        </div>
       </div>
+
+      ${templates.length > 0 ? `
+      <div>
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">⚡ Start from Template</label>
+        <select id="create-trip-template" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all">
+          <option value="">-- Fresh Trip --</option>
+          ${templatesOptions}
+        </select>
+      </div>
+      ` : ''}
+
       <div>
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Notes (Optional)</label>
         <textarea id="trip-notes-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="3" placeholder="Brief description..."></textarea>
@@ -217,37 +298,59 @@ function showCreateTripModal() {
     const tripName = document.getElementById('trip-name').value.trim();
     const budget = parseFloat(document.getElementById('trip-budget').value) || 0;
     const notes = document.getElementById('trip-notes-input').value.trim();
+    const currencyCode = document.getElementById('trip-currency').value;
+    const currencyObj = CURRENCIES.find(c => c.code === currencyCode) || { code: 'INR', symbol: '₹' };
+
+    const templateSelect = document.getElementById('create-trip-template');
+    const selectedTemplateId = templateSelect ? Number(templateSelect.value) : null;
 
     if (tripName) {
-      const tripId = await addTrip({ tripName, notes, estimatedBudget: budget });
+      let tripId;
+      if (selectedTemplateId && typeof getTemplates === 'function') {
+        const list = await getTemplates();
+        const template = list.find(t => t.id === selectedTemplateId);
+        if (template) {
+          tripId = await addTrip({
+            tripName: tripName,
+            notes: notes || `Created from template: ${template.name}`,
+            estimatedBudget: budget || template.estimatedBudget,
+            currency: template.currency || currencyObj.code,
+            currencySymbol: template.currencySymbol || currencyObj.symbol,
+            itinerary: template.itinerary || []
+          });
+          
+          // Auto add crew from template
+          if (template.crew && template.crew.length > 0) {
+            for (const member of template.crew) {
+              await addParticipant({
+                tripId: tripId,
+                name: member.name,
+                phone: '',
+                familyCount: member.familyCount || 1
+              });
+            }
+          }
+          if (window.showToast) window.showToast('Created trip from template! Crew loaded. ✅', 'success');
+        }
+      } else {
+        tripId = await addTrip({ 
+          tripName, 
+          notes, 
+          estimatedBudget: budget, 
+          currency: currencyObj.code, 
+          currencySymbol: currencyObj.symbol 
+        });
+      }
+      
       hideModal();
       loadTrips();
       selectTrip(tripId);
     }
   });
-}
-async function loadTripsCapsules() {
-  const trips = await getTrips();
-  const container = document.getElementById('trips-capsule-container');
-  if (!container) return;
+};
 
-  container.innerHTML = '';
-  trips.forEach(trip => {
-    const isActive = currentTripId === trip.id;
-    const capsule = document.createElement('button');
-    capsule.onclick = () => selectTrip(trip.id);
-    capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all ${
-      isActive 
-      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-105' 
-      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-    }`;
-    capsule.textContent = trip.tripName;
-    container.appendChild(capsule);
-  });
-}
-
-// Participant modal
-function showAddParticipantModal() {
+// Add Participant Modal
+window.showAddParticipantModal = function() {
   if (!currentTripId) {
     showTripSelectionModal();
     return;
@@ -266,7 +369,7 @@ function showAddParticipantModal() {
           <input type="tel" id="participant-phone" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="+91...">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Family/Group Size (Self + others)</label>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Family Size (Self + others)</label>
           <input type="number" id="participant-family" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="1" value="1">
         </div>
       </div>
@@ -290,10 +393,10 @@ function showAddParticipantModal() {
       loadHomeData();
     }
   });
-}
+};
 
-// Expense modal
-function showAddExpenseModal() {
+// Add Expense Modal with Collapsible "Split With" dropdown and Foreign currency + Recurring fields (F4, F7, F8)
+window.showAddExpenseModal = function() {
   if (!currentTripId) {
     showTripSelectionModal();
     return;
@@ -307,6 +410,7 @@ function showAddExpenseModal() {
     }
 
     const participantOptions = participants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    const baseSymbol = window.currentTripSymbol || '₹';
 
     const content = `
       <h3 class="text-xl font-bold mb-6 text-slate-800">New Expense</h3>
@@ -315,21 +419,56 @@ function showAddExpenseModal() {
           <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">What did you pay for?</label>
           <input type="text" id="expense-title" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Lunch, Fuel, etc." required>
         </div>
+        
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Price (₹)</label>
-            <input type="number" id="expense-total" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" placeholder="0.00" oninput="calculateRemaining()" required>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Price (${baseSymbol})</label>
+            <input type="number" id="expense-total" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" placeholder="0.00" oninput="calculateForeignAmount()" required>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Advance Paid (₹)</label>
-            <input type="number" id="expense-advance" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="0" oninput="calculateRemaining()">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Advance Paid (${baseSymbol})</label>
+            <input type="number" id="expense-advance" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" min="0" step="0.01" value="0" oninput="calculateForeignAmount()">
           </div>
         </div>
-        <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center">
-            <span class="text-xs font-bold text-slate-400 uppercase">Remaining to Pay</span>
-            <span id="remaining-amount" class="font-black text-rose-500">₹0.00</span>
+        
+        <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center text-xs font-bold text-slate-600">
+            <span class="uppercase tracking-widest text-[10px]">Payment Summary</span>
+            <span id="remaining-amount" class="text-rose-500 font-extrabold">Remaining: ${baseSymbol}0.00</span>
         </div>
+
+        <!-- F7: Foreign Currency Support -->
+        <div class="p-4 bg-slate-100/50 rounded-2xl space-y-4">
+          <label class="flex items-center space-x-2 cursor-pointer text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <input type="checkbox" id="expense-foreign-toggle" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleForeignCurrencyFields()">
+            <span>Paid in Foreign Currency?</span>
+          </label>
+          <div id="foreign-currency-fields" class="hidden grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Currency Code</label>
+              <select id="expense-foreign-currency" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs font-bold" onchange="calculateForeignAmount()">
+                ${CURRENCIES.map(c => `<option value="${c.code}">${c.code} (${c.symbol})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rate (1 Foreign = ? Base)</label>
+              <input type="number" id="expense-exchange-rate" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs font-bold" min="0" step="0.0001" placeholder="Exchange rate" oninput="calculateForeignAmount()">
+            </div>
+          </div>
         </div>
+
+        <!-- F8: Recurring Expense -->
+        <div class="p-4 bg-slate-100/50 rounded-2xl space-y-3">
+          <label class="flex items-center space-x-2 cursor-pointer text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <input type="checkbox" id="expense-recurring-toggle" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleRecurringFields()">
+            <span>🔄 Repeat Daily?</span>
+          </label>
+          <div id="recurring-fields" class="hidden">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Repeat For How Many Days? (Max 7)</label>
+            <input type="number" id="expense-recurring-days" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs font-bold" min="1" max="7" value="3">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Category</label>
             <select id="expense-category" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
@@ -343,19 +482,49 @@ function showAddExpenseModal() {
               <option value="Miscellaneous">Miscellaneous</option>
             </select>
           </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Paid By</label>
+            <select id="expense-paid-by" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
+              ${participantOptions}
+            </select>
+          </div>
         </div>
+
         <div id="manual-category-container" class="hidden">
           <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Manual Category Name</label>
           <input type="text" id="manual-category" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="E.g. Toll, Laundry">
         </div>
+
+        <!-- Collapsible Dropdown split checklist -->
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Paid By</label>
-          <select id="expense-paid-by" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" required>
-            ${participantOptions}
-          </select>
+          <button type="button" onclick="toggleSplitWithContainer()" class="w-full p-4 bg-slate-50 rounded-2xl flex justify-between items-center text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+              <span>👥 Split With: All Crew (Tap to customize)</span>
+              <svg id="split-arrow" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          
+          <div id="split-with-collapsible" class="hidden mt-3 p-3 bg-slate-50 rounded-2xl space-y-3">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Crew Members</span>
+              <div class="flex gap-2">
+                <button type="button" onclick="toggleSelectAllAddParticipants(true)" class="text-[10px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-wider">Select All</button>
+                <span class="text-slate-300">|</span>
+                <button type="button" onclick="toggleSelectAllAddParticipants(false)" class="text-[10px] font-black text-rose-500 hover:text-rose-700 uppercase tracking-wider">Clear</button>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto no-scrollbar p-1">
+              ${participants.map(p => `
+                <label class="flex items-center space-x-2 p-2.5 bg-white rounded-xl border border-slate-100 cursor-pointer text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <input type="checkbox" name="add-split-participant" value="${p.id}" checked class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span class="truncate">${p.name}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
         </div>
+
         <div class="flex space-x-3 pt-4">
-          <button type="submit" class="flex-1 btn-primary py-4">Add Expense</button>
+          <button type="submit" class="w-full btn-primary py-4">Add Expense</button>
           <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
         </div>
       </form>
@@ -366,36 +535,170 @@ function showAddExpenseModal() {
     const manualContainer = document.getElementById('manual-category-container');
     
     categorySelect.addEventListener('change', () => {
-      manualContainer.classList.toggle('hidden', categorySelect.value !== 'Others');
+      const val = categorySelect.value;
+      manualContainer.classList.toggle('hidden', val !== 'Others');
+      
+      // Wire F4 Split Presets
+      if (typeof getPresetForCategory === 'function') {
+        const preset = getPresetForCategory(currentTripId, val);
+        if (preset) {
+          document.querySelectorAll('input[name="add-split-participant"]').forEach(cb => {
+            cb.checked = preset.participantIds.includes(Number(cb.value));
+          });
+          if (window.showToast) window.showToast(`Preset auto-applied for ${val} ⚡`, 'success');
+        }
+      }
     });
-    // Show by default if Others is selected
-    manualContainer.classList.remove('hidden');
 
     document.getElementById('add-expense-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('expense-title').value.trim();
-      const totalAmount = parseFloat(document.getElementById('expense-total').value);
-      const advancePay = parseFloat(document.getElementById('expense-advance').value) || 0;
+      let totalAmount = parseFloat(document.getElementById('expense-total').value);
+      let advancePay = parseFloat(document.getElementById('expense-advance').value) || 0;
       let category = document.getElementById('expense-category').value;
       const paidBy = Number(document.getElementById('expense-paid-by').value);
+
+      const splitCheckboxes = document.querySelectorAll('input[name="add-split-participant"]:checked');
+      const splitBetween = Array.from(splitCheckboxes).map(cb => Number(cb.value));
+
+      if (splitBetween.length === 0) {
+        alert('You must select at least one person to split with.');
+        return;
+      }
 
       if (category === 'Others') {
         const manual = document.getElementById('manual-category').value.trim();
         category = manual || 'Others';
       }
 
+      // Foreign Exchange calculations
+      const foreignToggle = document.getElementById('expense-foreign-toggle');
+      if (foreignToggle && foreignToggle.checked) {
+        const rate = parseFloat(document.getElementById('expense-exchange-rate').value) || 1;
+        totalAmount = totalAmount * rate;
+        advancePay = advancePay * rate;
+      }
+
+      const isRecurring = document.getElementById('expense-recurring-toggle').checked;
+      const recurringDays = isRecurring ? Math.min(Number(document.getElementById('expense-recurring-days').value) || 1, 7) : 1;
+
       if (title && totalAmount > 0) {
-        await addExpense({ tripId: currentTripId, title, amount: totalAmount, totalAmount, advancePay, category, paidBy });
+        if (isRecurring && recurringDays > 1) {
+          const tempParentId = Date.now() + Math.floor(Math.random() * 1000);
+          for (let i = 0; i < recurringDays; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            
+            await addExpense({
+              tripId: currentTripId,
+              title: `${title} (Day ${i + 1})`,
+              amount: totalAmount,
+              totalAmount: totalAmount,
+              advancePay: advancePay,
+              category: category,
+              paidBy: paidBy,
+              splitBetween: splitBetween,
+              createdAt: d.toISOString(),
+              isRecurring: true,
+              recurringDayIndex: i,
+              parentRecurringId: i === 0 ? null : tempParentId
+            });
+          }
+          if (window.showToast) window.showToast(`Added recurring expense for ${recurringDays} days! 🔄`, 'success');
+        } else {
+          await addExpense({ 
+            tripId: currentTripId, 
+            title, 
+            amount: totalAmount, 
+            totalAmount, 
+            advancePay, 
+            category, 
+            paidBy, 
+            splitBetween 
+          });
+        }
         hideModal();
         loadHomeData();
         loadExpenses();
       }
     });
   });
-}
+};
 
-// Load home data
-async function loadHomeData() {
+// Collapsible helper buttons
+window.toggleSplitWithContainer = function() {
+  const container = document.getElementById('split-with-collapsible');
+  const arrow = document.getElementById('split-arrow');
+  if (container) {
+    container.classList.toggle('hidden');
+    if (arrow) {
+      arrow.style.transform = container.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+  }
+};
+
+window.toggleSelectAllAddParticipants = function(checked) {
+  document.querySelectorAll('input[name="add-split-participant"]').forEach(cb => {
+    cb.checked = checked;
+  });
+};
+
+window.toggleSelectAllParticipants = function(checked) {
+  document.querySelectorAll('input[name="split-participant"]').forEach(cb => {
+    cb.checked = checked;
+  });
+};
+
+window.toggleForeignCurrencyFields = function() {
+  const toggle = document.getElementById('expense-foreign-toggle');
+  const fields = document.getElementById('foreign-currency-fields');
+  if (toggle && fields) {
+    fields.classList.toggle('hidden', !toggle.checked);
+  }
+};
+
+window.calculateForeignAmount = function() {
+  const toggle = document.getElementById('expense-foreign-toggle');
+  const totalInput = document.getElementById('expense-total');
+  const advanceInput = document.getElementById('expense-advance');
+  const rateInput = document.getElementById('expense-exchange-rate');
+  const remDisplay = document.getElementById('remaining-amount');
+  const tripSymbol = window.currentTripSymbol || '₹';
+  
+  if (toggle && toggle.checked) {
+    const rate = parseFloat(rateInput.value) || 1;
+    const foreignAmount = parseFloat(totalInput.value) || 0;
+    const foreignAdvance = parseFloat(advanceInput.value) || 0;
+    
+    const baseAmount = foreignAmount * rate;
+    const baseAdvance = foreignAdvance * rate;
+    const baseRemaining = baseAmount - baseAdvance;
+    
+    remDisplay.innerHTML = `<span class="text-slate-400 font-normal">Base:</span> ${tripSymbol}${baseAmount.toFixed(2)} <span class="mx-1 font-normal text-slate-300">|</span> <span class="text-slate-400 font-normal">Rem:</span> ${tripSymbol}${baseRemaining.toFixed(2)}`;
+  } else {
+    calculateRemaining();
+  }
+};
+
+window.toggleRecurringFields = function() {
+  const toggle = document.getElementById('expense-recurring-toggle');
+  const fields = document.getElementById('recurring-fields');
+  if (toggle && fields) {
+    fields.classList.toggle('hidden', !toggle.checked);
+  }
+};
+
+// Calculate base remaining in Add modal (without foreign currency)
+window.calculateRemaining = function() {
+  const total = parseFloat(document.getElementById('expense-total').value) || 0;
+  const advance = parseFloat(document.getElementById('expense-advance').value) || 0;
+  const rem = document.getElementById('remaining-amount');
+  const tripSymbol = window.currentTripSymbol || '₹';
+  if (rem) rem.textContent = `Remaining: ${tripSymbol}${(total - advance).toFixed(2)}`;
+};
+
+// Load Home Page data
+async function loadHomeData(silentModeSwitch = false) {
   const participantsList = document.getElementById('participants-list');
   
   if (!currentTripId) {
@@ -415,33 +718,48 @@ async function loadHomeData() {
   const participants = await getParticipants(currentTripId);
   const expenses = await getExpenses(currentTripId);
 
+  const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
+  window.currentTripSymbol = tripSymbol;
+
+  // Active theme sync
+  document.body.className = window.currentAppMode === 'adviser' ? 'theme-adviser' : 'theme-split';
+
   document.getElementById('current-trip-name').textContent = trip ? trip.tripName : 'No trip selected';
   const subtext = document.getElementById('trip-dates');
   if (subtext) {
-      if (trip) {
-          subtext.textContent = trip.notes || 'Manage your travel expenses';
-      } else {
-          subtext.textContent = 'Select or create a trip to start';
-      }
+      subtext.textContent = (trip && trip.notes) ? trip.notes : 'Manage your travel expenses';
   }
 
   const totalExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  document.getElementById('total-expense').textContent = `₹${totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
+  document.getElementById('total-expense').textContent = `${tripSymbol}${totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
   // Update Share ID pill
   const idCol = document.getElementById('trip-id-pill');
-  if (trip && trip.share_id) {
-      idCol.classList.remove('hidden');
-      document.getElementById('display-share-id').textContent = trip.share_id;
-  } else {
-      idCol.classList.add('hidden');
+  if (idCol) {
+    if (trip && trip.share_id) {
+        idCol.classList.remove('hidden');
+        document.getElementById('display-share-id').textContent = trip.share_id;
+    } else {
+        idCol.classList.add('hidden');
+    }
   }
 
-  // Update Budget
+  // Update budget progress layout
   const budget = trip ? (trip.estimatedBudget || 0) : 0;
-  document.getElementById('display-budget').textContent = `₹${budget.toLocaleString('en-IN')}`;
-  
-  // Update profile header
+  document.getElementById('display-budget').textContent = `${tripSymbol}${budget.toLocaleString('en-IN')}`;
+
+  // F2 Sync indicator status
+  updateLiveStatusIndicator();
+
+  // F2 Small stats display inside split mode (Budget / Exp Count)
+  const statsDisplay = document.getElementById('split-mode-stats');
+  if (statsDisplay) {
+    statsDisplay.textContent = `Exp count: ${expenses.length}`;
+    if (window.currentAppMode === 'split') statsDisplay.classList.remove('hidden');
+    else statsDisplay.classList.add('hidden');
+  }
+
+  // Header profile letter sync
   const profileDiv = document.getElementById('header-profile');
   if (profileDiv) {
     getUserProfile().then(profile => {
@@ -454,167 +772,191 @@ async function loadHomeData() {
   }
 
   const budgetContainer = document.getElementById('budget-progress-container');
-  if (budget > 0) {
-      budgetContainer.classList.remove('hidden');
-      const percentage = Math.min((totalExpense / budget) * 100, 100);
-      const progressBar = document.getElementById('budget-progress-bar');
-      const percentageText = document.getElementById('budget-percentage');
-      
-      percentageText.textContent = `${Math.round((totalExpense / budget) * 100)}%`;
-      progressBar.style.width = `${percentage}%`;
-      
-      // Color coding based on budget usage
-      if (totalExpense > budget) {
-          progressBar.classList.remove('bg-white');
-          progressBar.classList.add('bg-rose-400');
-          document.getElementById('budget-status-text').textContent = 'Budget Exceeded!';
-      } else if (totalExpense > budget * 0.8) {
-          progressBar.classList.remove('bg-white', 'bg-rose-400');
-          progressBar.classList.add('bg-amber-400');
-          document.getElementById('budget-status-text').textContent = 'Approaching Limit';
-      } else {
-          progressBar.classList.remove('bg-rose-400', 'bg-amber-400');
-          progressBar.classList.add('bg-white');
-          document.getElementById('budget-status-text').textContent = 'Budget Progress';
-      }
-  } else {
-      budgetContainer.classList.add('hidden');
+  if (budgetContainer) {
+    if (budget > 0 && window.currentAppMode === 'split') {
+        budgetContainer.classList.remove('hidden');
+        const percentage = Math.min((totalExpense / budget) * 100, 100);
+        const progressBar = document.getElementById('budget-progress-bar');
+        const percentageText = document.getElementById('budget-percentage');
+        
+        if (percentageText) percentageText.textContent = `${Math.round((totalExpense / budget) * 100)}%`;
+        if (progressBar) progressBar.style.width = `${percentage}%`;
+        
+        const statusText = document.getElementById('budget-status-text');
+        if (statusText) {
+          if (totalExpense > budget) {
+              progressBar.classList.remove('bg-white');
+              progressBar.classList.add('bg-rose-400');
+              statusText.textContent = 'Budget Exceeded!';
+          } else if (totalExpense > budget * 0.8) {
+              progressBar.classList.remove('bg-white', 'bg-rose-400');
+              progressBar.classList.add('bg-amber-400');
+              statusText.textContent = 'Approaching Limit';
+          } else {
+              progressBar.classList.remove('bg-rose-400', 'bg-amber-400');
+              progressBar.classList.add('bg-white');
+              statusText.textContent = 'Budget Progress';
+          }
+        }
+    } else {
+        budgetContainer.classList.add('hidden');
+    }
   }
 
-  // Update participants horizontal list
-  const participantsList = document.getElementById('participants-list');
-  participantsList.innerHTML = '';
-  
-  participants.forEach(participant => {
-    const card = document.createElement('div');
-    card.className = 'bg-white rounded-3xl p-4 min-w-[140px] shadow-sm border border-slate-100 flex flex-col items-center animate-scale-in relative group';
-    card.innerHTML = `
-      <button onclick="editParticipant(${participant.id})" class="absolute top-2 right-2 p-1 bg-slate-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-      </button>
-      <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3 font-bold text-lg">
-        ${participant.name.charAt(0).toUpperCase()}
-      </div>
-      <div class="font-bold text-slate-800 text-sm truncate w-full text-center">${participant.name}</div>
-      <div class="text-xs font-bold text-indigo-500 mt-1">₹${participant.totalSpent.toFixed(0)}</div>
+  // Render Horizontal Participants Carousel
+  if (participantsList) {
+    participantsList.innerHTML = '';
+    participants.forEach(participant => {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-3xl p-4 min-w-[140px] shadow-sm border border-slate-100 flex flex-col items-center animate-scale-in relative group';
+      card.innerHTML = `
+        <button onclick="editParticipant(${participant.id})" class="absolute top-2 right-2 p-1 bg-slate-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+        </button>
+        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3 font-bold text-lg">
+          ${participant.name.charAt(0).toUpperCase()}
+        </div>
+        <div class="font-bold text-slate-800 text-sm truncate w-full text-center">${participant.name}</div>
+        <div class="text-xs font-bold text-indigo-500 mt-1">${tripSymbol}${participant.totalSpent.toFixed(0)}</div>
+      `;
+      participantsList.appendChild(card);
+    });
+    
+    // Add Member Pill Card
+    const addBtn = document.createElement('div');
+    addBtn.className = 'bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all';
+    addBtn.onclick = showAddParticipantModal;
+    addBtn.innerHTML = `
+      <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      <span class="text-xs font-medium">Add Member</span>
     `;
-    participantsList.appendChild(card);
-  });
-  
-  // Add member button
-  const addBtn = document.createElement('div');
-  addBtn.className = 'bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all';
-  addBtn.onclick = showAddParticipantModal;
-  addBtn.innerHTML = `
-    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-    <span class="text-xs font-medium">Add Member</span>
-  `;
-  participantsList.appendChild(addBtn);
+    participantsList.appendChild(addBtn);
+  }
 
-  // Update detailed participants list
+  // Render Detailed participants overlay dropdown
   const participantsDetails = document.getElementById('participants-details');
-  participantsDetails.innerHTML = '';
-  participants.forEach(participant => {
-    const detailCard = document.createElement('div');
-    detailCard.className = 'premium-card flex justify-between items-center';
-    detailCard.innerHTML = `
-      <div class="flex items-center space-x-4">
-        <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-slate-500">${participant.name.charAt(0)}</div>
-        <div>
-          <h4 class="font-bold text-slate-800">${participant.name}</h4>
-          <p class="text-xs text-slate-400">${participant.familyCount > 0 ? `+${participant.familyCount} family` : 'Individual'}</p>
-        </div>
-      </div>
-      <div class="text-right flex items-center space-x-4">
-        <div>
-            <p class="font-bold text-slate-800">₹${participant.totalSpent.toFixed(2)}</p>
-            <button onclick="editParticipant(${participant.id})" class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Edit</button>
-        </div>
-      </div>
-    `;
-    participantsDetails.appendChild(detailCard);
-  });
-
-  // Update expense summary
-  const expenseSummary = document.getElementById('expense-summary');
-  const categoryTotals = {};
-  expenses.forEach(exp => {
-    categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
-  });
-
-  expenseSummary.innerHTML = '';
-  const categories = Object.keys(categoryTotals);
-  if (categories.length === 0) {
-    expenseSummary.innerHTML = '<p class="text-slate-400 text-center py-4 italic text-sm">No expenses recorded yet.</p>';
-  } else {
-    categories.forEach(category => {
-      const percentage = (categoryTotals[category] / totalExpense) * 100;
-      const badgeClass = `badge-${category.toLowerCase().substring(0, 4)}`;
-      const div = document.createElement('div');
-      div.className = 'space-y-2';
-      div.innerHTML = `
-        <div class="flex justify-between items-center text-sm font-bold">
-          <div class="flex items-center space-x-2">
-            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-            <span class="text-slate-700">${category}</span>
+  if (participantsDetails) {
+    participantsDetails.innerHTML = '';
+    participants.forEach(participant => {
+      const detailCard = document.createElement('div');
+      detailCard.className = 'premium-card flex justify-between items-center';
+      detailCard.innerHTML = `
+        <div class="flex items-center space-x-4">
+          <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-slate-500">${participant.name.charAt(0)}</div>
+          <div>
+            <h4 class="font-bold text-slate-800">${participant.name}</h4>
+            <p class="text-xs text-slate-400">${participant.familyCount > 0 ? `+${participant.familyCount} family` : 'Individual'}</p>
           </div>
-          <span class="text-slate-900">₹${categoryTotals[category].toLocaleString('en-IN')}</span>
         </div>
-        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div class="h-full bg-indigo-500 rounded-full transition-all duration-1000" style="width: ${percentage}%"></div>
+        <div class="text-right flex items-center space-x-4">
+          <div>
+              <p class="font-bold text-slate-800">${tripSymbol}${participant.totalSpent.toFixed(2)}</p>
+              <button onclick="editParticipant(${participant.id})" class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Edit</button>
+          </div>
         </div>
       `;
-      expenseSummary.appendChild(div);
+      participantsDetails.appendChild(detailCard);
     });
   }
 
-  // Update detailed expense breakdown
-  const expenseDetails = document.getElementById('expense-details');
-  expenseDetails.innerHTML = '';
-  if (expenses.length > 0) {
-    const expensesByCategory = {};
+  // Render Category breakdown percentages
+  const expenseSummary = document.getElementById('expense-summary');
+  if (expenseSummary) {
+    const categoryTotals = {};
     expenses.forEach(exp => {
-      if (!expensesByCategory[exp.category]) expensesByCategory[exp.category] = [];
-      expensesByCategory[exp.category].push(exp);
+      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
     });
 
-    Object.keys(expensesByCategory).forEach(category => {
-      const categoryDiv = document.createElement('div');
-      categoryDiv.className = 'space-y-3';
-      categoryDiv.innerHTML = `<h5 class="text-xs font-black text-slate-300 uppercase tracking-widest">${category}</h5>`;
-
-      expensesByCategory[category].forEach(expense => {
-        const expenseDiv = document.createElement('div');
-        expenseDiv.className = 'flex justify-between items-center group';
-        expenseDiv.innerHTML = `
-          <div class="flex items-center space-x-3">
-             <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path></svg>
-             </div>
-             <div>
-                <p class="text-sm font-bold text-slate-700">${expense.title}</p>
-                <p class="text-[10px] text-slate-400">${new Date(expense.createdAt).toLocaleDateString()}</p>
-             </div>
+    expenseSummary.innerHTML = '';
+    const categoriesList = Object.keys(categoryTotals);
+    if (categoriesList.length === 0) {
+      expenseSummary.innerHTML = '<p class="text-slate-400 text-center py-4 italic text-sm">No expenses recorded yet.</p>';
+    } else {
+      categoriesList.forEach(category => {
+        const percentage = (categoryTotals[category] / totalExpense) * 100;
+        const div = document.createElement('div');
+        div.className = 'space-y-2';
+        div.innerHTML = `
+          <div class="flex justify-between items-center text-sm font-bold">
+            <div class="flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span class="text-slate-700">${category}</span>
+            </div>
+            <span class="text-slate-900">${tripSymbol}${categoryTotals[category].toLocaleString('en-IN')}</span>
           </div>
-          <span class="text-sm font-black text-slate-800">₹${expense.amount.toFixed(0)}</span>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-indigo-500 rounded-full transition-all duration-1000" style="width: ${percentage}%"></div>
+          </div>
         `;
-        categoryDiv.appendChild(expenseDiv);
+        expenseSummary.appendChild(div);
       });
-      expenseDetails.appendChild(categoryDiv);
-    });
+    }
+  }
+
+  // Render detailed recent expenses on home screen with Inline swipe Edit/Delete overlays (F3)
+  const expenseDetails = document.getElementById('expense-details');
+  if (expenseDetails) {
+    expenseDetails.innerHTML = '';
+    if (expenses.length > 0) {
+      const expensesByCategory = {};
+      expenses.forEach(exp => {
+        if (!expensesByCategory[exp.category]) expensesByCategory[exp.category] = [];
+        expensesByCategory[exp.category].push(exp);
+      });
+
+      const participantMap = {};
+      participants.forEach(p => participantMap[p.id] = p.name);
+
+      Object.keys(expensesByCategory).forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'space-y-3';
+        categoryDiv.innerHTML = `<h5 class="text-xs font-black text-slate-300 uppercase tracking-widest">${category}</h5>`;
+
+        expensesByCategory[category].forEach(expense => {
+          const expenseDiv = document.createElement('div');
+          expenseDiv.className = 'flex justify-between items-center group relative overflow-hidden py-1';
+          expenseDiv.innerHTML = `
+            <div class="flex items-center space-x-3">
+               <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path></svg>
+               </div>
+               <div>
+                  <p class="text-sm font-bold text-slate-700">${expense.title}</p>
+                  <p class="text-[10px] text-slate-400">${new Date(expense.createdAt).toLocaleDateString()} paid by ${participantMap[expense.paidBy] || 'Unknown'}</p>
+               </div>
+            </div>
+            <div class="flex items-center space-x-3">
+               <span class="text-sm font-black text-slate-800">${tripSymbol}${expense.amount.toFixed(0)}</span>
+               <div class="opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1">
+                  <button onclick="editExpense(${expense.id})" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold">Edit</button>
+                  <span class="text-slate-300 text-[10px]">|</span>
+                  <button onclick="deleteExpense(${expense.id})" class="text-xs text-rose-500 hover:text-rose-700 font-bold">Delete</button>
+               </div>
+            </div>
+          `;
+          categoryDiv.appendChild(expenseDiv);
+        });
+        expenseDetails.appendChild(categoryDiv);
+      });
+    }
   }
 }
 
-// Load expenses
+// Load full Expenses list screen
 async function loadExpenses() {
   if (!currentTripId) return;
 
   const expenses = await getExpenses(currentTripId);
   const participants = await getParticipants(currentTripId);
+  const trip = await getTrip(currentTripId);
+  
+  const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
   const participantMap = {};
   participants.forEach(p => participantMap[p.id] = p.name);
 
   const expensesList = document.getElementById('expenses-list');
+  if (!expensesList) return;
+
   expensesList.innerHTML = '';
 
   if (expenses.length === 0) {
@@ -634,33 +976,36 @@ async function loadExpenses() {
     card.innerHTML = `
       <div class="flex justify-between items-start mb-4">
         <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                ${expense.category.charAt(0)}
             </div>
             <div>
-              <h4 class="font-bold text-slate-800 text-lg">${expense.title}</h4>
-              <p class="text-xs text-slate-400 font-medium">${expense.category} • Paid by ${participantMap[expense.paidBy]}</p>
+              <h4 class="font-bold text-slate-800 text-lg flex items-center">
+                ${expense.title}
+                ${expense.isRecurring ? '<span class="text-xs text-indigo-500 font-bold ml-1.5" title="Recurring Daily Expense">🔄</span>' : ''}
+              </h4>
+              <p class="text-xs text-slate-400 font-medium">${expense.category} • Paid by ${participantMap[expense.paidBy] || 'Unknown'}</p>
             </div>
         </div>
         <div class="text-right">
-          <p class="font-black text-xl text-slate-900">₹${(expense.totalAmount || expense.amount).toFixed(2)}</p>
+          <p class="font-black text-xl text-slate-900">${tripSymbol}${(expense.totalAmount || expense.amount).toFixed(2)}</p>
           <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(expense.createdAt).toLocaleDateString()}</p>
           ${expense.advancePay ? `
             <div class="mt-2 text-[10px] font-bold">
-                <span class="text-emerald-500">PAID: ₹${expense.advancePay.toFixed(0)}</span>
+                <span class="text-emerald-500">PAID: ${tripSymbol}${expense.advancePay.toFixed(0)}</span>
                 <span class="mx-1 text-slate-300">|</span>
-                <span class="text-rose-500">REM: ₹${((expense.totalAmount || expense.amount) - expense.advancePay).toFixed(0)}</span>
+                <span class="text-rose-500">REM: ${tripSymbol}${((expense.totalAmount || expense.amount) - expense.advancePay).toFixed(0)}</span>
             </div>
           ` : ''}
         </div>
       </div>
       <div class="flex space-x-4 pt-4 border-t border-slate-50">
         <button onclick="editExpense(${expense.id})" class="flex items-center space-x-1 text-xs font-bold text-indigo-500 hover:text-indigo-700">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span>EDIT</span>
         </button>
         <button onclick="deleteExpense(${expense.id})" class="flex items-center space-x-1 text-xs font-bold text-rose-500 hover:text-rose-700">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             <span>DELETE</span>
         </button>
       </div>
@@ -669,7 +1014,8 @@ async function loadExpenses() {
   });
 }
 
-async function showEditTripModal() {
+// Edit Trip Details modal
+window.showEditTripModal = async function() {
   if (!currentTripId) return;
   const trip = await getTrip(currentTripId);
   if (!trip) return;
@@ -681,10 +1027,20 @@ async function showEditTripModal() {
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trip Name</label>
         <input type="text" id="edit-trip-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${trip.tripName}" required>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Estimated Budget (₹)</label>
-        <input type="number" id="edit-trip-budget" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${trip.estimatedBudget || 0}" min="0" step="0.01">
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Estimated Budget</label>
+          <input type="number" id="edit-trip-budget" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${trip.estimatedBudget || 0}" min="0" step="0.01">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Base Currency</label>
+          <select id="edit-trip-currency" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all">
+            ${CURRENCIES.map(c => `<option value="${c.code}" ${trip.currency === c.code ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join('')}
+          </select>
+        </div>
       </div>
+
       <div>
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Notes</label>
         <textarea id="edit-trip-notes" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="3">${trip.notes || ''}</textarea>
@@ -702,31 +1058,42 @@ async function showEditTripModal() {
     const tripName = document.getElementById('edit-trip-name').value.trim();
     const budget = parseFloat(document.getElementById('edit-trip-budget').value) || 0;
     const notes = document.getElementById('edit-trip-notes').value.trim();
+    const currencyCode = document.getElementById('edit-trip-currency').value;
+    const currencyObj = CURRENCIES.find(c => c.code === currencyCode) || { code: 'INR', symbol: '₹' };
 
     if (tripName) {
-      await updateTrip(currentTripId, { tripName, notes, estimatedBudget: budget });
+      await updateTrip(currentTripId, { 
+        tripName, 
+        notes, 
+        estimatedBudget: budget,
+        currency: currencyObj.code,
+        currencySymbol: currencyObj.symbol
+      });
       hideModal();
       loadHomeData();
       loadTrips();
-      if (window.showToast) window.showToast('Trip updated successfully', 'success');
+      if (window.showToast) window.showToast('Trip details updated!', 'success');
     }
   });
-}
+};
 
-// Load trips for history
+// Load Trips screen history containing Save Template action (F6)
 async function loadTrips() {
   const trips = await getTrips();
   const tripsList = document.getElementById('trips-list');
+  if (!tripsList) return;
+
   tripsList.innerHTML = '';
 
   if (trips.length === 0) {
-    tripsList.innerHTML = '<p class="text-center text-slate-400 py-10">No trip history yet.</p>';
+    tripsList.innerHTML = '<p class="text-center text-slate-400 py-10 font-bold">No trips found. Create one using the action button!</p>';
     return;
   }
 
   trips.forEach(trip => {
     const isCurrent = currentTripId === trip.id;
     const card = document.createElement('div');
+    const symbol = trip.currencySymbol || '₹';
     card.className = `premium-card animate-scale-in ${isCurrent ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''}`;
     card.innerHTML = `
       <div class="flex justify-between items-start mb-4">
@@ -737,7 +1104,7 @@ async function loadTrips() {
           </div>
           <p class="text-sm text-slate-500 mt-1 line-clamp-1">${trip.notes || 'No description provided'}</p>
           <div class="flex items-center space-x-3 mt-2">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Budget: ₹${trip.estimatedBudget || 0}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Budget: ${symbol}${trip.estimatedBudget || 0}</p>
             ${trip.share_id ? `<span class="text-[10px] text-indigo-400 font-black tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">ID: ${trip.share_id}</span>` : ''}
           </div>
         </div>
@@ -745,6 +1112,7 @@ async function loadTrips() {
       <div class="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
         <button onclick="selectTrip(${trip.id})" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors">SELECT</button>
         <button onclick="duplicateTrip(${trip.id})" class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors">DUPLICATE</button>
+        <button onclick="saveTripAsTemplate(${trip.id})" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors">📋 TEMPLATE</button>
         <button onclick="deleteTrip(${trip.id})" class="px-4 py-2 bg-rose-100 text-rose-600 text-xs font-bold rounded-xl hover:bg-rose-200 transition-colors">DELETE</button>
       </div>
     `;
@@ -752,25 +1120,29 @@ async function loadTrips() {
   });
 }
 
-// Dropdown toggle functions
-function toggleParticipantsDropdown() {
+// Dropdown arrow transitions
+window.toggleParticipantsDropdown = function() {
   const details = document.getElementById('participants-details');
   const arrow = document.getElementById('participants-arrow');
-  const isHidden = details.classList.contains('hidden');
-  details.classList.toggle('hidden');
-  if (arrow) arrow.classList.toggle('rotate-180', !isHidden);
-}
+  if (details) {
+    const isHidden = details.classList.contains('hidden');
+    details.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180', !isHidden);
+  }
+};
 
-function toggleExpenseSummaryDropdown() {
+window.toggleExpenseSummaryDropdown = function() {
   const details = document.getElementById('expense-details');
   const arrow = document.getElementById('expense-summary-arrow');
-  const isHidden = details.classList.contains('hidden');
-  details.classList.toggle('hidden');
-  if (arrow) arrow.classList.toggle('rotate-180', !isHidden);
-}
+  if (details) {
+    const isHidden = details.classList.contains('hidden');
+    details.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180', !isHidden);
+  }
+};
 
-// Participant edit function
-async function editParticipant(participantId) {
+// Edit Participant details
+window.editParticipant = async function(participantId) {
   const participant = await getParticipant(participantId);
   if (!participant) return;
 
@@ -811,227 +1183,381 @@ async function editParticipant(participantId) {
       loadHomeData();
     }
   });
-}
+};
 
-// Initialize UI
-function initUI() {
-  console.log('Initializing UI listeners...');
-  // Navigation
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    const screenId = btn.getAttribute('data-screen');
-    if (screenId) {
-      btn.addEventListener('click', () => showScreen(screenId));
+// Switch App Mode (silent persists changes quietly)
+window.switchAppMode = function(mode, silent = false) {
+  localStorage.setItem('tripsplit_app_mode', mode);
+  window.currentAppMode = mode;
+  
+  const adviserBtn = document.getElementById('mode-btn-adviser');
+  const splitBtn = document.getElementById('mode-btn-split');
+  
+  if (adviserBtn && splitBtn) {
+    if (mode === 'adviser') {
+      adviserBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 bg-white text-slate-800 shadow-sm";
+      splitBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-white/60 hover:text-white hover:bg-white/5";
+    } else {
+      splitBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 bg-white text-slate-800 shadow-sm";
+      adviserBtn.className = "flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 text-white/60 hover:text-white hover:bg-white/5";
+    }
+  }
+
+  // Toggling Home Widgets Visibility
+  const crewSection = document.getElementById('home-crew-section');
+  const settlementsCard = document.getElementById('home-settlements-card');
+  const breakdownCard = document.getElementById('home-breakdown-card');
+  const expensesCard = document.getElementById('home-expenses-card');
+  const detailsCard = document.getElementById('home-details-card');
+  const budgetContainer = document.getElementById('budget-progress-container');
+  const itineraryCard = document.getElementById('adviser-itinerary-card');
+  const notesCard = document.getElementById('adviser-notes-card');
+  const statsDisplay = document.getElementById('split-mode-stats');
+
+  if (mode === 'adviser') {
+    if (crewSection) crewSection.classList.add('hidden');
+    if (settlementsCard) settlementsCard.classList.add('hidden');
+    if (breakdownCard) breakdownCard.classList.add('hidden');
+    if (expensesCard) expensesCard.classList.add('hidden');
+    if (detailsCard) detailsCard.classList.add('hidden');
+    if (budgetContainer) budgetContainer.classList.add('hidden');
+    
+    if (itineraryCard) itineraryCard.classList.remove('hidden');
+    if (notesCard) notesCard.classList.remove('hidden');
+    if (statsDisplay) statsDisplay.classList.add('hidden');
+  } else {
+    // Split mode layout overrides
+    if (crewSection) crewSection.classList.remove('hidden');
+    if (settlementsCard) settlementsCard.classList.remove('hidden');
+    if (breakdownCard) breakdownCard.classList.remove('hidden');
+    if (expensesCard) expensesCard.classList.remove('hidden');
+    if (detailsCard) detailsCard.classList.remove('hidden');
+    
+    if (itineraryCard) itineraryCard.classList.add('hidden');
+    if (notesCard) notesCard.classList.add('hidden');
+    
+    if (statsDisplay) statsDisplay.classList.remove('hidden');
+  }
+  
+  if (!silent && window.showToast) {
+    window.showToast(`Mode: ${mode === 'adviser' ? '🎒 Adviser' : '💰 Split'} active`, 'info');
+  }
+  
+  loadHomeData(true);
+};
+
+// My Tab Screen (Me tab) personal balance logic (F5)
+window.loadMyData = async function() {
+  const summaryCard = document.getElementById('my-summary-card');
+  if (!summaryCard) return;
+
+  if (!currentTripId) {
+    summaryCard.innerHTML = '<p class="text-slate-400 text-center py-4 italic text-sm">Please select a trip first.</p>';
+    return;
+  }
+  
+  const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
+  const participants = await getParticipants(currentTripId);
+  const expenses = await getExpenses(currentTripId);
+  const trip = await getTrip(currentTripId);
+  const symbol = trip ? (trip.currencySymbol || '₹') : '₹';
+  
+  if (!profile || !profile.name) {
+    summaryCard.innerHTML = `
+      <div class="text-center py-6">
+        <p class="text-slate-500 mb-4 text-xs font-bold">Please set your name in Settings to see your personal summary.</p>
+        <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
+      </div>`;
+    return;
+  }
+  
+  const me = participants.find(p => p.name.trim().toLowerCase() === profile.name.trim().toLowerCase());
+  if (!me) {
+    summaryCard.innerHTML = `
+      <div class="text-center py-6">
+        <p class="text-slate-500 mb-4 text-xs font-bold leading-relaxed">
+          You are currently matching with profile <b>"${profile.name}"</b>.<br>
+          To display data, add a participant named "${profile.name}" to this trip or edit your name in Settings.
+        </p>
+        <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
+      </div>`;
+    return;
+  }
+
+  let myTotalSpent = 0;
+  let myExpectedShare = 0;
+
+  expenses.forEach(e => {
+    // Paid by Me
+    if (e.paidBy === me.id) {
+      myTotalSpent += (e.totalAmount || e.amount || 0);
+    }
+    
+    // Me in split subset
+    let splitBetweenIds = e.splitBetween || [];
+    if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
+      splitBetweenIds = participants.map(p => p.id);
+    }
+    if (splitBetweenIds.includes(me.id)) {
+      const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
+      const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
+      if (totalSplitFamily > 0) {
+        const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
+        myExpectedShare += costPerHead * (me.familyCount || 1);
+      }
     }
   });
 
-  // Center FAB - Initial state
-  updateCenterFAB(currentScreen);
+  const myBalance = myTotalSpent - myExpectedShare;
+  const isCreditor = myBalance >= 0;
   
-  // Action FABs
-  const addPlaceFab = document.getElementById('add-place-fab');
-  if (addPlaceFab) addPlaceFab.addEventListener('click', showAddPlaceModal);
-  
-  const addExpenseFab = document.getElementById('add-expense-fab');
-  if (addExpenseFab) addExpenseFab.addEventListener('click', showAddExpenseModal);
-
-  // Export for Google Sheets
-  const exportSheetsBtn = document.getElementById('export-sheets-btn');
-  if (exportSheetsBtn) {
-    exportSheetsBtn.onclick = showExportSelectionModal;
-  }
-
-  // Gemini AI Menu
-  const aiMenuBtn = document.getElementById('ai-menu-btn');
-  const aiDropdown = document.getElementById('ai-dropdown');
-  if (aiMenuBtn && aiDropdown) {
-    aiMenuBtn.onclick = (e) => {
-      e.stopPropagation();
-      aiDropdown.classList.toggle('hidden');
-    };
-    document.addEventListener('click', () => aiDropdown.classList.add('hidden'));
-  }
-
-  // Dropdown toggles
-  const expenseToggle = document.getElementById('expense-summary-toggle');
-  if (expenseToggle) {
-    expenseToggle.addEventListener('click', toggleExpenseSummaryDropdown);
-  }
-
-  // Menu button - Show Settings
-  const menuBtn = document.getElementById('menu-btn');
-  if (menuBtn) menuBtn.addEventListener('click', showSettings);
-
-  // Modal overlay click to close
-  document.getElementById('modal-overlay').addEventListener('click', (e) => {
-    if (e.target.id === 'modal-overlay') {
-      hideModal();
-    }
-  });
-
-  // Populate Sync URL if exists
-  const syncInput = document.getElementById('sync-url-input');
-  if (syncInput) {
-    syncInput.value = localStorage.getItem('tripsplit_sync_url') || '';
-  }
-
-  // Load initial data
-  loadHomeData();
-  loadTrips();
-  loadTripsCapsules();
-}
-
-async function showSettings() {
-  const profile = await getUserProfile();
-  const content = `
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xl font-bold text-slate-800">Settings</h3>
-        <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+  summaryCard.innerHTML = `
+    <div class="flex flex-col gap-4">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+        <div>
+          <h4 class="font-bold text-slate-800 text-lg">${me.name}</h4>
+          <p class="text-xs text-slate-400">Device Account Matches Profile</p>
+        </div>
+        <span class="px-4 py-2 rounded-2xl font-black text-sm ${isCreditor ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
+          ${isCreditor ? '+' + symbol + myBalance.toFixed(0) : '-' + symbol + Math.abs(myBalance).toFixed(0)}
+        </span>
       </div>
-
-      <!-- User Profile Summary Card -->
-      <div onclick="showProfileModal()" class="mb-6 p-4 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-3xl text-white shadow-lg shadow-indigo-200 cursor-pointer hover:scale-[1.02] transition-all group relative overflow-hidden">
-          <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform"></div>
-          <div class="flex items-center space-x-4 relative z-10">
-              <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center font-black text-2xl backdrop-blur-md">
-                  ${profile ? profile.name.charAt(0).toUpperCase() : '?'}
-              </div>
-              <div class="flex-1">
-                  <h4 class="font-bold text-lg leading-tight">${profile ? profile.name : 'Create Account'}</h4>
-                  <p class="text-indigo-100 text-xs opacity-80">${profile ? (profile.email || 'No email set') : 'Sync your data across devices'}</p>
-              </div>
-              <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-          </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Total Spendings</p>
+          <p class="text-xl font-black text-slate-800">${symbol}${myTotalSpent.toFixed(0)}</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Adjusted Share</p>
+          <p class="text-xl font-black text-slate-800">${symbol}${myExpectedShare.toFixed(0)}</p>
+        </div>
       </div>
-
-      <div class="space-y-6">
-          <!-- Cloud Features -->
-          <section>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Cloud Sync & Share</p>
-              <div class="grid grid-cols-1 gap-2">
-                  <button onclick="handleCloudSync()" class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-between transition-all">
-                      <div class="flex items-center space-x-3">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                          <span class="text-sm font-bold">Live Sync to Cloud</span>
-                      </div>
-                      <span id="cloud-status-text" class="text-[10px] font-bold px-2 py-1 bg-white/50 rounded-lg">Push</span>
-                  </button>
-                  <button onclick="showJoinTripModal()" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-between transition-all">
-                      <div class="flex items-center space-x-3">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                          <span class="text-sm font-bold">Join Using Trip ID</span>
-                      </div>
-                  </button>
-                  <button onclick="handleManagePermissions()" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-between transition-all">
-                      <div class="flex items-center space-x-3">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                          <span class="text-sm font-bold">Manage Trip Editors</span>
-                      </div>
-                  </button>
-                  <button onclick="handlePushEnable()" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-between transition-all">
-                      <div class="flex items-center space-x-3">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                          <span class="text-sm font-bold">App Push Notifications</span>
-                      </div>
-                      <span id="push-status-label" class="text-[10px] font-bold px-2 py-1 bg-white/50 rounded-lg">Enable</span>
-                  </button>
-                  <button onclick="deleteTripUI(currentTripId)" class="w-full p-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-between transition-all">
-                      <div class="flex items-center space-x-3">
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          <span class="text-sm font-bold">Delete Current Trip</span>
-                      </div>
-                  </button>
-              </div>
-          </section>
-          <!-- Data Management -->
-          <section>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Data Management</p>
-              <div class="grid grid-cols-2 gap-2">
-                  <button id="export-json-btn-settings" class="p-4 bg-slate-100 text-slate-600 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-200 transition-all">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                      <span class="text-[10px] font-bold text-center">Export JSON</span>
-                  </button>
-                  <button id="import-json-btn-settings" class="p-4 bg-slate-800 text-white rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-900 transition-all">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                      <span class="text-[10px] font-bold text-center">Restore JSON</span>
-                  </button>
-              </div>
-          </section>
-          <!-- Contact -->
-          <section class="pt-6 border-t border-slate-100 text-center">
-              <a href="https://aispace.co.in/" target="_blank" rel="noopener" class="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
-                  Contact Ai Space for Custom Apps →
-              </a>
-          </section>
-      </div>
-
-      <button onclick="hideModal()" class="w-full mt-8 py-4 font-black text-slate-300 uppercase tracking-widest text-xs hover:text-slate-500 transition-colors">Close Settings</button>
+    </div>
   `;
-  showModal(content);
+
+  // Expenses filter details
+  const myExpenses = expenses.filter(e => e.paidBy === me.id);
+  const myExpensesList = document.getElementById('my-expenses-list');
+  const myExpensesItems = document.getElementById('my-expenses-items');
   
-  // Listeners for Settings Modal
-  document.getElementById('export-json-btn-settings').onclick = () => {
-    exportDataToJSON().then(jsonData => {
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tripsplit-backup-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        if (window.showToast) window.showToast('Backup downloaded!', 'success');
-    });
-  };
+  if (myExpensesList && myExpensesItems) {
+    if (myExpenses.length > 0) {
+      myExpensesList.classList.remove('hidden');
+      myExpensesItems.innerHTML = myExpenses.map(e => `
+        <div class="flex justify-between items-center py-3 border-b border-slate-50 last:border-b-0">
+          <div>
+            <p class="text-sm font-bold text-slate-700">${e.title}</p>
+            <p class="text-[10px] text-slate-400">${new Date(e.createdAt).toLocaleDateString()} • ${e.category}</p>
+          </div>
+          <span class="text-sm font-black text-slate-800">${symbol}${e.amount.toFixed(0)}</span>
+        </div>
+      `).join('');
+    } else {
+      myExpensesList.classList.add('hidden');
+    }
+  }
+};
 
-  document.getElementById('import-json-btn-settings').onclick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = e => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = async () => {
-            try {
-                await importDataFromJSON(reader.result);
-                loadHomeData();
-                loadTrips();
-                if (window.showToast) window.showToast('Data restored!', 'success');
-                hideModal();
-            } catch (error) {
-                alert('Error restoring: ' + error.message);
-            }
+// Save Trip as template helper (F6)
+window.saveTripAsTemplate = async function(tripId) {
+  if (typeof saveTemplateFromTrip === 'function') {
+    try {
+      const templateId = await saveTemplateFromTrip(tripId);
+      if (templateId && window.showToast) {
+        window.showToast('Saved Trip structure as Template! 📋', 'success');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not save template: ' + error.message);
+    }
+  }
+};
+
+// Show Settings panel overlay
+window.showSettings = async function() {
+    const trip = currentTripId ? await getTrip(currentTripId) : null;
+    const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
+
+    const content = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-16 h-16 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-100">
+                    ${(profile ? profile.name : 'Guest').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">${profile ? profile.name : 'Guest User'}</h3>
+                    <p class="text-sm text-slate-400">Settings & Offline Sync Controls</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Account & Preferences</p>
+                
+                <button onclick="showProfileModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            👤
+                        </div>
+                        <span class="font-bold text-slate-700">User Account Settings</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <button onclick="showManagePresetsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            ⚡
+                        </div>
+                        <span class="font-bold text-slate-700">Manage Split Presets (F4)</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Trip Options</p>
+                
+                <button onclick="showEditTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            📝
+                        </div>
+                        <span class="font-bold text-slate-700">Edit Trip Details</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                ${trip && trip.share_id ? `
+                <button onclick="showManageEditorsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            👥
+                        </div>
+                        <span class="font-bold text-slate-700">Manage Editors</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                ` : ''}
+
+                <button onclick="showJoinTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-slate-100 text-slate-600 rounded-lg">
+                            📥
+                        </div>
+                        <span class="font-bold text-slate-700">Join Friend's Cloud Trip</span>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <button onclick="handleDeleteTripFromSettings()" class="w-full flex items-center justify-between p-4 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all group">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-all">
+                            🗑️
+                        </div>
+                        <span class="font-bold text-rose-600">Delete Current Trip</span>
+                    </div>
+                    <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <!-- F2: Cloud Connection details & Backup Restoring -->
+            <div class="space-y-4 pt-4 border-t border-slate-100">
+               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cloud Sync Status (F2)</p>
+               
+               <div class="flex items-center justify-between p-2 bg-slate-50 rounded-2xl">
+                 <span class="text-xs font-bold text-slate-600 ml-2">PWA Live Database</span>
+                 <button onclick="handleCloudSync()" class="btn-primary py-2 px-4 rounded-xl text-xs font-bold">Sync Now 🔄</button>
+               </div>
+
+               <div class="grid grid-cols-2 gap-2 mt-4">
+                   <button id="export-json-btn-settings" class="p-4 bg-slate-100 text-slate-600 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-200 transition-all">
+                       <span class="text-[10px] font-bold text-center">Export Backup</span>
+                   </button>
+                   <button id="import-json-btn-settings" class="p-4 bg-slate-800 text-white rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-900 transition-all">
+                       <span class="text-[10px] font-bold text-center">Restore Backup</span>
+                   </button>
+               </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-100">
+                <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
+            </div>
+            
+            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v2.0 • Premium PWA</p>
+        </div>
+    `;
+    showModal(content);
+
+    // Backup & restore click wire-up
+    const expBtn = document.getElementById('export-json-btn-settings');
+    if (expBtn) {
+      expBtn.onclick = () => {
+        exportDataToJSON().then(jsonData => {
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tripsplit-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            if (window.showToast) window.showToast('Backup downloaded!', 'success');
+        });
+      };
+    }
+
+    const impBtn = document.getElementById('import-json-btn-settings');
+    if (impBtn) {
+      impBtn.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    await importDataFromJSON(reader.result);
+                    loadHomeData();
+                    loadTrips();
+                    if (window.showToast) window.showToast('Data restored!', 'success');
+                    hideModal();
+                } catch (error) {
+                    alert('Error restoring backup: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
         };
-        reader.readAsText(file);
-    };
-    input.click();
-  };
-}
+        input.click();
+      };
+    }
+};
 
-async function showProfileModal() {
-    const profile = await getUserProfile();
+// Edit Profile settings
+window.showProfileModal = async function() {
+    const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
     const content = `
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold text-slate-800">User Account</h3>
+          <h3 class="text-xl font-bold text-slate-800">User Profile</h3>
           <button onclick="showSettings()" class="text-slate-400 hover:text-slate-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
           </button>
         </div>
         <form id="profile-form" class="space-y-5">
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
-                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? profile.name : ''}" placeholder="Enter your name" required>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Profile Name</label>
+                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? profile.name : ''}" placeholder="E.g. Praveen" required>
+                <p class="text-[10px] text-slate-400 mt-1">This name is used to identify you on the "Me" screen and personal balance trackers.</p>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-                <input type="email" id="profile-email" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.email || '') : ''}" placeholder="your@email.com" required>
+                <input type="email" id="profile-email" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.email || '') : ''}" placeholder="name@domain.com" required>
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mobile Number (Optional)</label>
-                <input type="tel" id="profile-mobile" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.mobile || '') : ''}" placeholder="+91 00000 00000">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone Mobile</label>
+                <input type="tel" id="profile-mobile" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.mobile || '') : ''}" placeholder="+91 ...">
             </div>
             <div class="pt-4">
-                <button type="submit" class="w-full btn-primary py-4">Save Account Info</button>
+                <button type="submit" class="w-full btn-primary py-4">Save Account Profile</button>
             </div>
         </form>
     `;
@@ -1051,9 +1577,10 @@ async function showProfileModal() {
             alert('Error saving profile: ' + error.message);
         }
     };
-}
+};
 
-async function showJoinTripModal() {
+// Join Trip modal (Download trip from ID)
+window.showJoinTripModal = async function() {
     const content = `
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-xl font-bold text-slate-800">Join a Trip</h3>
@@ -1082,12 +1609,11 @@ async function showJoinTripModal() {
         e.preventDefault();
         const shareId = document.getElementById('join-trip-id').value.trim().toUpperCase();
         
-        if (shareId) {
+        if (shareId && typeof joinTripFromCloud === 'function') {
             try {
-                if (window.showToast) window.showToast('Searching for trip...', 'info');
+                if (window.showToast) window.showToast('Searching for cloud trip...', 'info');
                 const tripId = await joinTripFromCloud(shareId);
                 
-                // Subscribe to real-time updates for this new trip
                 if (typeof subscribeToTripUpdates === 'function') {
                     subscribeToTripUpdates(shareId);
                 }
@@ -1095,15 +1621,16 @@ async function showJoinTripModal() {
                 hideModal();
                 loadTrips();
                 selectTrip(tripId);
-                if (window.showToast) window.showToast('Joined trip successfully!', 'success');
+                if (window.showToast) window.showToast('Trip loaded successfully!', 'success');
             } catch (error) {
                 alert('Trip not found: ' + error.message);
             }
         }
     };
-}
+};
 
-function showExportSelectionModal() {
+// Export selections for CSV
+window.showExportSelectionModal = function() {
   getTrips().then(trips => {
     let content = `
       <div class="flex justify-between items-center mb-6">
@@ -1125,22 +1652,22 @@ function showExportSelectionModal() {
         <div class="pt-4 border-t border-slate-100">
             <p class="text-[10px] text-slate-400 mb-3 font-bold uppercase tracking-widest">Single Trip Export:</p>
             <div class="space-y-2 max-h-[40vh] overflow-y-auto no-scrollbar">
-    `;
-    
-    trips.forEach(trip => {
-      content += `
-        <button onclick="downloadCSV(${trip.id})" class="w-full text-left p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl border-2 border-transparent hover:border-emerald-100 transition-all group">
-          <div class="flex justify-between items-center">
-            <div>
-              <p class="font-bold text-slate-800 group-hover:text-emerald-700">${trip.tripName}</p>
-              <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${new Date(trip.createdAt).toLocaleDateString()}</p>
+      `;
+      
+      trips.forEach(trip => {
+        content += `
+          <button onclick="downloadCSV(${trip.id})" class="w-full text-left p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl border-2 border-transparent hover:border-emerald-100 transition-all group">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-bold text-slate-800 group-hover:text-emerald-700">${trip.tripName}</p>
+                <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">${new Date(trip.createdAt).toLocaleDateString()}</p>
+              </div>
+              <svg class="w-5 h-5 text-slate-300 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             </div>
-            <svg class="w-5 h-5 text-slate-300 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </div>
-        </button>`;
-    });
+          </button>`;
+      });
 
-    content += `
+      content += `
             </div>
         </div>
       </div>
@@ -1148,17 +1675,17 @@ function showExportSelectionModal() {
     `;
     showModal(content);
   });
-}
+};
 
-async function downloadCSV(tripId) {
+window.downloadCSV = async function(tripId) {
     let csvData;
     let filename;
     
     if (tripId === 'all') {
-        csvData = await exportDataToCSV();
+        csvData = typeof exportDataToCSV === 'function' ? await exportDataToCSV() : '';
         filename = `tripsplit-all-backup-${new Date().toISOString().split('T')[0]}.csv`;
     } else {
-        csvData = await exportTripToCSV(tripId);
+        csvData = typeof exportTripToCSV === 'function' ? await exportTripToCSV(tripId) : '';
         const trip = await getTrip(tripId);
         const safeName = (trip ? trip.tripName : 'trip').replace(/[^a-z0-9]/gi, '_').toLowerCase();
         filename = `tripsplit-trip-${safeName}-${new Date().toISOString().split('T')[0]}.csv`;
@@ -1172,17 +1699,18 @@ async function downloadCSV(tripId) {
     a.click();
     URL.revokeObjectURL(url);
     hideModal();
-}
+};
 
-function saveSyncURL() {
+window.saveSyncURL = function() {
     const url = document.getElementById('sync-url-input').value.trim();
     if (url) {
         localStorage.setItem('tripsplit_sync_url', url);
         alert('Sync URL saved successfully!');
     }
-}
+};
 
-function showEditPlaceModal(index) {
+// Edit Stop/Place inside itinerary list (Plan tab)
+window.showEditPlaceOverlay = function(index) {
     getTrip(currentTripId).then(trip => {
         const item = trip.itinerary[index];
         const content = `
@@ -1219,160 +1747,104 @@ function showEditPlaceModal(index) {
                 itinerary[index] = { ...itinerary[index], placeName, time, notes };
                 await updateTrip(currentTripId, { itinerary });
                 hideModal();
-                loadTripNotes();
+                if (typeof loadTripNotes === 'function') loadTripNotes();
             }
         });
     });
-}
+};
 
-async function handleCloudSync() {
+// Cloud sync runner
+window.handleCloudSync = async function() {
     if (!currentTripId) {
         if (window.showToast) window.showToast('Please select a trip first!', 'info');
         return;
     }
     
-    const statusText = document.getElementById('cloud-status-text');
-    if (statusText) {
-        statusText.textContent = 'Syncing...';
-        statusText.className = 'text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-700 rounded-lg animate-pulse';
+    if (typeof syncTripToCloud !== 'function') {
+        alert('Offline Sync module is not fully loaded. Check your internet connection.');
+        return;
     }
+
+    if (window.showToast) window.showToast('Syncing trip data...', 'info');
 
     try {
         await syncTripToCloud(currentTripId);
-        if (statusText) {
-            statusText.textContent = 'Synced';
-            statusText.className = 'text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg';
-        }
-        if (window.showToast) window.showToast('Trip synced to cloud!', 'success');
-        loadHomeData(); // Refresh UI to show the new ID
+        if (window.showToast) window.showToast('Trip fully synced to cloud! 🟢', 'success');
+        loadHomeData();
     } catch (error) {
-        if (statusText) {
-            statusText.textContent = 'Error';
-            statusText.className = 'text-[10px] font-bold px-2 py-1 bg-rose-100 text-rose-700 rounded-lg';
-        }
         alert('Sync error: ' + error.message);
     }
-}
+};
 
-async function handlePushEnable() {
-    const label = document.getElementById('push-status-label');
-    if (label) label.textContent = 'Wait...';
-    
-    try {
-        const success = await subscribeToPush();
-        if (success) {
-            if (label) {
-                label.textContent = 'Active';
-                label.className = 'text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg';
-            }
-            if (window.showToast) window.showToast('Push Notifications Enabled!', 'success');
-        } else {
-            if (label) label.textContent = 'Error';
-            alert('Could not enable notifications. Please check browser permissions.');
-        }
-    } catch (error) {
-        if (label) label.textContent = 'Error';
-        console.error(error);
-    }
-}
-
-
-async function deleteTripUI(tripId) {
-    if (confirm('Are you sure you want to delete this trip and all its data? This cannot be undone.')) {
-        await deleteTrip(tripId);
-        currentTripId = null;
-        localStorage.removeItem('currentTripId');
-        loadTrips();
-        loadHomeData();
-        if (window.showToast) window.showToast('Trip deleted successfully', 'success');
-    }
-}
-
-function calculateRemaining() {
-    const total = parseFloat(document.getElementById('expense-total').value) || 0;
-    const advance = parseFloat(document.getElementById('expense-advance').value) || 0;
-    const rem = document.getElementById('remaining-amount');
-    if (rem) rem.textContent = '₹' + (total - advance).toFixed(2);
-}
-
-// Global UI Initialization
-function initUI() {
-    // Bind menu button
-    const menuBtn = document.getElementById('menu-btn');
-    if (menuBtn) {
-        menuBtn.onclick = showSettings;
-    }
-}
-
-// Settings Modal
-async function showSettings() {
-    const trip = currentTripId ? await getTrip(currentTripId) : null;
-    const profile = await getUserProfile();
-
-    const content = `
-        <div class="space-y-6">
-            <div class="flex items-center space-x-4 mb-6">
-                <div class="w-16 h-16 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-100">
-                    ${(profile ? profile.name : 'U').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-slate-800">${profile ? profile.name : 'Guest User'}</h3>
-                    <p class="text-sm text-slate-400">Settings & Profile</p>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Trip Management</label>
-                
-                <button onclick="showEditTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        </div>
-                        <span class="font-bold text-slate-700">Edit Trip Details</span>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-
-                ${trip && trip.share_id ? `
-                <button onclick="showManageEditorsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        </div>
-                        <span class="font-bold text-slate-700">Manage Editors</span>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                ` : ''}
-
-                <button onclick="handleDeleteTripFromSettings()" class="w-full flex items-center justify-between p-4 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </div>
-                        <span class="font-bold text-rose-600">Delete Current Trip</span>
-                    </div>
-                    <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-            </div>
-
-            <div class="pt-6 border-t border-slate-100">
-                <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
-            </div>
-            
-            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v2.0 • Premium PWA</p>
-        </div>
-    `;
-    showModal(content);
-}
-
-// Delete helper from settings
-async function handleDeleteTripFromSettings() {
+window.handleDeleteTripFromSettings = async function() {
     if (!currentTripId) return;
     if (confirm('Are you sure you want to delete this trip and all its data? This cannot be undone.')) {
-        await deleteTrip(currentTripId);
-        currentTripId = null;
-        window.location.reload();
+        if (typeof deleteTrip === 'function') {
+          await deleteTrip(currentTripId);
+          currentTripId = null;
+          window.location.reload();
+        }
     }
-}
+};
+
+// Global PWA UI Listeners registration
+window.initUI = function() {
+  console.log('Registering premium UI hooks & listeners...');
+  
+  // Dock Nav switching hooks
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const screenId = btn.getAttribute('data-screen');
+    if (screenId) {
+      btn.addEventListener('click', () => showScreen(screenId));
+    }
+  });
+
+  // Action Add FAB contextual settings
+  updateCenterFAB(currentScreen);
+
+  // Sheets Export link
+  const exportSheetsBtn = document.getElementById('export-sheets-btn');
+  if (exportSheetsBtn) {
+    exportSheetsBtn.onclick = showExportSelectionModal;
+  }
+
+  // Gemini AI Menu dropdown transitions
+  const aiMenuBtn = document.getElementById('ai-menu-btn');
+  const aiDropdown = document.getElementById('ai-dropdown');
+  if (aiMenuBtn && aiDropdown) {
+    aiMenuBtn.onclick = (e) => {
+      e.stopPropagation();
+      aiDropdown.classList.toggle('hidden');
+    };
+    document.addEventListener('click', () => aiDropdown.classList.add('hidden'));
+  }
+
+  // Horizontal collapsibles toggles
+  const expenseToggle = document.getElementById('expense-summary-toggle');
+  if (expenseToggle) {
+    expenseToggle.addEventListener('click', toggleExpenseSummaryDropdown);
+  }
+
+  const pToggle = document.getElementById('participants-toggle');
+  if (pToggle) {
+    pToggle.addEventListener('click', toggleParticipantsDropdown);
+  }
+
+  // Header options gear and overlay close
+  const menuBtn = document.getElementById('menu-btn');
+  if (menuBtn) {
+    menuBtn.onclick = showSettings;
+  }
+
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target.id === 'modal-overlay') {
+        hideModal();
+      }
+    });
+  }
+
+  // Initial render calls
+  switchAppMode(window.currentAppMode, true);
+};

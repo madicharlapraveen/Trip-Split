@@ -6,8 +6,12 @@ const STORAGE_KEY = 'tripsplit_data';
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
     trips: [],
     participants: [],
-    expenses: []
+    expenses: [],
+    templates: []
 };
+// Ensure templates always exists on older data
+if (!data.templates) data.templates = [];
+
 
 // Global State
 // currentTripId is now managed on window.currentTripId via index.html
@@ -15,6 +19,7 @@ let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
 
 
 function saveData() {
+    data.pendingSync = true;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     // Auto-sync if connected to cloud
     if (typeof triggerBackgroundSync === 'function') {
@@ -90,6 +95,44 @@ async function duplicateTripFromDB(id) {
     }
     return null;
 }
+
+// ======= F6: Trip Template CRUD =======
+async function saveTemplateFromTrip(tripId) {
+    const trip = await getTrip(tripId);
+    if (!trip) return null;
+    const participants = await getParticipants(tripId);
+    const template = {
+        id: Date.now(),
+        name: trip.tripName + ' Template',
+        estimatedBudget: trip.estimatedBudget || 0,
+        currency: trip.currency || 'INR',
+        currencySymbol: trip.currencySymbol || '₹',
+        itinerary: trip.itinerary || [],
+        crew: participants.map(p => ({ name: p.name, familyCount: p.familyCount || 1 })),
+        savedAt: new Date().toISOString()
+    };
+    data.templates.push(template);
+    saveData();
+    return template.id;
+}
+
+async function getTemplates() {
+    return data.templates || [];
+}
+
+async function deleteTemplateFromDB(id) {
+    data.templates = data.templates.filter(t => t.id !== id);
+    saveData();
+}
+
+
+
+// ======= F2: Clear pendingSync after successful cloud push =======
+function clearPendingSync() {
+    data.pendingSync = false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
 
 // Participant operations
 async function addParticipant(participant) {

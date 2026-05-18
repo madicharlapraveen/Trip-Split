@@ -1,14 +1,17 @@
-const CACHE_NAME = 'tripsplit-v6-final';
+const CACHE_NAME = 'tripsplit-v12-consolidated';
 const urlsToCache = [
   './',
   './index.html',
   './css/style.css',
   './js/app.js',
   './js/db.js',
-  './js/ui_engine.js',
+  './js/sync.js',
   './js/split.js',
   './js/planner.js',
   './js/share.js',
+  './js/ai.js',
+  './js/presets.js',
+  './js/ui_engine.js',
   './manifest.json',
   './assets/icon-192.png',
   './assets/icon-512.png'

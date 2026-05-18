@@ -26,6 +26,23 @@
     --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- Dynamic App Themes --- */
+/* Trip Adviser Mode: Purple / Orange */
+body.theme-adviser {
+    --primary: #7c3aed;       /* Violet */
+    --primary-light: #a78bfa; /* Soft Violet */
+    --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #f97316 100%); /* Purple to Orange */
+    --secondary: #f97316;     /* Orange */
+}
+
+/* Trip Split Mode: Blue */
+body.theme-split {
+    --primary: #2563eb;       /* Royal Blue */
+    --primary-light: #60a5fa; /* Soft Blue */
+    --primary-gradient: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%); /* Blue to Cyan */
+    --secondary: #06b6d4;     /* Cyan */
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -307,10 +324,10 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
-    align-items: center;
+    align-items: flex-end;          /* Anchor to bottom like a sheet */
     justify-content: center;
     z-index: 100;
-    padding: 20px;
+    padding: 0;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
@@ -324,19 +341,49 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 .modal-content {
     background: white;
     width: 100%;
-    max-width: 400px;
-    border-radius: 32px;
-    padding: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    transform: scale(0.9) translateY(20px);
+    max-width: 480px;
+    border-radius: 32px 32px 0 0;   /* Rounded only at top — sheet style */
+    padding: 24px 24px 40px 24px;   /* Extra bottom padding for home indicator */
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    transform: translateY(100%);     /* Slide in from bottom */
     opacity: 0;
     transition: all 0.4s var(--transition-bouncy);
+    max-height: 90vh;               /* Never taller than 90% of screen */
+    overflow-y: auto;               /* Scroll inside modal if content overflows */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Drag handle at top of every modal */
+.modal-content::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin: 0 auto 20px;
 }
 
 .modal-overlay.active .modal-content {
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
     opacity: 1;
 }
+
+/* On larger screens, center the modal like a dialog */
+@media (min-width: 640px) {
+    .modal-overlay {
+        align-items: center;
+        padding: 20px;
+    }
+    .modal-content {
+        border-radius: 32px;
+        max-height: 85vh;
+    }
+    .modal-content::before {
+        display: none;
+    }
+}
+
 
 /* --- Animations --- */
 .animate-slide-up {
@@ -383,3 +430,28 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 .hover\:bg-indigo-50:hover { background-color: #eef2ff !important; }
 .hover\:bg-emerald-50:hover { background-color: #ecfdf5 !important; }
 .hover\:text-emerald-700:hover { color: #047857 !important; }
+
+/* Custom green breathing animation for live database indicator */
+.pulse-green {
+    width: 6px;
+    height: 6px;
+    background-color: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green-anim 2s infinite;
+}
+
+@keyframes pulse-green-anim {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}

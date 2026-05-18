@@ -5,6 +5,8 @@ async function calculateSplit() {
 
   const participants = await getParticipants(currentTripId);
   const expenses = await getExpenses(currentTripId);
+  const tripObj = await getTrip(currentTripId);
+  const symbol = tripObj ? (tripObj.currencySymbol || '₹') : '₹';
 
   if (participants.length === 0) {
       document.getElementById('split-details').innerHTML = `
@@ -14,21 +16,51 @@ async function calculateSplit() {
       return;
   }
 
-  // Calculate total expense and total participants (including family)
-  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount), 0);
+  // Initialize balances structure with zero totals
+  const balances = participants.map(p => ({
+    ...p,
+    totalSpent: 0,
+    expectedShare: 0,
+    balance: 0
+  }));
+
+  // Calculate actual individual spent and expected share totals based on split subset per expense
+  expenses.forEach(e => {
+    // Add to paid amount for the payer
+    const payer = balances.find(p => p.id === e.paidBy);
+    if (payer) {
+      payer.totalSpent += (e.totalAmount || e.amount || 0);
+    }
+
+    // Determine the set of participants this expense is split between
+    let splitBetweenIds = e.splitBetween || [];
+    if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
+      // Backwards compatibility: split among all active participants
+      splitBetweenIds = participants.map(p => p.id);
+    }
+
+    const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
+    const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
+
+    if (totalSplitFamily > 0) {
+      const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
+      splitParticipants.forEach(sp => {
+        const balanceRecord = balances.find(p => p.id === sp.id);
+        if (balanceRecord) {
+          balanceRecord.expectedShare += costPerHead * (sp.familyCount || 1);
+        }
+      });
+    }
+  });
+
+  // Calculate final net balances
+  balances.forEach(b => {
+    b.balance = b.totalSpent - b.expectedShare;
+  });
+
+  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount || 0), 0);
   const totalParticipants = participants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
   const perPersonShare = totalParticipants > 0 ? totalExpense / totalParticipants : 0;
-
-  // Calculate balances
-  const balances = participants.map(participant => {
-    const expectedShare = perPersonShare * (participant.familyCount || 1);
-    const balance = participant.totalSpent - expectedShare;
-    return {
-      ...participant,
-      expectedShare,
-      balance
-    };
-  });
 
   // Display split details
   const splitDetails = document.getElementById('split-details');
@@ -38,11 +70,11 @@ async function calculateSplit() {
       <div class="grid grid-cols-2 gap-4">
         <div>
             <p class="text-[10px] font-bold text-slate-400 uppercase">Total Expense</p>
-            <p class="text-xl font-black text-slate-800">₹${totalExpense.toFixed(0)}</p>
+            <p class="text-xl font-black text-slate-800">${symbol}${totalExpense.toFixed(0)}</p>
         </div>
         <div>
             <p class="text-[10px] font-bold text-slate-400 uppercase">Per Person</p>
-            <p class="text-xl font-black text-slate-800">₹${perPersonShare.toFixed(0)}</p>
+            <p class="text-xl font-black text-slate-800">${symbol}${perPersonShare.toFixed(0)}</p>
         </div>
       </div>
       <div class="mt-4 pt-4 border-t border-indigo-100 flex justify-between items-center">
@@ -68,12 +100,12 @@ async function calculateSplit() {
           </div>
           <div>
             <h5 class="font-bold text-slate-800">${participant.name}</h5>
-            <p class="text-[10px] text-slate-400 font-bold uppercase">Expected: ₹${participant.expectedShare.toFixed(0)}</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase">Expected: ${symbol}${participant.expectedShare.toFixed(0)}</p>
           </div>
         </div>
         <div class="text-right">
           <p class="font-black text-lg ${isCreditor ? 'text-emerald-600' : 'text-rose-600'}">
-            ${isCreditor ? '+' : ''}₹${Math.abs(participant.balance).toFixed(0)}
+            ${isCreditor ? '+' : ''}${symbol}${Math.abs(participant.balance).toFixed(0)}
           </p>
           <p class="text-[10px] font-black uppercase tracking-widest ${isCreditor ? 'text-emerald-400' : 'text-rose-400'}">
             ${isCreditor ? 'Receives' : 'Owes'}
@@ -171,7 +203,7 @@ async function calculateSplit() {
                 <p class="text-xs font-bold text-indigo-400">${settlement.to}</p>
             </div>
             <div class="text-right">
-                <p class="text-lg font-black text-emerald-400">₹${settlement.amount.toFixed(0)}</p>
+                <p class="text-lg font-black text-emerald-400">${symbol}${settlement.amount.toFixed(0)}</p>
             </div>
         </div>
         <div class="flex justify-end pt-2 border-t border-white/10">

@@ -131,6 +131,10 @@ window.triggerBackgroundSync = function(actionDesc = "Updated trip") {
 window.subscribeToTripUpdates = function(shareId) {
     if (realtimeSubscription) supabase.removeChannel(realtimeSubscription);
     
+    if (typeof updateLiveStatusIndicator === 'function') {
+        updateLiveStatusIndicator(false);
+    }
+    
     realtimeSubscription = supabase.channel('public:trips:share_id=eq.' + shareId)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'trips', filter: `share_id=eq.${shareId}` }, async (payload) => {
             const cloudTripRecord = payload.new;
@@ -160,7 +164,17 @@ window.subscribeToTripUpdates = function(shareId) {
                 isApplyingCloudUpdate = false;
             }
         })
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                if (typeof updateLiveStatusIndicator === 'function') {
+                    updateLiveStatusIndicator(true);
+                }
+            } else {
+                if (typeof updateLiveStatusIndicator === 'function') {
+                    updateLiveStatusIndicator(false);
+                }
+            }
+        });
 };
 
 async function syncTripToCloud(tripId, actionDesc = "Updated trip") {
