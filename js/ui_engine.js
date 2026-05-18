@@ -1382,8 +1382,15 @@ window.showSettings = async function() {
     const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
 
     const content = `
-        <div class="space-y-6">
-            <div class="flex items-center space-x-4 mb-6">
+        <div class="space-y-6 relative">
+            <!-- Top Right Close Icon Button -->
+            <button onclick="hideModal()" class="absolute -top-1 -right-1 p-2 text-slate-400 hover:text-slate-600 hover:scale-110 active:scale-95 transition-all cursor-pointer" title="Close Settings">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <div class="flex items-center space-x-4 mb-6 pr-8">
                 <div class="w-16 h-16 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-100">
                     ${(profile ? profile.name : 'Guest').charAt(0).toUpperCase()}
                 </div>
@@ -1482,6 +1489,33 @@ window.showSettings = async function() {
                </div>
             </div>
 
+            <!-- Push Notifications Section -->
+            <div class="space-y-3 pt-4 border-t border-slate-100">
+               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Push Notifications & Alerts</p>
+               
+               <div class="flex flex-col gap-2">
+                   <button id="enable-notifications-btn" onclick="requestNotificationPermission()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                       <div class="flex items-center space-x-3">
+                           <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all" id="notif-icon">
+                               🔔
+                           </div>
+                           <span class="font-bold text-slate-700" id="notif-text">Enable Push Notifications</span>
+                       </div>
+                       <span id="notif-status-badge" class="pill bg-slate-200 text-[10px] font-black text-slate-500">Disabled</span>
+                   </button>
+
+                   <button id="test-notifications-btn" onclick="triggerTestNotification()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group hidden">
+                       <div class="flex items-center space-x-3">
+                           <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                               ⚡
+                           </div>
+                           <span class="font-bold text-slate-700">Send Test Notification</span>
+                       </div>
+                       <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                   </button>
+               </div>
+            </div>
+
             <div class="pt-6 border-t border-slate-100">
                 <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
             </div>
@@ -1490,6 +1524,11 @@ window.showSettings = async function() {
         </div>
     `;
     showModal(content);
+
+    // Call updateNotificationSettingsUI to sync UI state
+    if (typeof updateNotificationSettingsUI === 'function') {
+        updateNotificationSettingsUI();
+    }
 
     // Backup & restore click wire-up
     const expBtn = document.getElementById('export-json-btn-settings');
@@ -1501,7 +1540,10 @@ window.showSettings = async function() {
             const a = document.createElement('a');
             a.href = url;
             a.download = `tripsplit-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
             if (window.showToast) window.showToast('Backup downloaded!', 'success');
         });
@@ -1535,6 +1577,98 @@ window.showSettings = async function() {
     }
 };
 
+window.requestNotificationPermission = async function() {
+    if (!('Notification' in window)) {
+        alert('This browser does not support notifications.');
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (typeof updateNotificationSettingsUI === 'function') {
+        updateNotificationSettingsUI();
+    }
+
+    if (permission === 'granted') {
+        if (window.showToast) window.showToast('Notification permission granted! 🔔', 'success');
+        if (typeof subscribeToPush === 'function') {
+            await subscribeToPush();
+        }
+    } else {
+        if (window.showToast) window.showToast('Notification permission denied.', 'error');
+    }
+};
+
+window.updateNotificationSettingsUI = function() {
+    const btn = document.getElementById('enable-notifications-btn');
+    const badge = document.getElementById('notif-status-badge');
+    const text = document.getElementById('notif-text');
+    const icon = document.getElementById('notif-icon');
+    const testBtn = document.getElementById('test-notifications-btn');
+
+    if (!btn || !badge) return;
+
+    if (!('Notification' in window)) {
+        badge.textContent = 'Unsupported';
+        badge.className = 'pill bg-rose-100 text-[10px] font-black text-rose-700';
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        badge.textContent = 'Active';
+        badge.className = 'pill bg-emerald-100 text-[10px] font-black text-emerald-700';
+        text.textContent = 'Notifications Active';
+        if (icon) icon.textContent = '🔔';
+        if (testBtn) testBtn.classList.remove('hidden');
+    } else if (Notification.permission === 'denied') {
+        badge.textContent = 'Blocked';
+        badge.className = 'pill bg-rose-100 text-[10px] font-black text-rose-700';
+        text.textContent = 'Notifications Blocked';
+        if (icon) icon.textContent = '🔕';
+        if (testBtn) testBtn.classList.add('hidden');
+    } else {
+        badge.textContent = 'Configure';
+        badge.className = 'pill bg-amber-100 text-[10px] font-black text-amber-700';
+        text.textContent = 'Enable Push Notifications';
+        if (icon) icon.textContent = '🔔';
+        if (testBtn) testBtn.classList.add('hidden');
+    }
+};
+
+window.triggerTestNotification = function() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        alert('Please enable notifications first.');
+        return;
+    }
+
+    if (window.showToast) window.showToast('Testing native notification... 🚀', 'info');
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification('TripSplit Notification Test', {
+                body: '🎉 Notifications are working perfectly! Split bills, share memories!',
+                icon: './assets/icon-192.png',
+                badge: './assets/icon-192.png',
+                vibrate: [100, 50, 100],
+                tag: 'tripsplit-test',
+                renotify: true,
+                data: {
+                    url: './'
+                }
+            });
+        }).catch(err => {
+            new Notification('TripSplit Notification Test', {
+                body: '🎉 Notifications are working perfectly! Split bills, share memories!',
+                icon: './assets/icon-192.png',
+            });
+        });
+    } else {
+        new Notification('TripSplit Notification Test', {
+            body: '🎉 Notifications are working perfectly! Split bills, share memories!',
+            icon: './assets/icon-192.png',
+        });
+    }
+};
+
 // Edit Profile settings
 window.showProfileModal = async function() {
     const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
@@ -1545,6 +1679,20 @@ window.showProfileModal = async function() {
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
           </button>
         </div>
+
+        <!-- Local Storage and Backup Warning Note -->
+        <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start space-x-3 mb-5">
+            <span class="text-lg">🔒</span>
+            <div class="flex-1">
+                <h4 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1">Local Data Security Note</h4>
+                <p class="text-[11px] text-amber-700 leading-relaxed">
+                    Your data is stored securely **directly on your device** for absolute privacy and safety. 
+                    <b>Warning:</b> Do not clear your browser cache, site data, or private browsing history without exporting a backup first. 
+                    Once you backup your files, your data is secure and ready to be fully restored at any time!
+                </p>
+            </div>
+        </div>
+
         <form id="profile-form" class="space-y-5">
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Profile Name</label>
@@ -1563,9 +1711,39 @@ window.showProfileModal = async function() {
                 <button type="submit" class="w-full btn-primary py-4">Save Account Profile</button>
             </div>
         </form>
+
+        <!-- CSV Export Option Tools -->
+        <div class="space-y-3 pt-5 border-t border-slate-100 mt-5">
+           <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Local Data Export Tools</p>
+           
+           <div class="grid grid-cols-1 gap-2">
+               <button type="button" id="export-csv-all-btn" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                   <div class="flex items-center space-x-3">
+                       <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                           📊
+                       </div>
+                       <span class="font-bold text-slate-700 text-left">Export All Trips to CSV</span>
+                   </div>
+                   <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+               </button>
+
+               ${window.currentTripId ? `
+               <button type="button" id="export-csv-trip-btn" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                   <div class="flex items-center space-x-3">
+                       <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                           ✈️
+                       </div>
+                       <span class="font-bold text-slate-700 text-left">Export Active Trip Ledger (.csv)</span>
+                   </div>
+                   <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+               </button>
+               ` : ''}
+           </div>
+        </div>
     `;
     showModal(content);
     
+    // Bind form submission
     document.getElementById('profile-form').onsubmit = async (e) => {
         e.preventDefault();
         const name = document.getElementById('profile-name').value.trim();
@@ -1580,6 +1758,56 @@ window.showProfileModal = async function() {
             alert('Error saving profile: ' + error.message);
         }
     };
+
+    // CSV Export All Wire-Up
+    const csvAllBtn = document.getElementById('export-csv-all-btn');
+    if (csvAllBtn) {
+        csvAllBtn.onclick = async () => {
+            try {
+                if (typeof exportDataToCSV === 'function') {
+                    const csvContent = await exportDataToCSV();
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tripsplit-all-trips-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    if (window.showToast) window.showToast('CSV Backup exported successfully! 📊', 'success');
+                }
+            } catch (err) {
+                alert('Export failed: ' + err.message);
+            }
+        };
+    }
+
+    // CSV Export Active Trip Wire-Up
+    const csvTripBtn = document.getElementById('export-csv-trip-btn');
+    if (csvTripBtn) {
+        csvTripBtn.onclick = async () => {
+            try {
+                if (typeof exportTripToCSV === 'function' && window.currentTripId) {
+                    const csvContent = await exportTripToCSV(window.currentTripId);
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tripsplit-trip-ledger-${window.currentTripId}-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    if (window.showToast) window.showToast('Active trip ledger exported! ✈️', 'success');
+                }
+            } catch (err) {
+                alert('Export failed: ' + err.message);
+            }
+        };
+    }
 };
 
 // Join Trip modal (Download trip from ID)

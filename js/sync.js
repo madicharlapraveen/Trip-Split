@@ -151,6 +151,35 @@ window.subscribeToTripUpdates = function(shareId) {
                 if (window.showToast) {
                     window.showToast(`${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`, 'info');
                 }
+
+                // Show Native System Notification if permission is granted
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification('TripSplit Update', {
+                                body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                                icon: './assets/icon-192.png',
+                                badge: './assets/icon-192.png',
+                                vibrate: [100, 50, 100],
+                                tag: 'tripsplit-update',
+                                renotify: true,
+                                data: {
+                                    url: './'
+                                }
+                            });
+                        }).catch(err => {
+                            new Notification('TripSplit Update', {
+                                body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                                icon: './assets/icon-192.png'
+                            });
+                        });
+                    } else {
+                        new Notification('TripSplit Update', {
+                            body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                            icon: './assets/icon-192.png'
+                        });
+                    }
+                }
                 
                 await saveCloudTripBundle(cloudTripRecord.trip_data);
                 

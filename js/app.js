@@ -37,6 +37,13 @@ async function initApp() {
     try {
       await navigator.serviceWorker.register('./service-worker.js');
       console.log('Service worker registered');
+      
+      // Auto-subscribe to push if permission is already granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if (typeof subscribeToPush === 'function') {
+          subscribeToPush();
+        }
+      }
     } catch (error) {
       console.warn('Service worker registration failed:', error);
     }
