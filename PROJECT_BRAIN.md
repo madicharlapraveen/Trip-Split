@@ -14,6 +14,7 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 *   **Deployment**: Automated GitHub-to-Firebase workflow via GitHub Actions.
 *   **Identity**: Device-based identity with optional profile linking (Name, Email, Mobile).
 *   **AI**: Integrated Google Gemini AI for automated trip itinerary generation.
+*   **Intro Animation**: Snappy 1-second custom logo intro splash screen on startup featuring smooth scale bounce-in and staggered fade-out animations.
 
 ---
 
@@ -26,18 +27,19 @@ The app has two primary modes switchable from the Home screen:
 | 🎒 **Adviser Mode** | Itinerary preview, Travel Guidelines, Memories Gallery | Indigo/Purple gradient |
 | 💰 **Split Mode** | Crew list, Recent Expenses, Settlement Breakdown, Budget stats | Indigo/Purple (same palette, stat additions) |
 
-Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchAppMode(mode, silent)` function in `ui_engine.js` handles all switching. `loadHomeData()` reads `currentAppMode` to show/hide cards.
+Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchAppMode(mode, silent)` function in `ui_engine.js` handles all switching, immediately adding the active theme class (`theme-adviser` or `theme-split`) to the `body` element. This transitions all background gradients and primary color styles instantly on click without reload.
 
 ---
 
 ## 🎨 3. Design System (Premium Aesthetics)
 *   **Theme**: "Super Cool" Glassmorphism (High-blur backdrops, translucent cards, animated ambient background blobs).
-*   **Typography**: `Outfit` (Google Fonts) for a modern, tech-forward feel.
+*   **Typography**: `Outfit` (Google Fonts) for a modern, tech-forward feel. Brand title in persistent header is sized at `text-2xl font-extrabold` and paired with a tight, perfectly aligned tagline `SPLIT BILLS, SHARE MEMORIES` (`text-[8px] font-bold` sub-label) that fits precisely within the title bounds.
 *   **Palette**:
-    *   **Primary**: Deep Indigo (`#4f46e5`) to Purple gradient (`--primary-gradient`).
+    *   **Primary**: Deep Indigo (`#4f46e5`) to Purple gradient (`--primary-gradient`). Toggles instantly to Violet-to-Orange in Adviser Mode, and Royal Blue-to-Cyan in Split Mode.
     *   **Success/Warning/Danger**: Emerald, Amber, Rose (Tailwind standard colors).
     *   **Neutral**: Slate-50 to Slate-900.
 *   **Key Components**:
+    *   **Splash Screen**: Full-screen startup intro with a bouncing brand avatar (`icon-192.png`) and staggered fade-slide titles that auto-remove after 1 second.
     *   **Floating Nav Dock**: iOS-style bottom pill with scale-in icon animations.
     *   **Glass Modals**: Centered, bouncy animated overlays (`animate-scale-in`).
     *   **Hero Trip Card**: Stunning gradient card with budget progress visualization.
@@ -180,7 +182,7 @@ Bottom Nav:
 ---
 
 ## 🛠️ 9. Maintenance Checklist
-*   **Version Control**: Script tags use `?v=11`. Increment on each deploy.
+*   **Version Control**: Script tags use `?v=12`. Increment on each deploy to bust browser cache.
 *   **Asset Management**: Keep all icons in `/assets`. Use `icon-192.png` for splash/PWA.
 *   **Styles**: Avoid inline styles. Use the token system in `style.css`.
 *   **Persistence**: Always use `await` when calling `db.js` function to ensure data integrity before UI updates.
