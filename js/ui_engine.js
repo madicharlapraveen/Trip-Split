@@ -1190,6 +1190,9 @@ window.switchAppMode = function(mode, silent = false) {
   localStorage.setItem('tripsplit_app_mode', mode);
   window.currentAppMode = mode;
   
+  // Update body class immediately to apply adviser/split theme gradients
+  document.body.className = mode === 'adviser' ? 'theme-adviser' : 'theme-split';
+  
   const adviserBtn = document.getElementById('mode-btn-adviser');
   const splitBtn = document.getElementById('mode-btn-split');
   

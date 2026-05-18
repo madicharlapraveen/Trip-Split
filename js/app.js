@@ -42,7 +42,7 @@ async function initApp() {
     }
   }
 
-  // Splash Screen Logic
+  // Splash Screen Logic (Snappy 1-Second Fade out)
   setTimeout(() => {
     const splash = document.getElementById('splash-screen');
     if (splash) {
@@ -50,7 +50,7 @@ async function initApp() {
       splash.style.visibility = 'hidden';
       setTimeout(() => splash.remove(), 700); // Remove after fade transition
     }
-  }, 1500);
+  }, 1000);
 
   // Initialize Modules
   if (typeof initUI === 'function') initUI();
