@@ -280,6 +280,9 @@ async function joinTripFromCloud(shareId) {
 
 // --- UI Handlers ---
 
+window.showManageEditorsModal = function() {
+    return handleManagePermissions();
+};
 
 async function handleManagePermissions() {
     if (!currentTripId) return;

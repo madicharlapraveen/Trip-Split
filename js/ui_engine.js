@@ -765,23 +765,23 @@ async function loadHomeData(silentModeSwitch = false) {
     itineraryPreview.innerHTML = '';
     const itinerary = (trip && trip.itinerary) ? trip.itinerary : [];
     if (itinerary.length === 0) {
-      itineraryPreview.innerHTML = '<p class="text-white/60 text-xs italic py-2">Roadmap is empty. Go to Plan to add places.</p>';
+      itineraryPreview.innerHTML = '<p class="text-slate-400 text-xs italic py-2">Roadmap is empty. Go to Plan to add places.</p>';
     } else {
       itinerary.slice(0, 3).forEach(item => {
         const div = document.createElement('div');
-        div.className = 'relative flex justify-between items-center bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/5';
+        div.className = 'relative flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100/50';
         div.innerHTML = `
           <div>
-            <h4 class="font-bold text-white text-xs ${item.visited ? 'line-through text-white/55' : ''}">${item.placeName}</h4>
-            <p class="text-[10px] text-white/60 font-bold mt-1 uppercase tracking-wider">${item.time || 'Anytime'}</p>
+            <h4 class="font-bold text-slate-700 text-xs ${item.visited ? 'line-through text-slate-400/80' : ''}">${item.placeName}</h4>
+            <p class="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">${item.time || 'Anytime'}</p>
           </div>
-          ${item.visited ? '<span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full">Visited</span>' : '<span class="text-[9px] font-black text-indigo-300 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">Planned</span>'}
+          ${item.visited ? '<span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-100 px-2 py-0.5 rounded-full">Visited</span>' : '<span class="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-100 px-2 py-0.5 rounded-full">Planned</span>'}
         `;
         itineraryPreview.appendChild(div);
       });
       if (itinerary.length > 3) {
         const moreDiv = document.createElement('div');
-        moreDiv.className = 'text-center text-[10px] font-bold text-white/50 py-1 cursor-pointer hover:text-white transition-colors';
+        moreDiv.className = 'text-center text-[10px] font-black text-indigo-600 uppercase tracking-wider py-2 cursor-pointer hover:text-indigo-700 transition-colors';
         moreDiv.onclick = () => showScreen('plan');
         moreDiv.textContent = `+ ${itinerary.length - 3} more stops`;
         itineraryPreview.appendChild(moreDiv);
@@ -824,16 +824,16 @@ async function loadHomeData(silentModeSwitch = false) {
         const statusText = document.getElementById('budget-status-text');
         if (statusText) {
           if (totalExpense > budget) {
-              progressBar.classList.remove('bg-white');
-              progressBar.classList.add('bg-rose-400');
+              progressBar.classList.remove('bg-indigo-500', 'bg-amber-500');
+              progressBar.classList.add('bg-rose-500');
               statusText.textContent = 'Budget Exceeded!';
           } else if (totalExpense > budget * 0.8) {
-              progressBar.classList.remove('bg-white', 'bg-rose-400');
-              progressBar.classList.add('bg-amber-400');
+              progressBar.classList.remove('bg-indigo-500', 'bg-rose-500');
+              progressBar.classList.add('bg-amber-500');
               statusText.textContent = 'Approaching Limit';
           } else {
-              progressBar.classList.remove('bg-rose-400', 'bg-amber-400');
-              progressBar.classList.add('bg-white');
+              progressBar.classList.remove('bg-rose-500', 'bg-amber-500');
+              progressBar.classList.add('bg-indigo-500');
               statusText.textContent = 'Budget Progress';
           }
         }
@@ -1451,16 +1451,6 @@ window.showSettings = async function() {
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-
-                <button onclick="showManagePresetsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            ⚡
-                        </div>
-                        <span class="font-bold text-slate-700">Manage Split Presets (F4)</span>
-                    </div>
-                    <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
-                </button>
             </div>
 
             <div class="space-y-3 pt-4 border-t border-slate-100">
@@ -1509,16 +1499,11 @@ window.showSettings = async function() {
                 </button>
             </div>
 
-            <!-- F2: Cloud Connection details & Backup Restoring -->
+            <!-- F2: Local Backups -->
             <div class="space-y-4 pt-4 border-t border-slate-100">
-               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cloud Sync Status (F2)</p>
-               
-               <div class="flex items-center justify-between p-2 bg-slate-50 rounded-2xl">
-                 <span class="text-xs font-bold text-slate-600 ml-2">PWA Live Database</span>
-                 <button onclick="handleCloudSync()" class="btn-primary py-2 px-4 rounded-xl text-xs font-bold">Sync Now 🔄</button>
-               </div>
+               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Local Database Backups</p>
 
-               <div class="grid grid-cols-2 gap-2 mt-4">
+               <div class="grid grid-cols-2 gap-2">
                    <button id="export-json-btn-settings" class="p-4 bg-slate-100 text-slate-600 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-200 transition-all">
                        <span class="text-[10px] font-bold text-center">Export Backup</span>
                    </button>
@@ -1542,16 +1527,6 @@ window.showSettings = async function() {
                        </div>
                        <span id="notif-status-badge" class="pill bg-slate-200 text-[10px] font-black text-slate-500">Disabled</span>
                    </button>
-
-                   <button id="test-notifications-btn" onclick="triggerTestNotification()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group hidden">
-                       <div class="flex items-center space-x-3">
-                           <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                               ⚡
-                           </div>
-                           <span class="font-bold text-slate-700">Send Test Notification</span>
-                       </div>
-                       <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
-                   </button>
                </div>
             </div>
 
@@ -1559,7 +1534,7 @@ window.showSettings = async function() {
                 <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
             </div>
             
-            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v2.0 • Premium PWA</p>
+            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v2.0 • Ai Space - Premium</p>
         </div>
     `;
     showModal(content);

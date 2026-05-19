@@ -35,7 +35,7 @@ async function initApp() {
   // Register service worker
   if ('serviceWorker' in navigator) {
     try {
-      await navigator.serviceWorker.register('./service-worker.js');
+      const registration = await navigator.serviceWorker.register('./service-worker.js');
       console.log('Service worker registered');
       
       // Auto-subscribe to push if permission is already granted
@@ -44,9 +44,30 @@ async function initApp() {
           subscribeToPush();
         }
       }
+
+      // Handle updates to the service worker
+      registration.addEventListener('updatefound', () => {
+        const installingWorker = registration.installing;
+        if (installingWorker) {
+          installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('New update available. Activating...');
+            }
+          });
+        }
+      });
     } catch (error) {
       console.warn('Service worker registration failed:', error);
     }
+
+    // Auto-reload to apply new service worker updates instantly
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
   }
 
   // Splash Screen Logic (Snappy 1-Second Fade out)
