@@ -13,6 +13,11 @@
     
     <!-- Link to our super cool new CSS (Loaded after Tailwind to override it) -->
     <link rel="stylesheet" href="css/style.css?v=11">
+    
+    <!-- Leaflet.js for beautiful offline map planning (F6) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>window.currentTripId = null;</script>
 </head>
 <body>
@@ -193,11 +198,26 @@
         </section>
 
         <!-- ================= PLANNER SCREEN (Adviser Mode) ================= -->
-        <section id="plan-screen" class="hidden flex-col gap-6 animate-slide-up">
+        <section id="plan-screen" class="hidden flex-col gap-5 animate-slide-up">
             <div class="flex justify-between items-center">
-                <h2 class="text-2xl">Itinerary</h2>
-                <button id="add-place-btn" class="btn" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);" onclick="showAddPlaceModal()">Add Place</button>
+                <div class="flex flex-col">
+                    <h2 class="text-2xl font-extrabold text-slate-800">Itinerary Roadmap</h2>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Offline-Ready Pinned Map</span>
+                </div>
+                <button id="add-place-btn" class="flex items-center gap-1.5 py-2.5 px-4 bg-indigo-50 text-indigo-600 text-xs font-black rounded-xl hover:bg-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm" onclick="showAddPlaceModal()">
+                    ➕ Add Stop
+                </button>
             </div>
+            
+            <!-- Beautiful Map Container -->
+            <div class="relative w-full h-[280px] rounded-3xl shadow-sm border border-slate-100/80 overflow-hidden bg-slate-50">
+                <div id="plan-map" class="w-full h-full" style="z-index: 10;"></div>
+                <div id="map-offline-badge" class="absolute top-3 right-3 z-[20] flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-md pointer-events-none transition-all scale-0">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Cached Offline
+                </div>
+            </div>
+
+            <!-- Stops Roadmap List -->
             <div id="itinerary-list" class="flex flex-col gap-4 relative"></div>
         </section>
 
