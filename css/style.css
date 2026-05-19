@@ -515,3 +515,32 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
 }
+
+/* --- Glowing Circle Highlight for Navigation Buttons (New Users Guidance) --- */
+.glowing-pulse-nav {
+    position: relative;
+    animation: nav-glow-pulse 2s infinite ease-in-out;
+    border-radius: 20px !important;
+}
+
+.glowing-pulse-nav::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 22px;
+    border: 3px solid var(--primary);
+    animation: ring-expand-pulse 2s infinite ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes nav-glow-pulse {
+    0% { background-color: rgba(79, 70, 229, 0.05); transform: scale(1); }
+    50% { background-color: rgba(79, 70, 229, 0.15); transform: scale(1.08); box-shadow: 0 0 15px rgba(79, 70, 229, 0.25); }
+    100% { background-color: rgba(79, 70, 229, 0.05); transform: scale(1); }
+}
+
+@keyframes ring-expand-pulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    70% { transform: scale(1.2); opacity: 0; }
+    100% { transform: scale(0.95); opacity: 0; }
+}

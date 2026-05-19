@@ -120,7 +120,7 @@ Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchApp
 
 ---
 
-## 🛠️ 6. 9 Upgraded Features (v2)
+## 🛠️ 6. 11 Upgraded Features (v2)
 
 | # | Feature | Mode | Where |
 |---|---------|------|-------|
@@ -133,6 +133,8 @@ Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchApp
 | F7 | Multi-Currency | 💰 Split | Add Expense → 💱 toggle → local amount + exchange rate → auto-calculates base amount |
 | F8 | Recurring Expenses | 💰 Split | Add Expense → 🔄 checkbox → `createRecurringExpense()` → creates N daily copies |
 | F9 | Memories Gallery | 🎒 Adviser | Plan screen → Memories tab → `loadGallery()` → `addTripPhoto()` → max 20 photos, 600px JPEG 0.65 |
+| F10 | Interactive Map Canvas & Routing | 🎒 Adviser | Plan screen → Maps tab → Leaflet.js canvas, auto-geocoded location search database, stop card list, map-drawn routing lines, Google Maps deep linking directions, and offline tile caching |
+| F11 | Active Trip Persistence & Dock Glow | 🔗 Both | Launches home screen with last-active trip automatically from localStorage (`tripsplit_active_trip_id`). If no trip selected, bottom dock Trips button glows with dynamic breathing halo animation (`glowing-pulse-nav`) |
 
 ---
 
@@ -182,7 +184,7 @@ Bottom Nav:
 ---
 
 ## 🛠️ 9. Maintenance Checklist
-*   **Version Control**: Script tags use `?v=12`. Increment on each deploy to bust browser cache.
+*   **Version Control**: Script tags use `?v=13`. Increment on each deploy to bust browser cache.
 *   **Asset Management**: Keep all icons in `/assets`. Use `icon-192.png` for splash/PWA.
 *   **Styles**: Avoid inline styles. Use the token system in `style.css`.
 *   **Persistence**: Always use `await` when calling `db.js` function to ensure data integrity before UI updates.
@@ -191,4 +193,4 @@ Bottom Nav:
 
 ---
 
-*Last Updated: 2026-05-18 — v2 9-Feature Upgrade & Browser Interactive Verification Complete (100% Green)*
+*Last Updated: 2026-05-19 — v2 11-Feature Upgrade & Browser Interactive Verification Complete (100% Green)*

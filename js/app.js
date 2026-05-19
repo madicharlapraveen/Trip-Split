@@ -86,9 +86,27 @@ async function initApp() {
   if (typeof initShare === 'function') initShare();
 
   // Load initial data
+  // Load initial data and restore last active trip ID across sessions
   const trips = await getTrips();
-  if (trips.length > 0 && !currentTripId) {
+  const savedActiveTripId = localStorage.getItem('tripsplit_active_trip_id');
+  
+  if (savedActiveTripId && trips.some(t => t.id === Number(savedActiveTripId))) {
+    currentTripId = Number(savedActiveTripId);
+  } else if (trips.length > 0) {
     currentTripId = trips[0].id;
+    localStorage.setItem('tripsplit_active_trip_id', currentTripId);
+  } else {
+    currentTripId = null;
+  }
+
+  // Highlight and guide new users to the Trips icon if no active trip exists
+  const tripsNavBtn = document.getElementById('nav-btn-trips');
+  if (tripsNavBtn) {
+    if (!currentTripId) {
+      tripsNavBtn.classList.add('glowing-pulse-nav');
+    } else {
+      tripsNavBtn.classList.remove('glowing-pulse-nav');
+    }
   }
 
   await loadHomeData();
@@ -127,6 +145,14 @@ async function initApp() {
 // Trip selection
 async function selectTrip(tripId) {
   currentTripId = tripId;
+  localStorage.setItem('tripsplit_active_trip_id', tripId);
+  
+  // Remove guide pulse on selection
+  const tripsNavBtn = document.getElementById('nav-btn-trips');
+  if (tripsNavBtn) {
+    tripsNavBtn.classList.remove('glowing-pulse-nav');
+  }
+  
   hideModal();
   await loadHomeData();
   await loadExpenses();
@@ -166,6 +192,13 @@ async function deleteTrip(tripId) {
 
     if (currentTripId === tripId) {
       currentTripId = null;
+      localStorage.removeItem('tripsplit_active_trip_id');
+      
+      // Guide user back to selecting/creating a trip
+      const tripsNavBtn = document.getElementById('nav-btn-trips');
+      if (tripsNavBtn) {
+        tripsNavBtn.classList.add('glowing-pulse-nav');
+      }
     }
 
     loadHomeData();

@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Link to our super cool new CSS (Loaded after Tailwind to override it) -->
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=13">
     
     <!-- Leaflet.js for beautiful offline map planning (F6) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -282,7 +282,7 @@
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             <span>Plan</span>
         </button>
-        <button onclick="showScreen('trips')" class="nav-btn" data-screen="trips">
+        <button id="nav-btn-trips" onclick="showScreen('trips')" class="nav-btn" data-screen="trips">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span>Trips</span>
         </button>
@@ -290,14 +290,14 @@
 
     <!-- Core Logic Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/db.js?v=12"></script>
-    <script src="js/sync.js?v=12"></script>
-    <script src="js/split.js?v=12"></script>
-    <script src="js/planner.js?v=12"></script>
-    <script src="js/share.js?v=12"></script>
-    <script src="js/ai.js?v=12"></script>
-    <script src="js/presets.js?v=12"></script>
-    <script src="js/ui_engine.js?v=12"></script>
-    <script src="js/app.js?v=12"></script>
+    <script src="js/db.js?v=13"></script>
+    <script src="js/sync.js?v=13"></script>
+    <script src="js/split.js?v=13"></script>
+    <script src="js/planner.js?v=13"></script>
+    <script src="js/share.js?v=13"></script>
+    <script src="js/ai.js?v=13"></script>
+    <script src="js/presets.js?v=13"></script>
+    <script src="js/ui_engine.js?v=13"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>
