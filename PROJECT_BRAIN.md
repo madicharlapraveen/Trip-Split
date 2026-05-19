@@ -15,6 +15,7 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 *   **Identity**: Device-based identity with optional profile linking (Name, Email, Mobile).
 *   **AI**: Integrated Google Gemini AI for automated trip itinerary generation.
 *   **Intro Animation**: Snappy 1-second custom logo intro splash screen on startup featuring smooth scale bounce-in and staggered fade-out animations.
+*   **Link Previews**: Open Graph and Twitter Card meta tags in `index.html` for social sharing icons (WhatsApp, Twitter, Facebook, etc.). Uses `assets/icon-512.png` as `og:image`.
 
 ---
 
@@ -193,7 +194,8 @@ Bottom Nav:
 *   **Trip ID Comparison**: Trip IDs may be numeric (`Date.now()`) for local trips OR string-prefixed (e.g. `"GOA-8492"`) for cloud-synced trips. **Always compare as strings**: `String(t.id) === String(savedId)`. Never use `===` directly or `Number()` coercion. Updated in `app.js` and `ui_engine.js`.
 *   **Global currentTripId**: Declared as `var currentTripId` AND `window.currentTripId` in `index.html`. Both must be kept in sync whenever setting a new active trip — always assign to both `currentTripId = x; window.currentTripId = x;` in `app.js` (`selectTrip`, `deleteTrip`, `initApp`).
 *   **Inline onclick IDs**: When embedding trip.id into HTML template strings for onclick handlers (e.g. `selectTrip`), wrap with single quotes: `onclick="selectTrip('${trip.id}')"` to support alphanumeric cloud IDs without JS syntax errors.
+*   **Social Meta Tags**: Open Graph (`og:title`, `og:description`, `og:image`) and Twitter Card tags in `index.html` head. `og:image` should use absolute URL for production (e.g., `https://trip-split-e56d3.web.app/assets/icon-512.png`).
 
 ---
 
-*Last Updated: 2026-05-19 — v2 F11 Bug Fix: Robust string-coerced Trip ID comparison, window.currentTripId dual-assignment, inline onclick quote-wrapping. Cache bumped to tripsplit-v20-pulse-fix. Version strings at ?v=14.*
+*Last Updated: 2026-05-19 — Added Open Graph and Twitter Card meta tags for link preview icons. Cache bumped to tripsplit-v20-pulse-fix. Version strings at ?v=14.*
