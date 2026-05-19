@@ -240,6 +240,11 @@ async function syncTripToCloud(tripId, actionDesc = "Updated trip") {
 
         if (error) throw new Error(error.message);
         
+        // Clear pending sync flag since upload succeeded
+        if (typeof clearPendingSync === 'function') {
+            clearPendingSync();
+        }
+        
         // Ensure we are listening for others
         subscribeToTripUpdates(trip.share_id);
         

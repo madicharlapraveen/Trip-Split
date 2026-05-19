@@ -759,6 +759,45 @@ async function loadHomeData(silentModeSwitch = false) {
     else statsDisplay.classList.add('hidden');
   }
 
+  // Populate Adviser Mode widgets if active
+  const itineraryPreview = document.getElementById('adviser-itinerary-preview');
+  if (itineraryPreview) {
+    itineraryPreview.innerHTML = '';
+    const itinerary = (trip && trip.itinerary) ? trip.itinerary : [];
+    if (itinerary.length === 0) {
+      itineraryPreview.innerHTML = '<p class="text-white/60 text-xs italic py-2">Roadmap is empty. Go to Plan to add places.</p>';
+    } else {
+      itinerary.slice(0, 3).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'relative flex justify-between items-center bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/5';
+        div.innerHTML = `
+          <div>
+            <h4 class="font-bold text-white text-xs ${item.visited ? 'line-through text-white/55' : ''}">${item.placeName}</h4>
+            <p class="text-[10px] text-white/60 font-bold mt-1 uppercase tracking-wider">${item.time || 'Anytime'}</p>
+          </div>
+          ${item.visited ? '<span class="text-[9px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full">Visited</span>' : '<span class="text-[9px] font-black text-indigo-300 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">Planned</span>'}
+        `;
+        itineraryPreview.appendChild(div);
+      });
+      if (itinerary.length > 3) {
+        const moreDiv = document.createElement('div');
+        moreDiv.className = 'text-center text-[10px] font-bold text-white/50 py-1 cursor-pointer hover:text-white transition-colors';
+        moreDiv.onclick = () => showScreen('plan');
+        moreDiv.textContent = `+ ${itinerary.length - 3} more stops`;
+        itineraryPreview.appendChild(moreDiv);
+      }
+    }
+  }
+
+  const adviserNotesContent = document.getElementById('adviser-notes-content');
+  if (adviserNotesContent) {
+    if (trip && trip.notes && trip.notes.trim() !== '') {
+      adviserNotesContent.textContent = trip.notes;
+    } else {
+      adviserNotesContent.textContent = 'No guidelines or checklists added yet. Tap edit at the top to add trip parameters or notes.';
+    }
+  }
+
   // Header profile letter sync
   const profileDiv = document.getElementById('header-profile');
   if (profileDiv) {

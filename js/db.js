@@ -27,12 +27,22 @@ function saveData() {
     }
 }
 
+// Helper to update the last updated timestamp of a trip
+function touchTrip(tripId) {
+    if (!tripId) return;
+    const index = data.trips.findIndex(t => t.id === Number(tripId));
+    if (index !== -1) {
+        data.trips[index].updatedAt = new Date().toISOString();
+    }
+}
+
 // Trip operations
 async function addTrip(trip) {
     const newTrip = {
         ...trip,
         id: Date.now(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     };
     data.trips.push(newTrip);
     saveData();
@@ -40,7 +50,11 @@ async function addTrip(trip) {
 }
 
 async function getTrips() {
-    return data.trips.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return data.trips.sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt);
+        const dateB = new Date(b.updatedAt || b.createdAt);
+        return dateB - dateA;
+    });
 }
 
 async function getTrip(id) {
@@ -50,7 +64,11 @@ async function getTrip(id) {
 async function updateTrip(id, updates) {
     const index = data.trips.findIndex(t => t.id === id);
     if (index !== -1) {
-        data.trips[index] = { ...data.trips[index], ...updates };
+        data.trips[index] = { 
+            ...data.trips[index], 
+            ...updates,
+            updatedAt: new Date().toISOString()
+        };
         saveData();
     }
 }
@@ -66,11 +84,16 @@ async function saveCloudTripBundle(bundle) {
     data.expenses = data.expenses.filter(e => e.tripId !== tripId);
     
     // Insert new cloud data
-    data.trips.push(bundle.trip);
+    const tripRecord = {
+        ...bundle.trip,
+        updatedAt: new Date().toISOString()
+    };
+    data.trips.push(tripRecord);
     if (bundle.participants) data.participants.push(...bundle.participants);
     if (bundle.expenses) data.expenses.push(...bundle.expenses);
     
-    saveData();
+    data.pendingSync = false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 async function deleteTripFromDB(id) {
@@ -87,7 +110,8 @@ async function duplicateTripFromDB(id) {
             ...trip, 
             id: Date.now(), 
             tripName: `${trip.tripName} (Copy)`, 
-            createdAt: new Date().toISOString() 
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
         data.trips.push(newTrip);
         saveData();
@@ -136,6 +160,7 @@ function clearPendingSync() {
 
 // Participant operations
 async function addParticipant(participant) {
+    touchTrip(participant.tripId);
     const newParticipant = {
         ...participant,
         familyCount: participant.familyCount || 1, // Default to 1 (self)
@@ -167,11 +192,16 @@ async function updateParticipant(id, updates) {
     const index = data.participants.findIndex(p => p.id === id);
     if (index !== -1) {
         data.participants[index] = { ...data.participants[index], ...updates };
+        touchTrip(data.participants[index].tripId);
         saveData();
     }
 }
 
 async function deleteParticipantFromDB(id) {
+    const participant = data.participants.find(p => p.id === id);
+    if (participant) {
+        touchTrip(participant.tripId);
+    }
     data.participants = data.participants.filter(p => p.id !== id);
     data.expenses = data.expenses.filter(e => e.paidBy !== id);
     saveData();
@@ -179,6 +209,7 @@ async function deleteParticipantFromDB(id) {
 
 // Expense operations
 async function addExpense(expense) {
+    touchTrip(expense.tripId);
     const newExpense = {
         ...expense,
         id: Date.now() + Math.floor(Math.random() * 1000),
@@ -203,11 +234,16 @@ async function updateExpense(id, updates) {
     const index = data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
         data.expenses[index] = { ...data.expenses[index], ...updates };
+        touchTrip(data.expenses[index].tripId);
         saveData();
     }
 }
 
 async function deleteExpenseFromDB(id) {
+    const expense = data.expenses.find(e => e.id === id);
+    if (expense) {
+        touchTrip(expense.tripId);
+    }
     data.expenses = data.expenses.filter(e => e.id !== id);
     saveData();
 }
