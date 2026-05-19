@@ -184,13 +184,16 @@ Bottom Nav:
 ---
 
 ## 🛠️ 9. Maintenance Checklist
-*   **Version Control**: Script tags use `?v=13`. Increment on each deploy to bust browser cache.
+*   **Version Control**: Script tags use `?v=14`. Increment on each deploy to bust browser cache.
 *   **Asset Management**: Keep all icons in `/assets`. Use `icon-192.png` for splash/PWA.
 *   **Styles**: Avoid inline styles. Use the token system in `style.css`.
 *   **Persistence**: Always use `await` when calling `db.js` function to ensure data integrity before UI updates.
 *   **Photos**: All photos are stored as Base64 JPEG on the trip object. Max 20 per trip. Enforced by `addTripPhoto()`.
 *   **Sync Flag**: `saveData()` in `db.js` automatically sets `pendingSync = true`. Clear it by calling `clearPendingSync()` after a cloud push in `sync.js`.
+*   **Trip ID Comparison**: Trip IDs may be numeric (`Date.now()`) for local trips OR string-prefixed (e.g. `"GOA-8492"`) for cloud-synced trips. **Always compare as strings**: `String(t.id) === String(savedId)`. Never use `===` directly or `Number()` coercion. Updated in `app.js` and `ui_engine.js`.
+*   **Global currentTripId**: Declared as `var currentTripId` AND `window.currentTripId` in `index.html`. Both must be kept in sync whenever setting a new active trip — always assign to both `currentTripId = x; window.currentTripId = x;` in `app.js` (`selectTrip`, `deleteTrip`, `initApp`).
+*   **Inline onclick IDs**: When embedding trip.id into HTML template strings for onclick handlers (e.g. `selectTrip`), wrap with single quotes: `onclick="selectTrip('${trip.id}')"` to support alphanumeric cloud IDs without JS syntax errors.
 
 ---
 
-*Last Updated: 2026-05-19 — v2 11-Feature Upgrade & Browser Interactive Verification Complete (100% Green)*
+*Last Updated: 2026-05-19 — v2 F11 Bug Fix: Robust string-coerced Trip ID comparison, window.currentTripId dual-assignment, inline onclick quote-wrapping. Cache bumped to tripsplit-v20-pulse-fix. Version strings at ?v=14.*

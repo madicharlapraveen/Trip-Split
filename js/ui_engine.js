@@ -189,7 +189,7 @@ async function loadTripsCapsules() {
 
   container.innerHTML = '';
   trips.forEach(trip => {
-    const isActive = currentTripId === trip.id;
+    const isActive = String(currentTripId) === String(trip.id);
     const capsule = document.createElement('button');
     capsule.onclick = () => selectTrip(trip.id);
     capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all ${
@@ -228,7 +228,7 @@ window.showTripSelectionModal = function() {
       content += '<div class="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar pr-1">';
       trips.forEach(trip => {
         content += `
-          <button onclick="selectTrip(${trip.id})" class="w-full text-left p-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl border-2 border-transparent hover:border-indigo-100 transition-all group">
+          <button onclick="selectTrip('${trip.id}')" class="w-full text-left p-4 bg-slate-50 hover:bg-indigo-50 rounded-2xl border-2 border-transparent hover:border-indigo-100 transition-all group">
             <div class="flex justify-between items-center">
               <div>
                 <p class="font-bold text-slate-800 group-hover:text-indigo-700">${trip.tripName}</p>
@@ -1130,7 +1130,7 @@ async function loadTrips() {
   }
 
   trips.forEach(trip => {
-    const isCurrent = currentTripId === trip.id;
+    const isCurrent = String(currentTripId) === String(trip.id);
     const card = document.createElement('div');
     const symbol = trip.currencySymbol || '₹';
     card.className = `premium-card animate-scale-in ${isCurrent ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''}`;
@@ -1149,10 +1149,10 @@ async function loadTrips() {
         </div>
       </div>
       <div class="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
-        <button onclick="selectTrip(${trip.id})" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors">SELECT</button>
-        <button onclick="duplicateTrip(${trip.id})" class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors">DUPLICATE</button>
-        <button onclick="saveTripAsTemplate(${trip.id})" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors">📋 TEMPLATE</button>
-        <button onclick="deleteTrip(${trip.id})" class="px-4 py-2 bg-rose-100 text-rose-600 text-xs font-bold rounded-xl hover:bg-rose-200 transition-colors">DELETE</button>
+        <button onclick="selectTrip('${trip.id}')" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors">SELECT</button>
+        <button onclick="duplicateTrip('${trip.id}')" class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors">DUPLICATE</button>
+        <button onclick="saveTripAsTemplate('${trip.id}')" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors">📋 TEMPLATE</button>
+        <button onclick="deleteTrip('${trip.id}')" class="px-4 py-2 bg-rose-100 text-rose-600 text-xs font-bold rounded-xl hover:bg-rose-200 transition-colors">DELETE</button>
       </div>
     `;
     tripsList.appendChild(card);

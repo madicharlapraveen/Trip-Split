@@ -90,13 +90,18 @@ async function initApp() {
   const trips = await getTrips();
   const savedActiveTripId = localStorage.getItem('tripsplit_active_trip_id');
   
-  if (savedActiveTripId && trips.some(t => t.id === Number(savedActiveTripId))) {
-    currentTripId = Number(savedActiveTripId);
+  // Robust check: compare as strings to handle both numeric and string IDs (cloud-synced UUIDs)
+  const matchedTrip = trips.find(t => String(t.id) === String(savedActiveTripId));
+  if (savedActiveTripId && matchedTrip) {
+    currentTripId = matchedTrip.id;
+    window.currentTripId = matchedTrip.id;
   } else if (trips.length > 0) {
     currentTripId = trips[0].id;
+    window.currentTripId = trips[0].id;
     localStorage.setItem('tripsplit_active_trip_id', currentTripId);
   } else {
     currentTripId = null;
+    window.currentTripId = null;
   }
 
   // Highlight and guide new users to the Trips icon if no active trip exists
@@ -116,7 +121,7 @@ async function initApp() {
   
   // Attach WebSocket if cloud connected
   if (currentTripId) {
-    const activeTrip = trips.find(t => t.id === currentTripId);
+    const activeTrip = trips.find(t => String(t.id) === String(currentTripId));
     if (activeTrip && activeTrip.share_id && typeof subscribeToTripUpdates === 'function') {
         subscribeToTripUpdates(activeTrip.share_id);
     } else {
@@ -145,6 +150,7 @@ async function initApp() {
 // Trip selection
 async function selectTrip(tripId) {
   currentTripId = tripId;
+  window.currentTripId = tripId;
   localStorage.setItem('tripsplit_active_trip_id', tripId);
   
   // Remove guide pulse on selection
@@ -190,8 +196,9 @@ async function deleteTrip(tripId) {
 
     await deleteTripFromDB(tripId);
 
-    if (currentTripId === tripId) {
+    if (String(currentTripId) === String(tripId)) {
       currentTripId = null;
+      window.currentTripId = null;
       localStorage.removeItem('tripsplit_active_trip_id');
       
       // Guide user back to selecting/creating a trip

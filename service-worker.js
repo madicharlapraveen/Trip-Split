@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v19-consolidated';
+const CACHE_NAME = 'tripsplit-v20-pulse-fix';
 const urlsToCache = [
   './',
   './index.html',
