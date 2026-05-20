@@ -137,4 +137,52 @@ function initShare() {
   if (shareBtn) {
     shareBtn.addEventListener('click', shareOnWhatsApp);
   }
+}async function shareAllExpensesOnWhatsApp() {
+  if (!currentTripId) {
+    alert('Please select a trip first');
+    return;
+  }
+
+  const trip = await getTrip(currentTripId);
+  if (!trip) return;
+  const sym = trip.currencySymbol || '₹';
+
+  const expenses = await getExpenses(currentTripId);
+  const participants = await getParticipants(currentTripId);
+  
+  if (expenses.length === 0) {
+    alert('No expenses to share.');
+    return;
+  }
+
+  const participantMap = {};
+  participants.forEach(p => participantMap[p.id] = p.name);
+
+  let message = * - All Expenses Log*\n\n;
+
+  let totalSpent = 0;
+
+  expenses.forEach((exp, index) => {
+    const amount = exp.totalAmount || exp.amount || 0;
+    totalSpent += amount;
+    const desc = exp.title || exp.description || 'Expense';
+    const payerName = participantMap[exp.paidBy] || 'Unknown';
+    const dateStr = new Date(exp.createdAt).toLocaleDateString();
+
+    message += ${index + 1}. \n;
+    message +=    Amount: \n;
+    message +=    Paid By: \n;
+    if (exp.category) {
+      message +=    Category: \n;
+    }
+    message +=    Date: \n\n;
+  });
+
+  message += ────────────────────────\n;
+  message += Total Trip Expenses: \n\n;
+
+  message += Sent from TripSplit App a product of AiSpace.co.in;
+
+  const whatsappUrl = https://wa.me/?text=;
+  window.open(whatsappUrl, '_blank');
 }
