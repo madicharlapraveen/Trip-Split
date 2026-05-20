@@ -3,6 +3,15 @@
 // State Management (Global)
 let deferredPrompt = null;
 
+window.canEditCurrentTrip = async function() {
+  if (!currentTripId) return false;
+  const trip = await getTrip(currentTripId);
+  if (!trip) return false;
+  if (!trip.share_id) return true; // Local trips are editable by owner
+  const role = trip.myRole || 'owner'; // Legacy trips default to owner since they didn't have roles
+  return role === 'owner' || role === 'editor';
+};
+
 
 // Initialize app when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
@@ -236,6 +245,7 @@ async function duplicateTrip(tripId) {
 
 // Expense operations
 async function editExpense(expenseId) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify expenses.');
   const expense = await getExpense(expenseId);
   if (!expense) return;
 
@@ -358,6 +368,7 @@ async function editExpense(expenseId) {
 }
 
 async function deleteExpense(expenseId) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify expenses.');
   if (confirm('Are you sure you want to delete this expense?')) {
     await deleteExpenseFromDB(expenseId);
     loadHomeData();
@@ -368,6 +379,7 @@ async function deleteExpense(expenseId) {
 }
 
 async function deleteParticipant(participantId) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
   if (confirm('Are you sure you want to delete this participant? This will also remove their expenses.')) {
     const expenses = await getExpenses(currentTripId);
     const participantExpenses = expenses.filter(e => e.paidBy === participantId);

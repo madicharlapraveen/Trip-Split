@@ -70,9 +70,18 @@ window.showScreen = function(screenId) {
 };
 
 // Contextual Floating Action Button updates
-function updateCenterFAB(screenId) {
+async function updateCenterFAB(screenId) {
   const fab = document.getElementById('fab');
   if (!fab) return;
+
+  const canEdit = typeof window.canEditCurrentTrip === 'function' ? await window.canEditCurrentTrip() : true;
+
+  if (screenId !== 'trips' && !canEdit) {
+      fab.style.display = 'none';
+      return;
+  } else {
+      fab.style.display = 'flex';
+  }
 
   fab.innerHTML = '';
   let iconHTML = '';
@@ -350,11 +359,12 @@ window.showCreateTripModal = async function() {
 };
 
 // Add Participant Modal
-window.showAddParticipantModal = function() {
-  if (!currentTripId) {
-    showTripSelectionModal();
-    return;
-  }
+window.showAddParticipantModal = async function() {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
+    if (!currentTripId) {
+        showTripSelectionModal();
+        return;
+    }
 
   const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">Add Participant</h3>
@@ -395,12 +405,13 @@ window.showAddParticipantModal = function() {
   });
 };
 
-// Add Expense Modal with Collapsible "Split With" dropdown and Foreign currency + Recurring fields (F4, F7, F8)
-window.showAddExpenseModal = function() {
-  if (!currentTripId) {
-    showTripSelectionModal();
-    return;
-  }
+// Add Expense Modal
+window.showAddExpenseModal = async function() {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify expenses.');
+    if (!currentTripId) {
+        showTripSelectionModal();
+        return;
+    }
 
   getParticipants(currentTripId).then(participants => {
     if (participants.length === 0) {
@@ -851,9 +862,11 @@ async function loadHomeData(silentModeSwitch = false) {
       const card = document.createElement('div');
       card.className = 'bg-white rounded-3xl p-4 min-w-[140px] shadow-sm border border-slate-100 flex flex-col items-center animate-scale-in relative group';
       card.innerHTML = `
+        ${canEdit ? `
         <button onclick="editParticipant(${participant.id})" class="absolute top-2 right-2 p-1 bg-slate-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
           <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
         </button>
+        ` : ''}
         <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3 font-bold text-lg">
           ${participant.name.charAt(0).toUpperCase()}
         </div>
@@ -863,15 +876,17 @@ async function loadHomeData(silentModeSwitch = false) {
       participantsList.appendChild(card);
     });
     
-    // Add Member Pill Card
-    const addBtn = document.createElement('div');
-    addBtn.className = 'bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all';
-    addBtn.onclick = showAddParticipantModal;
-    addBtn.innerHTML = `
-      <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-      <span class="text-xs font-medium">Add Member</span>
-    `;
-    participantsList.appendChild(addBtn);
+    if (canEdit) {
+      // Add Member Pill Card
+      const addBtn = document.createElement('div');
+      addBtn.className = 'bg-white border-2 border-dashed border-slate-200 rounded-3xl p-4 min-w-[140px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-500 transition-all';
+      addBtn.onclick = showAddParticipantModal;
+      addBtn.innerHTML = `
+        <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        <span class="text-xs font-medium">Add Member</span>
+      `;
+      participantsList.appendChild(addBtn);
+    }
   }
 
   // Render Detailed participants overlay dropdown
@@ -1011,6 +1026,8 @@ async function loadExpenses() {
     return;
   }
 
+  const canEdit = typeof window.canEditCurrentTrip === 'function' ? await window.canEditCurrentTrip() : true;
+
   expenses.forEach(expense => {
     const card = document.createElement('div');
     card.className = 'premium-card animate-scale-in';
@@ -1040,6 +1057,7 @@ async function loadExpenses() {
           ` : ''}
         </div>
       </div>
+      ${canEdit ? `
       <div class="flex space-x-4 pt-4 border-t border-slate-50">
         <button onclick="editExpense(${expense.id})" class="flex items-center space-x-1 text-xs font-bold text-indigo-500 hover:text-indigo-700">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -1050,6 +1068,7 @@ async function loadExpenses() {
             <span>DELETE</span>
         </button>
       </div>
+      ` : ''}
     `;
     expensesList.appendChild(card);
   });
@@ -1540,6 +1559,7 @@ window.renderSyncCard = async function() {
                     
                     <div class="relative flex py-2 items-center">
                         <div class="flex-grow border-t border-slate-100"></div>
+                        <span class="flex-grow border-t border-slate-100"></span>
                         <span class="flex-shrink mx-4 text-slate-300 font-bold text-[9px] uppercase tracking-wider">Returning User?</span>
                         <div class="flex-grow border-t border-slate-100"></div>
                     </div>
@@ -1790,6 +1810,7 @@ window.showSettings = async function() {
             <div class="space-y-3 pt-4 border-t border-slate-100">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Trip Options</p>
                 
+                ${(typeof window.canEditCurrentTrip === 'function' ? await window.canEditCurrentTrip() : true) ? `
                 <button onclick="showEditTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -1799,9 +1820,10 @@ window.showSettings = async function() {
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
+                ` : ''}
 
-                ${trip && trip.share_id ? `
-                <button onclick="showManageEditorsModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
+                ${trip && trip.share_id && trip.myRole === 'owner' ? `
+                <button onclick="handleManagePermissions()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
                             👥

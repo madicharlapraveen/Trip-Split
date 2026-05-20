@@ -41,6 +41,7 @@ async function addTrip(trip) {
     const newTrip = {
         ...trip,
         id: Date.now(),
+        myRole: 'owner', // Default role for local trips
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -78,6 +79,10 @@ async function saveCloudTripBundle(bundle) {
     
     const tripId = bundle.trip.id;
     
+    // Preserve existing role, otherwise default to viewer for cloud joined trips
+    const existingTrip = data.trips.find(t => String(t.id) === String(tripId));
+    const role = existingTrip && existingTrip.myRole ? existingTrip.myRole : 'viewer';
+
     // Remove existing local data for this trip
     data.trips = data.trips.filter(t => String(t.id) !== String(tripId));
     data.participants = data.participants.filter(p => String(p.tripId) !== String(tripId));
@@ -86,6 +91,7 @@ async function saveCloudTripBundle(bundle) {
     // Insert new cloud data
     const tripRecord = {
         ...bundle.trip,
+        myRole: role,
         updatedAt: new Date().toISOString()
     };
     data.trips.push(tripRecord);

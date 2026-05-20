@@ -184,7 +184,7 @@ window.subscribeToTripUpdates = function(shareId) {
                 await saveCloudTripBundle(cloudTripRecord.trip_data);
                 
                 // If the user is currently viewing this trip, refresh the UI silently
-                if (currentTripId === cloudTripRecord.trip_data.trip.id) {
+                if (String(currentTripId) === String(cloudTripRecord.trip_data.trip.id)) {
                     if (currentScreen === 'expenses') loadExpenses();
                     if (currentScreen === 'split') calculateSplit();
                     if (currentScreen === 'plan') loadTripNotes();

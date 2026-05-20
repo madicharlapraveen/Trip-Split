@@ -44,13 +44,21 @@ async function loadTripNotes() {
     if (itinerary.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'flex flex-col items-center justify-center py-20 text-slate-400 space-y-4';
-        emptyState.innerHTML = `
+        
+        let emptyStateContent = `
             <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                 <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </div>
             <p class="text-sm font-bold">Your roadmap itinerary is empty.</p>
-            <button onclick="showAddPlaceModal()" class="btn-primary px-6 py-3 text-sm rounded-2xl shadow-md">Add First Stop</button>
         `;
+
+        if (canEdit) {
+            emptyStateContent += `
+            <button onclick="showAddPlaceModal()" class="btn-primary px-6 py-3 text-sm rounded-2xl shadow-md">Add First Stop</button>
+            `;
+        }
+
+        emptyState.innerHTML = emptyStateContent;
         itineraryList.appendChild(emptyState);
         
         // Default center on Ooty or default coords if map present - delayed to avoid 0x0 hidden container projection bug
@@ -142,6 +150,7 @@ async function loadTripNotes() {
                             </button>
                             ${directionsBtnHTML}
                         </div>
+                        ${canEdit ? `
                         <div class="flex space-x-1.5">
                             <button onclick="showEditPlaceModal(${index})" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100" title="Edit details & location">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -150,6 +159,7 @@ async function loadTripNotes() {
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -311,7 +321,8 @@ async function searchGeocodingLocation() {
 }
 
 // Add stop modal form
-window.showAddPlaceModal = function() {
+window.showAddPlaceModal = async function() {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     if (!currentTripId) {
         showTripSelectionModal();
         return;
@@ -419,6 +430,7 @@ window.showAddPlaceModal = function() {
 
 // Edit stop modal form
 window.showEditPlaceModal = async function(index) {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     if (!currentTripId) return;
     const trip = await getTrip(currentTripId);
     const item = trip.itinerary && trip.itinerary[index];
