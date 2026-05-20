@@ -519,7 +519,8 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 /* --- Glowing Circle Highlight for Navigation Buttons (New Users Guidance) --- */
 .glowing-pulse-nav {
     position: relative;
-    animation: nav-glow-pulse 2s infinite ease-in-out;
+    animation: nav-glow-pulse 2s ease-in-out;
+    animation-iteration-count: 3;
     border-radius: 20px !important;
 }
 
@@ -529,8 +530,10 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     inset: -3px;
     border-radius: 22px;
     border: 3px solid var(--primary);
-    animation: ring-expand-pulse 2s infinite ease-in-out;
+    animation: ring-expand-pulse 2s ease-in-out;
+    animation-iteration-count: 3;
     pointer-events: none;
+    opacity: 0;
 }
 
 @keyframes nav-glow-pulse {
