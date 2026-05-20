@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v33-share-expenses';
+const CACHE_NAME = 'tripsplit-v34-footer-update';
 const RUNTIME_CACHE = 'tripsplit-runtime-v1';
 const urlsToCache = [
   './',
