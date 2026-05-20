@@ -620,6 +620,8 @@ window.showAddExpenseModal = function() {
         hideModal();
         loadHomeData();
         loadExpenses();
+        if (typeof calculateSplit === 'function') calculateSplit(); // instantly refresh split numbers
+        if (window.showToast) window.showToast('Expense added! Calculations refreshed.', 'success');
       }
     });
   });

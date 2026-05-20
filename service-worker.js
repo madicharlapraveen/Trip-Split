@@ -1,4 +1,5 @@
-const CACHE_NAME = 'tripsplit-v25-whatsapp-footer-alignment';
+const CACHE_NAME = 'tripsplit-v31-true-offline';
+const RUNTIME_CACHE = 'tripsplit-runtime-v1';
 const urlsToCache = [
   './',
   './index.html',
@@ -14,13 +15,18 @@ const urlsToCache = [
   './js/ui_engine.js',
   './manifest.json',
   './assets/icon-192.png',
-  './assets/icon-512.png'
+  './assets/icon-512.png',
+  'https://cdn.tailwindcss.com',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
+      .catch(err => console.warn('Cache addAll failed, but continuing', err))
   );
   self.skipWaiting();
 });
@@ -40,35 +46,47 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch Strategy: Cache-First for Map Tiles, Network-First for other assets
+// Fetch Strategy
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Cache-First strategy for Leaflet assets & OpenStreetMap tiles (offline capability)
-  if (url.hostname.includes('tile.openstreetmap.org') || url.pathname.includes('unpkg.com/leaflet')) {
+  // Skip cross-origin POST/API requests (like Supabase API) - let them fail naturally if offline
+  if (event.request.method !== 'GET' || url.hostname.includes('supabase.co')) {
+    return;
+  }
+
+  // Cache-First for Map Tiles
+  if (url.hostname.includes('tile.openstreetmap.org')) {
     event.respondWith(
-      caches.open('tripsplit-map-tiles').then(cache => {
-        return cache.match(event.request).then(cachedResponse => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          return fetch(event.request).then(networkResponse => {
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then(networkResponse => {
+          return caches.open('tripsplit-map-tiles').then(cache => {
             cache.put(event.request, networkResponse.clone());
             return networkResponse;
-          }).catch(() => {
-            // Silently fail if completely offline and not in cache
-            return new Response('', { status: 404 });
           });
-        });
+        }).catch(() => new Response('', { status: 404 }));
       })
     );
     return;
   }
 
-  // Standard Network-First strategy with Cache Fallback for app shell
+  // Stale-While-Revalidate for app assets and CDNs
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(RUNTIME_CACHE).then(cache => {
+            cache.put(event.request, networkResponse.clone());
+          });
+        }
+        return networkResponse;
+      }).catch(err => {
+        // If offline and no cache, just throw
+        if (!cachedResponse) throw err;
+      });
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

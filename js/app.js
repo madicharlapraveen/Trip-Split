@@ -347,19 +347,23 @@ async function editExpense(expenseId) {
       }
 
       if (title && totalPay > 0) {
-      await updateExpense(expenseId, { title, amount, totalPay, advancePay, category, paidBy, splitBetween });
-      hideModal();
-      loadHomeData();
-      loadExpenses();
-    }
-  });
+        await updateExpense(expenseId, { title, description: title, amount, totalAmount: totalPay, totalPay, advancePay, category, paidBy, splitBetween });
+        hideModal();
+        loadHomeData();
+        loadExpenses();
+        if (typeof calculateSplit === 'function') calculateSplit(); // refresh settlement numbers
+        if (window.showToast) window.showToast('Expense updated! Calculations refreshed.', 'success');
+      }
+    });
 }
 
 async function deleteExpense(expenseId) {
   if (confirm('Are you sure you want to delete this expense?')) {
-    await deleteExpenseFromDB(expenseId); // Fixed: call DB function, not self
+    await deleteExpenseFromDB(expenseId);
     loadHomeData();
     loadExpenses();
+    if (typeof calculateSplit === 'function') calculateSplit(); // refresh settlement numbers
+    if (window.showToast) window.showToast('Expense deleted! Calculations refreshed.', 'success');
   }
 }
 
@@ -373,6 +377,7 @@ async function deleteParticipant(participantId) {
 
     await deleteParticipantFromDB(participantId);
     loadHomeData();
+    if (typeof calculateSplit === 'function') calculateSplit(); // refresh settlement numbers
   }
 }
 

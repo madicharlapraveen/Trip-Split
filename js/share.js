@@ -64,39 +64,69 @@ async function shareIndividualOnWhatsApp(participantId) {
   const trip = await getTrip(currentTripId);
   const participant = await getParticipant(participantId);
   const splitData = await calculateSplit();
-  
+
   if (!participant || !splitData) return;
-  
+
   const balance = splitData.balances.find(b => b.id === participantId);
   if (!balance) return;
 
+  const sym = trip.currencySymbol || 'Rs.';
   const totalExpense = splitData.totalExpense;
   const totalParticipants = splitData.totalParticipants;
   const perPersonShare = splitData.perPersonShare;
-
-  let message = `*${trip.tripName} - Expense Split for ${participant.name}*\n\n`;
-  message += `🧮 Total Expenses ÷ (${totalParticipants} Members) = ₹${perPersonShare.toFixed(2)}\n\n`;
-  
-  message += `👤 *Your Details:*\n`;
-  message += `   - Paid / Spent: ₹${balance.totalSpent.toFixed(2)}\n`;
-  
-  const expectedShareStr = perPersonShare.toFixed(2);
-  message += `   - Share: - ₹${expectedShareStr}\n`;
-  
   const individualBalance = balance.totalSpent - perPersonShare;
-  const status = individualBalance >= 0 ? 'Receives' : 'Owes';
-  message += `   - Total Result: ₹${Math.abs(individualBalance).toFixed(2)} (${status})\n\n`;
+  const isCreditor = individualBalance >= 0;
 
-  message += `💳 *Settlement for You:*\n`;
-  if (Math.abs(individualBalance) < 0.01) {
-    message += `✅ All settled! No payments needed.\n`;
-  } else if (individualBalance < 0) {
-    message += `👉 Pay ₹${Math.abs(individualBalance).toFixed(2)} to ADMIN\n`;
+  // ── Header ──────────────────────────────────────────
+  let message = `*${trip.tripName} - Expense Split*\n`;
+  message += `--------------------------------\n`;
+  message += `Dear ${participant.name},\n\n`;
+
+  // ── Trip Totals ──────────────────────────────────────
+  message += `Total Expenses : ${sym}${totalExpense.toFixed(2)}\n`;
+  message += `Members        : ${totalParticipants}\n`;
+  message += `Each Share     : ${sym}${perPersonShare.toFixed(2)}\n`;
+  message += `\n`;
+
+  // ── Expenses paid by this person ────────────────────
+  message += `Expenses Paid by You (${participant.name})\n`;
+  message += `--------------------------------\n`;
+
+  if (balance.myExpenses && balance.myExpenses.length > 0) {
+    balance.myExpenses.forEach(exp => {
+      const amt = (exp.totalAmount || exp.amount || 0).toFixed(2);
+      const desc = (exp.title || exp.description || 'Expense').padEnd(22, ' ');
+      message += `  * ${desc} ${sym}${amt}\n`;
+    });
   } else {
-    message += `👈 Receive ₹${Math.abs(individualBalance).toFixed(2)} from ADMIN\n`;
+    message += `  No expenses paid directly\n`;
   }
 
-  message += `\n\nSent from TripSplit App a product of AiSpace.co.in`;
+  message += `--------------------------------\n`;
+  message += `  Total Paid          : ${sym}${balance.totalSpent.toFixed(2)}\n`;
+  message += `\n`;
+
+  // ── Calculation ──────────────────────────────────────
+  message += `Your Calculation\n`;
+  message += `--------------------------------\n`;
+  message += `  ${sym}${totalExpense.toFixed(2)} / ${totalParticipants} members = ${sym}${perPersonShare.toFixed(2)} per person\n\n`;
+  const sign = isCreditor ? '+' : '-';
+  message += `  Paid ${sym}${balance.totalSpent.toFixed(2)} - Share ${sym}${perPersonShare.toFixed(2)} = ${sign}${sym}${Math.abs(individualBalance).toFixed(2)}\n`;
+  message += `\n`;
+
+  // ── Settlement ───────────────────────────────────────
+  message += `Settlement for You\n`;
+  message += `--------------------------------\n`;
+  if (Math.abs(individualBalance) < 0.01) {
+    message += `  All settled! No payments needed.\n`;
+  } else if (isCreditor) {
+    message += `  You will Receive ${sym}${Math.abs(individualBalance).toFixed(2)} from ADMIN\n`;
+  } else {
+    message += `  Pay ${sym}${Math.abs(individualBalance).toFixed(2)} to ADMIN\n`;
+  }
+
+  // ── Footer ───────────────────────────────────────────
+  message += `\n\nSent from TripSplit App\na product of AiSpace.co.in`;
 
   // Ask for phone number
   const phone = prompt(`Enter phone number for ${participant.name} (with country code, e.g., 919876543210):`, participant.phone || '');

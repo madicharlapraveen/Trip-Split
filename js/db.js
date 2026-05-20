@@ -213,7 +213,8 @@ async function addExpense(expense) {
     const newExpense = {
         ...expense,
         id: Date.now() + Math.floor(Math.random() * 1000),
-        createdAt: new Date().toISOString()
+        description: expense.title || expense.description || '',  // ensure description field always set
+        createdAt: expense.createdAt || new Date().toISOString()
     };
     data.expenses.push(newExpense);
     saveData();
@@ -233,6 +234,14 @@ async function getExpense(id) {
 async function updateExpense(id, updates) {
     const index = data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
+        // Ensure description stays in sync with title
+        if (updates.title && !updates.description) {
+            updates.description = updates.title;
+        }
+        // Ensure totalAmount is always set correctly
+        if (updates.totalPay && !updates.totalAmount) {
+            updates.totalAmount = updates.totalPay;
+        }
         data.expenses[index] = { ...data.expenses[index], ...updates };
         touchTrip(data.expenses[index].tripId);
         saveData();

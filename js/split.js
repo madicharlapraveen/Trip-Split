@@ -21,46 +21,36 @@ async function calculateSplit() {
     ...p,
     totalSpent: 0,
     expectedShare: 0,
-    balance: 0
+    balance: 0,
+    myExpenses: []  // list of expenses this person paid
   }));
 
-  // Calculate actual individual spent and expected share totals based on split subset per expense
+  // Step 1: Calculate total expenses and per-person share
+  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount || 0), 0);
+  const totalMembers = participants.length;
+  const perPersonShare = totalMembers > 0 ? totalExpense / totalMembers : 0;
+  const totalParticipants = totalMembers; // Alias for UI compatibility
+
+  // Step 2: Calculate how much each participant actually paid
   expenses.forEach(e => {
-    // Add to paid amount for the payer
     const payer = balances.find(p => p.id === e.paidBy);
     if (payer) {
       payer.totalSpent += (e.totalAmount || e.amount || 0);
-    }
-
-    // Determine the set of participants this expense is split between
-    let splitBetweenIds = e.splitBetween || [];
-    if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
-      // Backwards compatibility: split among all active participants
-      splitBetweenIds = participants.map(p => p.id);
-    }
-
-    const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
-    const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
-
-    if (totalSplitFamily > 0) {
-      const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
-      splitParticipants.forEach(sp => {
-        const balanceRecord = balances.find(p => p.id === sp.id);
-        if (balanceRecord) {
-          balanceRecord.expectedShare += costPerHead * (sp.familyCount || 1);
-        }
-      });
+      payer.myExpenses.push(e); // track this expense under their name
     }
   });
 
-  // Calculate final net balances
+  // Step 3: Assign equal expected share to each participant
+  balances.forEach(b => {
+    b.expectedShare = perPersonShare;
+  });
+
+  // Step 4: Calculate final net balance (Paid - Share)
+  // Positive = person receives money back
+  // Negative = person owes money
   balances.forEach(b => {
     b.balance = b.totalSpent - b.expectedShare;
   });
-
-  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount || 0), 0);
-  const totalParticipants = participants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
-  const perPersonShare = totalParticipants > 0 ? totalExpense / totalParticipants : 0;
 
   // Pre-calculate settlements so they are available for individual card display
   const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
@@ -101,24 +91,32 @@ async function calculateSplit() {
   splitDetails.innerHTML = `
     <div class="premium-card bg-indigo-50 border-none mb-6">
       <h4 class="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">Trip Summary</h4>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-            <p class="text-[10px] font-bold text-slate-400 uppercase">Total Expense</p>
-            <p class="text-xl font-black text-slate-800">${symbol}${totalExpense.toFixed(2)}</p>
+
+      <!-- Calculation Box -->
+      <div class="bg-white rounded-2xl border border-indigo-100 p-4 mb-4">
+        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-wider mb-3">How the split is calculated</p>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-500">Total Expenses</span>
+            <span class="text-sm font-black text-slate-800">${symbol}${totalExpense.toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-500">Total Members</span>
+            <span class="text-sm font-black text-slate-800">${totalParticipants}</span>
+          </div>
+          <div class="h-px bg-indigo-100 my-2"></div>
+          <div class="flex justify-between items-center bg-indigo-50 rounded-xl px-3 py-2">
+            <span class="text-xs font-bold text-indigo-600">Formula</span>
+            <span class="text-xs font-bold text-indigo-600">${symbol}${totalExpense.toFixed(2)} &divide; ${totalParticipants} Members</span>
+          </div>
+          <div class="text-center py-3 bg-indigo-600 rounded-xl">
+            <span class="text-[10px] text-indigo-200 font-bold uppercase tracking-wider block mb-1">Each Person's Share</span>
+            <span class="text-3xl font-black text-white">${symbol}${perPersonShare.toFixed(2)}</span>
+          </div>
         </div>
-        <div>
-            <p class="text-[10px] font-bold text-slate-400 uppercase">Per Person</p>
-            <p class="text-xl font-black text-slate-800">${symbol}${perPersonShare.toFixed(2)}</p>
-        </div>
       </div>
-      <div class="mt-3 text-[11px] font-medium text-slate-600 bg-white/50 px-3 py-2 rounded-xl border border-indigo-100/50">
-        🧮 <strong>Average Share Calculation:</strong> ${symbol}${totalExpense.toFixed(2)} ÷ ${totalParticipants} people = <strong>${symbol}${perPersonShare.toFixed(2)}</strong> per head
-      </div>
-      <div class="mt-4 pt-4 border-t border-indigo-100 flex justify-between items-center">
-        <span class="text-xs font-bold text-indigo-600">Total Members</span>
-        <span class="px-3 py-1 bg-white rounded-full text-xs font-black text-indigo-600">${totalParticipants}</span>
-      </div>
-      <div class="mt-4 pt-3 border-t border-indigo-100/50 flex justify-center">
+
+      <div class="mt-3 pt-3 border-t border-indigo-100/50 flex justify-center">
         <button onclick="shareOnWhatsApp()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
           <span>Share Entire Split Summary</span>
@@ -165,23 +163,38 @@ async function calculateSplit() {
       `;
     }
     
+    // Build expenses breakdown html for this participant
+    let expensesHtml = '';
+    if (participant.myExpenses && participant.myExpenses.length > 0) {
+      expensesHtml = participant.myExpenses.map(exp => `
+        <div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+          <div class="flex items-center space-x-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span>
+            <span class="text-[11px] text-slate-600 font-medium truncate max-w-[160px]">${exp.title || exp.description || 'Expense'}</span>
+          </div>
+          <span class="text-[11px] font-black text-slate-700 ml-2">${symbol}${(exp.totalAmount || exp.amount || 0).toFixed(2)}</span>
+        </div>
+      `).join('');
+    } else {
+      expensesHtml = `<p class="text-[11px] text-slate-400 italic py-1">No expenses paid directly</p>`;
+    }
+
     balanceDiv.innerHTML = `
       <div class="flex flex-col space-y-3">
+
+        <!-- Name + Balance Header -->
         <div class="flex justify-between items-start">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl ${isCreditor ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'} flex items-center justify-center font-bold text-base shadow-sm">
-              ${participant.name.charAt(0)}
+              ${participant.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h5 class="font-bold text-slate-800 text-sm md:text-base">${participant.name}</h5>
-              <div class="flex flex-wrap gap-2 mt-1">
-                <span class="text-[9px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">Paid: ${symbol}${participant.totalSpent.toFixed(2)}</span>
-                <span class="text-[9px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md font-bold">Share: ${symbol}${participant.expectedShare.toFixed(2)}</span>
-              </div>
+              <h5 class="font-bold text-slate-800 text-sm">${participant.name}</h5>
+              <p class="text-[10px] text-slate-400 font-medium mt-0.5">${participant.myExpenses.length} expense(s) paid</p>
             </div>
           </div>
           <div class="text-right">
-            <p class="font-black text-base md:text-lg ${isCreditor ? 'text-emerald-600' : 'text-rose-600'}">
+            <p class="font-black text-base ${isCreditor ? 'text-emerald-600' : 'text-rose-600'}">
               ${isCreditor ? '+' : '-'}${symbol}${Math.abs(participant.balance).toFixed(2)}
             </p>
             <p class="text-[9px] font-bold uppercase tracking-wider ${isCreditor ? 'text-emerald-500 bg-emerald-50' : 'text-rose-500 bg-rose-50'} px-2 py-0.5 rounded-full inline-block mt-0.5">
@@ -189,21 +202,54 @@ async function calculateSplit() {
             </p>
           </div>
         </div>
-        
-        <div class="pt-2.5 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Result (Paid - Share)</p>
-            <p class="text-[10px] text-slate-600 font-mono mt-0.5">
-              ${symbol}${participant.totalSpent.toFixed(2)} - ${symbol}${participant.expectedShare.toFixed(2)} = <strong>${isCreditor ? '+' : '-'}${symbol}${Math.abs(participant.balance).toFixed(2)}</strong>
-            </p>
-          </div>
-          <div class="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex-grow md:max-w-[60%]">
-            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Settlement for You</p>
-            <div class="mt-1">${settlementHtml}</div>
+
+        <!-- Expenses They Paid -->
+        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+          <p class="text-[9px] text-slate-400 font-black uppercase tracking-wider mb-2">Expenses Paid by ${participant.name}</p>
+          ${expensesHtml}
+          <div class="flex justify-between items-center pt-2 mt-1 border-t border-slate-200">
+            <span class="text-[10px] font-black text-slate-500 uppercase">Total Paid</span>
+            <span class="text-sm font-black text-slate-800">${symbol}${participant.totalSpent.toFixed(2)}</span>
           </div>
         </div>
 
-        <div class="pt-2 border-t border-slate-100 flex justify-end">
+        <!-- Trip Split Info -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-white border border-slate-100 rounded-xl px-2 py-2 text-center">
+            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total Expenses</p>
+            <p class="text-xs font-black text-slate-800 mt-0.5">${symbol}${totalExpense.toFixed(2)}</p>
+          </div>
+          <div class="bg-white border border-slate-100 rounded-xl px-2 py-2 text-center">
+            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Members</p>
+            <p class="text-xs font-black text-slate-800 mt-0.5">${totalParticipants}</p>
+          </div>
+          <div class="bg-indigo-600 rounded-xl px-2 py-2 text-center">
+            <p class="text-[9px] text-indigo-200 font-bold uppercase tracking-wider">Each Share</p>
+            <p class="text-xs font-black text-white mt-0.5">${symbol}${perPersonShare.toFixed(2)}</p>
+          </div>
+        </div>
+
+        <!-- Calculation Row -->
+        <div class="bg-indigo-50 rounded-xl px-3 py-2.5">
+          <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Your Calculation</p>
+          <p class="text-[10px] text-slate-500 mb-1.5">${symbol}${totalExpense.toFixed(2)} &divide; ${totalParticipants} members = ${symbol}${perPersonShare.toFixed(2)} per person</p>
+          <div class="flex items-center justify-between bg-white rounded-lg px-2 py-1.5">
+            <span class="text-[10px] text-slate-600">Paid <span class="font-black">${symbol}${participant.totalSpent.toFixed(2)}</span></span>
+            <span class="text-slate-300 font-bold">-</span>
+            <span class="text-[10px] text-slate-600">Share <span class="font-black">${symbol}${participant.expectedShare.toFixed(2)}</span></span>
+            <span class="text-slate-300 font-bold">=</span>
+            <span class="text-[10px] font-black ${isCreditor ? 'text-emerald-600' : 'text-rose-600'}">${isCreditor ? '+' : '-'}${symbol}${Math.abs(participant.balance).toFixed(2)}</span>
+          </div>
+        </div>
+
+        <!-- Settlement -->
+        <div class="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
+          <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1">Settlement for You</p>
+          <div>${settlementHtml}</div>
+        </div>
+
+        <!-- Share Button -->
+        <div class="pt-1 border-t border-slate-100 flex justify-end">
           <button onclick="shareIndividualOnWhatsApp(${participant.id})" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center space-x-1 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-100/50">
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
             <span>Share details</span>
