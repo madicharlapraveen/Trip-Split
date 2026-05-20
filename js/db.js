@@ -30,7 +30,7 @@ function saveData() {
 // Helper to update the last updated timestamp of a trip
 function touchTrip(tripId) {
     if (!tripId) return;
-    const index = data.trips.findIndex(t => t.id === Number(tripId));
+    const index = data.trips.findIndex(t => String(t.id) === String(tripId));
     if (index !== -1) {
         data.trips[index].updatedAt = new Date().toISOString();
     }
@@ -58,11 +58,11 @@ async function getTrips() {
 }
 
 async function getTrip(id) {
-    return data.trips.find(t => t.id === id);
+    return data.trips.find(t => String(t.id) === String(id));
 }
 
 async function updateTrip(id, updates) {
-    const index = data.trips.findIndex(t => t.id === id);
+    const index = data.trips.findIndex(t => String(t.id) === String(id));
     if (index !== -1) {
         data.trips[index] = { 
             ...data.trips[index], 
@@ -79,9 +79,9 @@ async function saveCloudTripBundle(bundle) {
     const tripId = bundle.trip.id;
     
     // Remove existing local data for this trip
-    data.trips = data.trips.filter(t => t.id !== tripId);
-    data.participants = data.participants.filter(p => p.tripId !== tripId);
-    data.expenses = data.expenses.filter(e => e.tripId !== tripId);
+    data.trips = data.trips.filter(t => String(t.id) !== String(tripId));
+    data.participants = data.participants.filter(p => String(p.tripId) !== String(tripId));
+    data.expenses = data.expenses.filter(e => String(e.tripId) !== String(tripId));
     
     // Insert new cloud data
     const tripRecord = {
@@ -97,9 +97,9 @@ async function saveCloudTripBundle(bundle) {
 }
 
 async function deleteTripFromDB(id) {
-    data.trips = data.trips.filter(t => t.id !== id);
-    data.participants = data.participants.filter(p => p.tripId !== id);
-    data.expenses = data.expenses.filter(e => e.tripId !== id);
+    data.trips = data.trips.filter(t => String(t.id) !== String(id));
+    data.participants = data.participants.filter(p => String(p.tripId) !== String(id));
+    data.expenses = data.expenses.filter(e => String(e.tripId) !== String(id));
     saveData();
 }
 
@@ -173,8 +173,8 @@ async function addParticipant(participant) {
 }
 
 async function getParticipants(tripId) {
-    const tripParticipants = data.participants.filter(p => p.tripId === tripId);
-    const tripExpenses = data.expenses.filter(e => e.tripId === tripId);
+    const tripParticipants = data.participants.filter(p => String(p.tripId) === String(tripId));
+    const tripExpenses = data.expenses.filter(e => String(e.tripId) === String(tripId));
     
     return tripParticipants.map(p => {
         const totalSpent = tripExpenses
@@ -222,7 +222,7 @@ async function addExpense(expense) {
 
 async function getExpenses(tripId) {
     return data.expenses
-        .filter(e => e.tripId === tripId)
+        .filter(e => String(e.tripId) === String(tripId))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 

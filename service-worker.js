@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v20-pulse-fix';
+const CACHE_NAME = 'tripsplit-v22-settlements-whatsapp-fix';
 const urlsToCache = [
   './',
   './index.html',

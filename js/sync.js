@@ -212,13 +212,13 @@ async function syncTripToCloud(tripId, actionDesc = "Updated trip") {
         if (!trip) throw new Error("Trip not found locally.");
 
         // Get full data bundle
-        const allParticipants = await getParticipants();
-        const allExpenses = await getExpenses();
+        const allParticipants = await getParticipants(tripId);
+        const allExpenses = await getExpenses(tripId);
         
         const tripBundle = {
             trip: trip,
-            participants: allParticipants.filter(p => p.tripId === tripId),
-            expenses: allExpenses.filter(e => e.tripId === tripId)
+            participants: allParticipants,
+            expenses: allExpenses
         };
 
         if (!trip.share_id) {

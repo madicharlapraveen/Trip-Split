@@ -185,7 +185,7 @@ Bottom Nav:
 ---
 
 ## 🛠️ 9. Maintenance Checklist
-*   **Version Control**: Script tags use `?v=14`. Increment on each deploy to bust browser cache.
+*   **Version Control**: Script tags use `?v=15`. Increment on each deploy to bust browser cache.
 *   **Asset Management**: Keep all icons in `/assets`. Use `icon-192.png` for splash/PWA.
 *   **Styles**: Avoid inline styles. Use the token system in `style.css`.
 *   **Persistence**: Always use `await` when calling `db.js` function to ensure data integrity before UI updates.
@@ -198,4 +198,4 @@ Bottom Nav:
 
 ---
 
-*Last Updated: 2026-05-19 — Added Open Graph and Twitter Card meta tags for link preview icons. Cache bumped to tripsplit-v20-pulse-fix. Version strings at ?v=14.*
+*Last Updated: 2026-05-20 — Refactored settlements calculation flow, enhanced Split UI and global/individual WhatsApp sharing text with average share equations and individual pay/receive actions, fixed the startup and transition flow TypeErrors, and resolved the creator empty sync bug. Version strings bumped to ?v=15. Cache bumped to tripsplit-v21-settlements-whatsapp-fix.*

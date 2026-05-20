@@ -8,6 +8,7 @@ async function loadTripNotes() {
     if (!currentTripId) return;
 
     const trip = await getTrip(currentTripId);
+    if (!trip) return;
     const itinerary = trip.itinerary || [];
     
     const itineraryList = document.getElementById('itinerary-list');
