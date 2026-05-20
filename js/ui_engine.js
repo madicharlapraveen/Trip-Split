@@ -1293,111 +1293,443 @@ window.loadMyData = async function() {
   const summaryCard = document.getElementById('my-summary-card');
   if (!summaryCard) return;
 
-  if (!currentTripId) {
-    summaryCard.innerHTML = '<p class="text-slate-400 text-center py-4 italic text-sm">Please select a trip first.</p>';
-    return;
-  }
-  
   const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
-  const participants = await getParticipants(currentTripId);
-  const expenses = await getExpenses(currentTripId);
-  const trip = await getTrip(currentTripId);
-  const symbol = trip ? (trip.currencySymbol || '₹') : '₹';
   
-  if (!profile || !profile.name) {
-    summaryCard.innerHTML = `
-      <div class="text-center py-6">
-        <p class="text-slate-500 mb-4 text-xs font-bold">Please set your name in Settings to see your personal summary.</p>
-        <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
-      </div>`;
-    return;
-  }
-  
-  const me = participants.find(p => p.name.trim().toLowerCase() === profile.name.trim().toLowerCase());
-  if (!me) {
-    summaryCard.innerHTML = `
-      <div class="text-center py-6">
-        <p class="text-slate-500 mb-4 text-xs font-bold leading-relaxed">
-          You are currently matching with profile <b>"${profile.name}"</b>.<br>
-          To display data, add a participant named "${profile.name}" to this trip or edit your name in Settings.
-        </p>
-        <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
-      </div>`;
-    return;
-  }
-
-  let myTotalSpent = 0;
-  let myExpectedShare = 0;
-
-  expenses.forEach(e => {
-    // Paid by Me
-    if (e.paidBy === me.id) {
-      myTotalSpent += (e.totalAmount || e.amount || 0);
-    }
+  if (currentTripId) {
+    const participants = await getParticipants(currentTripId);
+    const expenses = await getExpenses(currentTripId);
+    const trip = await getTrip(currentTripId);
+    const symbol = trip ? (trip.currencySymbol || '₹') : '₹';
     
-    // Me in split subset
-    let splitBetweenIds = e.splitBetween || [];
-    if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
-      splitBetweenIds = participants.map(p => p.id);
-    }
-    if (splitBetweenIds.includes(me.id)) {
-      const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
-      const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
-      if (totalSplitFamily > 0) {
-        const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
-        myExpectedShare += costPerHead * (me.familyCount || 1);
+    if (!profile || !profile.name) {
+      summaryCard.innerHTML = `
+        <div class="text-center py-6">
+          <p class="text-slate-500 mb-4 text-xs font-bold">Please set your name in Settings to see your personal summary.</p>
+          <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
+        </div>`;
+    } else {
+      const me = participants.find(p => p.name.trim().toLowerCase() === profile.name.trim().toLowerCase());
+      if (!me) {
+        summaryCard.innerHTML = `
+          <div class="text-center py-6">
+            <p class="text-slate-500 mb-4 text-xs font-bold leading-relaxed">
+              You are currently matching with profile <b>"${profile.name}"</b>.<br>
+              To display data, add a participant named "${profile.name}" to this trip or edit your name in Settings.
+            </p>
+            <button onclick="showSettings()" class="btn-primary py-2.5 px-4 rounded-xl text-xs">Configure Profile</button>
+          </div>`;
+      } else {
+        let myTotalSpent = 0;
+        let myExpectedShare = 0;
+
+        expenses.forEach(e => {
+          // Paid by Me
+          if (e.paidBy === me.id) {
+            myTotalSpent += (e.totalAmount || e.amount || 0);
+          }
+          
+          // Me in split subset
+          let splitBetweenIds = e.splitBetween || [];
+          if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
+            splitBetweenIds = participants.map(p => p.id);
+          }
+          if (splitBetweenIds.includes(me.id)) {
+            const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
+            const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
+            if (totalSplitFamily > 0) {
+              const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
+              myExpectedShare += costPerHead * (me.familyCount || 1);
+            }
+          }
+        });
+
+        const myBalance = myTotalSpent - myExpectedShare;
+        const isCreditor = myBalance >= 0;
+        
+        summaryCard.innerHTML = `
+          <div class="flex flex-col gap-4">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+              <div>
+                <h4 class="font-bold text-slate-800 text-lg">${me.name}</h4>
+                <p class="text-xs text-slate-400">Device Account Matches Profile</p>
+              </div>
+              <span class="px-4 py-2 rounded-2xl font-black text-sm ${isCreditor ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
+                ${isCreditor ? '+' + symbol + myBalance.toFixed(0) : '-' + symbol + Math.abs(myBalance).toFixed(0)}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Total Spendings</p>
+                <p class="text-xl font-black text-slate-800">${symbol}${myTotalSpent.toFixed(0)}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Adjusted Share</p>
+                <p class="text-xl font-black text-slate-800">${symbol}${myExpectedShare.toFixed(0)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Expenses filter details
+        const myExpenses = expenses.filter(e => e.paidBy === me.id);
+        const myExpensesList = document.getElementById('my-expenses-list');
+        const myExpensesItems = document.getElementById('my-expenses-items');
+        
+        if (myExpensesList && myExpensesItems) {
+          if (myExpenses.length > 0) {
+            myExpensesList.classList.remove('hidden');
+            myExpensesItems.innerHTML = myExpenses.map(e => `
+              <div class="flex justify-between items-center py-3 border-b border-slate-50 last:border-b-0">
+                <div>
+                  <p class="text-sm font-bold text-slate-700">${e.title}</p>
+                  <p class="text-[10px] text-slate-400">${new Date(e.createdAt).toLocaleDateString()} • ${e.category}</p>
+                </div>
+                <span class="text-sm font-black text-slate-800">${symbol}${e.amount.toFixed(0)}</span>
+              </div>
+            `).join('');
+          } else {
+            myExpensesList.classList.add('hidden');
+          }
+        }
       }
     }
-  });
-
-  const myBalance = myTotalSpent - myExpectedShare;
-  const isCreditor = myBalance >= 0;
-  
-  summaryCard.innerHTML = `
-    <div class="flex flex-col gap-4">
-      <div class="flex justify-between items-center pb-4 border-b border-slate-100">
-        <div>
-          <h4 class="font-bold text-slate-800 text-lg">${me.name}</h4>
-          <p class="text-xs text-slate-400">Device Account Matches Profile</p>
-        </div>
-        <span class="px-4 py-2 rounded-2xl font-black text-sm ${isCreditor ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
-          ${isCreditor ? '+' + symbol + myBalance.toFixed(0) : '-' + symbol + Math.abs(myBalance).toFixed(0)}
-        </span>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Total Spendings</p>
-          <p class="text-xl font-black text-slate-800">${symbol}${myTotalSpent.toFixed(0)}</p>
-        </div>
-        <div>
-          <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Your Adjusted Share</p>
-          <p class="text-xl font-black text-slate-800">${symbol}${myExpectedShare.toFixed(0)}</p>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Expenses filter details
-  const myExpenses = expenses.filter(e => e.paidBy === me.id);
-  const myExpensesList = document.getElementById('my-expenses-list');
-  const myExpensesItems = document.getElementById('my-expenses-items');
-  
-  if (myExpensesList && myExpensesItems) {
-    if (myExpenses.length > 0) {
-      myExpensesList.classList.remove('hidden');
-      myExpensesItems.innerHTML = myExpenses.map(e => `
-        <div class="flex justify-between items-center py-3 border-b border-slate-50 last:border-b-0">
-          <div>
-            <p class="text-sm font-bold text-slate-700">${e.title}</p>
-            <p class="text-[10px] text-slate-400">${new Date(e.createdAt).toLocaleDateString()} • ${e.category}</p>
-          </div>
-          <span class="text-sm font-black text-slate-800">${symbol}${e.amount.toFixed(0)}</span>
-        </div>
-      `).join('');
-    } else {
-      myExpensesList.classList.add('hidden');
-    }
+  } else {
+    // No active trip selected placeholder
+    summaryCard.innerHTML = `
+      <div class="text-center py-8 flex flex-col items-center justify-center">
+        <span class="text-3xl mb-2">✈️</span>
+        <h4 class="font-bold text-slate-700 text-sm">No Active Trip Selected</h4>
+        <p class="text-slate-400 text-xs mt-1 leading-relaxed">Select or create a trip to see your personal spending ledger and balances.</p>
+        <button onclick="showScreen('trips')" class="btn-primary py-2 px-5 rounded-xl text-xs font-bold mt-4 shadow-sm">View Trips</button>
+      </div>`;
+    
+    const myExpensesList = document.getElementById('my-expenses-list');
+    if (myExpensesList) myExpensesList.classList.add('hidden');
   }
+
+  // Always load and render sync & recovery options
+  window.renderSyncCard();
+};
+
+window.syncFlowState = window.syncFlowState || {
+    email: '',
+    mode: 'initial', // 'initial', 'restore_input', 'otp'
+    flowType: '', // 'link' or 'restore'
+    timerInterval: null
+};
+
+window.renderSyncCard = async function() {
+    const syncCard = document.getElementById('my-sync-card');
+    if (!syncCard) return;
+    
+    const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
+    
+    // Linked State
+    if (profile && profile.email) {
+        syncCard.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-lg shadow-sm">
+                        ☁️
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm text-slate-800">Secure Cloud Sync Active</h4>
+                        <p class="text-xs text-slate-400">Your trips are safely backed up to the cloud.</p>
+                    </div>
+                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full font-black text-[9px] uppercase tracking-wider border border-emerald-100">Linked</span>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">Account Email:</span>
+                        <span class="font-bold text-slate-700">${profile.email}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">Device Identity:</span>
+                        <span class="font-bold text-slate-500 font-mono text-[10px]">${profile.device_id ? profile.device_id.substring(0, 15) : '...'}...</span>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed italic">
+                    💡 <b>Tip:</b> If you get a new device, click "Restore Account" and verify this email address to load all your trips instantly.
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    // OTP Entry State
+    if (window.syncFlowState.mode === 'otp') {
+        syncCard.innerHTML = `
+            <div class="space-y-5 animate-scale-in">
+                <div class="flex items-center space-x-3">
+                    <button onclick="window.handleShowInitialView()" class="p-1 text-slate-400 hover:text-slate-600 hover:scale-115 active:scale-95 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm text-slate-800">Enter Verification Code</h4>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">Enter the 6-digit OTP code sent to <b class="text-indigo-600">${window.syncFlowState.email}</b>.</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="otp-code-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-center text-xl font-black tracking-[0.6em] text-slate-800" placeholder="------" required>
+                    
+                    <div class="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                        <span id="otp-timer">Resend code in 59s</span>
+                        <button onclick="window.handleResendOTP()" id="resend-otp-btn" class="hidden text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-wider font-bold">Resend Code</button>
+                    </div>
+                    
+                    <button onclick="window.handleVerifyOTP()" id="verify-otp-submit-btn" class="w-full btn-primary py-3.5 rounded-2xl text-xs font-bold shadow-md shadow-indigo-100 flex items-center justify-center space-x-2">
+                        <span>Confirm & Verify Code</span>
+                    </button>
+                </div>
+            </div>
+        `;
+        window.startOTPTimer();
+    } else if (window.syncFlowState.mode === 'restore_input') {
+        // Account Restore Input State
+        syncCard.innerHTML = `
+            <div class="space-y-4 animate-scale-in">
+                <div class="flex items-center space-x-3">
+                    <button onclick="window.handleShowInitialView()" class="p-1 text-slate-400 hover:text-slate-600 hover:scale-115 active:scale-95 transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm text-slate-800">Restore Cloud Account</h4>
+                        <p class="text-xs text-slate-400">Restore your historical trips using your registered email.</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Registered Email Address</label>
+                        <input type="email" id="restore-email-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-xs" placeholder="E.g. name@domain.com" required>
+                    </div>
+                    <button onclick="window.handleStartRestoreAccount()" id="restore-submit-btn" class="w-full btn-primary py-3.5 rounded-2xl text-xs font-bold shadow-md shadow-indigo-100 flex items-center justify-center space-x-2">
+                        <span>Send Verification Code</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        // Unlinked State / Initial Sync Options
+        syncCard.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-lg shadow-sm">
+                        📧
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm text-slate-800">Secure Cloud Backup</h4>
+                        <p class="text-xs text-slate-400">Link your email address to sync trips across devices and prevent data loss.</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Backup Email Address</label>
+                        <input type="email" id="sync-email-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-xs" placeholder="E.g. name@domain.com" required>
+                    </div>
+                    
+                    <button onclick="window.handleStartLinkEmail()" id="link-submit-btn" class="w-full btn-primary py-3.5 rounded-2xl text-xs font-bold shadow-md shadow-indigo-100 flex items-center justify-center space-x-2">
+                        <span>Link & Sync Account</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                    
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-slate-100"></div>
+                        <span class="flex-shrink mx-4 text-slate-300 font-bold text-[9px] uppercase tracking-wider">Returning User?</span>
+                        <div class="flex-grow border-t border-slate-100"></div>
+                    </div>
+                    
+                    <button onclick="window.handleShowRestoreView()" class="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-bold transition-all flex items-center justify-center space-x-2">
+                        <span>🔄 Restore Account from Cloud</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+window.handleShowInitialView = function() {
+    clearInterval(window.syncFlowState.timerInterval);
+    window.syncFlowState.mode = 'initial';
+    window.renderSyncCard();
+};
+
+window.handleShowRestoreView = function() {
+    window.syncFlowState.mode = 'restore_input';
+    window.renderSyncCard();
+};
+
+window.handleStartLinkEmail = async function() {
+    const emailInput = document.getElementById('sync-email-input');
+    if (!emailInput || !emailInput.value.trim()) {
+        alert("Please enter a valid email address.");
+        return;
+    }
+    const email = emailInput.value.trim().toLowerCase();
+    
+    const submitBtn = document.getElementById('link-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Sending Code...</span>`;
+    }
+    
+    try {
+        const existingProfile = await window.getProfileByEmail(email);
+        if (existingProfile && existingProfile.device_id !== getDeviceId()) {
+            alert("This email address is already linked to an existing account. To recover your existing trips, please use 'Restore Account' instead.");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Link & Sync Account</span>`;
+            }
+            return;
+        }
+        
+        await window.sendEmailOTP(email);
+        window.syncFlowState.email = email;
+        window.syncFlowState.flowType = 'link';
+        window.syncFlowState.mode = 'otp';
+        window.renderSyncCard();
+        if (window.showToast) window.showToast('OTP verification code sent!', 'info');
+    } catch (e) {
+        alert("Failed to send code: " + e.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Link & Sync Account</span>`;
+        }
+    }
+};
+
+window.handleStartRestoreAccount = async function() {
+    const emailInput = document.getElementById('restore-email-input');
+    if (!emailInput || !emailInput.value.trim()) {
+        alert("Please enter a valid email address.");
+        return;
+    }
+    const email = emailInput.value.trim().toLowerCase();
+    
+    const submitBtn = document.getElementById('restore-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Sending Code...</span>`;
+    }
+    
+    try {
+        const existingProfile = await window.getProfileByEmail(email);
+        if (!existingProfile) {
+            alert("No saved account found for this email address. Please make sure you link your email first on your original device.");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Send Verification Code</span>`;
+            }
+            return;
+        }
+        
+        await window.sendEmailOTP(email);
+        window.syncFlowState.email = email;
+        window.syncFlowState.flowType = 'restore';
+        window.syncFlowState.mode = 'otp';
+        window.renderSyncCard();
+        if (window.showToast) window.showToast('OTP verification code sent!', 'info');
+    } catch (e) {
+        alert("Failed to send code: " + e.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Send Verification Code</span>`;
+        }
+    }
+};
+
+window.handleResendOTP = async function() {
+    try {
+        await window.sendEmailOTP(window.syncFlowState.email);
+        if (window.showToast) window.showToast('New verification code sent!', 'success');
+        window.startOTPTimer();
+    } catch (e) {
+        alert("Failed to resend code: " + e.message);
+    }
+};
+
+window.startOTPTimer = function() {
+    let secondsLeft = 60;
+    const timerText = document.getElementById('otp-timer');
+    const resendBtn = document.getElementById('resend-otp-btn');
+    if (!timerText || !resendBtn) return;
+    
+    resendBtn.classList.add('hidden');
+    timerText.classList.remove('hidden');
+    timerText.textContent = `Resend code in ${secondsLeft}s`;
+    
+    clearInterval(window.syncFlowState.timerInterval);
+    window.syncFlowState.timerInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+            clearInterval(window.syncFlowState.timerInterval);
+            timerText.classList.add('hidden');
+            resendBtn.classList.remove('hidden');
+        } else {
+            timerText.textContent = `Resend code in ${secondsLeft}s`;
+        }
+    }, 1000);
+};
+
+window.handleVerifyOTP = async function() {
+    const otpInput = document.getElementById('otp-code-input');
+    if (!otpInput || otpInput.value.trim().length !== 6) {
+        alert("Please enter the 6-digit verification code.");
+        return;
+    }
+    const token = otpInput.value.trim();
+    
+    const submitBtn = document.getElementById('verify-otp-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Verifying Code...</span>`;
+    }
+    
+    try {
+        await window.verifyEmailOTP(window.syncFlowState.email, token);
+        
+        clearInterval(window.syncFlowState.timerInterval);
+        
+        if (window.syncFlowState.flowType === 'link') {
+            await window.linkEmailToProfile(window.syncFlowState.email);
+            if (window.showToast) window.showToast('Profile linked & Cloud sync enabled!', 'success');
+            
+            const profile = await getUserProfile();
+            const emailInputOnSettings = document.getElementById('profile-email');
+            if (emailInputOnSettings) emailInputOnSettings.value = profile.email || '';
+            
+            window.syncFlowState.mode = 'initial';
+            window.loadMyData();
+        } else if (window.syncFlowState.flowType === 'restore') {
+            const localTrips = await getTrips();
+            if (localTrips.length > 0) {
+                const confirmRestore = confirm("Warning: Restoring your account will switch your device identity and replace current local trips. Make sure you don't have unsaved data. Proceed?");
+                if (!confirmRestore) {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<span>Confirm & Verify Code</span>`;
+                    }
+                    return;
+                }
+            }
+            
+            if (window.showToast) window.showToast('Code verified! Fetching historical trips...', 'info');
+            const tripsCount = await window.restoreAccountByEmail(window.syncFlowState.email);
+            
+            alert(`Account recovered successfully! Restored ${tripsCount} trips and updated your device identity. The app will now reload.`);
+            window.location.reload();
+        }
+    } catch (e) {
+        alert("Verification failed: " + e.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Confirm & Verify Code</span>`;
+        }
+    }
 };
 
 // Save Trip as template helper (F6)
@@ -1715,7 +2047,20 @@ window.showProfileModal = async function() {
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-                <input type="email" id="profile-email" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.email || '') : ''}" placeholder="name@domain.com" required>
+                ${profile && profile.email ? `
+                    <div class="relative">
+                        <input type="hidden" id="profile-email" value="${profile.email}">
+                        <input type="email" class="w-full p-4 bg-emerald-50/50 border border-emerald-100 text-emerald-800 font-bold rounded-2xl focus:outline-none cursor-not-allowed text-xs" value="${profile.email}" readonly>
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full shadow-sm">✓ Verified</span>
+                    </div>
+                ` : `
+                    <div class="relative">
+                        <input type="hidden" id="profile-email" value="">
+                        <input type="email" class="w-full p-4 bg-slate-100/50 border border-slate-100 text-slate-400 rounded-2xl focus:outline-none cursor-not-allowed text-xs" placeholder="Not linked" readonly>
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-600 text-[10px] font-bold hover:underline cursor-pointer" onclick="hideModal(); showScreen('my');">Link Email ➔</span>
+                    </div>
+                `}
+                <p class="text-[10px] text-slate-400 mt-1">To link, change, or recover your email account, please use the sync panel on the "My Summary" screen.</p>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone Mobile</label>
