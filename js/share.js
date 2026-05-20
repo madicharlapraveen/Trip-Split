@@ -13,48 +13,43 @@ async function shareOnWhatsApp() {
   const totalExpense = splitData.totalExpense;
   const totalParticipants = splitData.totalParticipants;
   const perPersonShare = splitData.perPersonShare;
+  const sym = trip ? (trip.currencySymbol || '₹') : '₹';
 
-  let message = `*${trip.tripName} - Trip Split Summary*\n\n`;
-  message += `📊 *Total Expense:* ₹${totalExpense.toFixed(2)}\n`;
-  message += `👥 *Total Members:* ${totalParticipants}\n`;
-  message += `🧮 *Average Share Calculation:* ₹${totalExpense.toFixed(2)} ÷ ${totalParticipants} people = ₹${perPersonShare.toFixed(2)} per head\n\n`;
+  let message = `${trip.tripName} - Expense Split Summary\n\n`;
+  message += `Total Expenses : ${sym}${totalExpense.toFixed(2)}\n`;
+  message += `Members :   ${totalParticipants}\n`;
+  message += `Each Share: ${sym}${perPersonShare.toFixed(2)}\n\n`;
 
-  message += `👤 *Individual Balances & Details:*\n`;
+  message += `INDIVIDUAL BALANCES\n`;
+  message += `────────────────────────\n\n`;
+
   splitData.balances.forEach(balance => {
     const status = balance.balance >= 0 ? 'Receives' : 'Owes';
     const resultSign = balance.balance >= 0 ? '+' : '-';
-    message += `*${balance.name}*:\n`;
-    message += `   - Paid / Spent: ₹${balance.totalSpent.toFixed(2)}\n`;
-    message += `   - Expected Share: ₹${balance.expectedShare.toFixed(2)}\n`;
-    message += `   - Result (Paid - Share): ${resultSign}₹${Math.abs(balance.balance).toFixed(2)} (${status})\n`;
-    
-    // Settlements involving this specific person
-    const mySettlements = splitData.settlements.filter(s => s.from === balance.name || s.to === balance.name);
-    if (mySettlements.length > 0) {
-      message += `   - Settlement for You:\n`;
-      mySettlements.forEach(s => {
-        if (s.from === balance.name) {
-          message += `     👉 Pay ₹${s.amount.toFixed(2)} to ${s.to}\n`;
-        } else {
-          message += `     👈 Receive ₹${s.amount.toFixed(2)} from ${s.from}\n`;
-        }
-      });
-    } else {
-      message += `   - Settlement for You: 0 (No payments needed)\n`;
-    }
-    message += `\n`;
+    message += `${balance.name}:\n`;
+    message += `  Paid / Spent: ${sym}${balance.totalSpent.toFixed(2)}\n`;
+    message += `  Result: ${resultSign}${sym}${Math.abs(balance.balance).toFixed(2)} (${status})\n\n`;
   });
 
-  message += `💳 *Overall Settlement Plan:*\n`;
-  if (splitData.settlements.length === 0) {
-    message += `✅ All settled! No payments needed.\n`;
+  message += `────────────────────────\n`;
+  message += `SETTLEMENT PLAN\n\n`;
+
+  const payers = splitData.balances.filter(b => b.balance <= -0.01);
+  const receivers = splitData.balances.filter(b => b.balance >= 0.01);
+
+  if (payers.length === 0 && receivers.length === 0) {
+    message += `All settled! No payments needed.\n`;
   } else {
-    splitData.settlements.forEach((settlement, index) => {
-      message += `${index + 1}. ${settlement.from} → ${settlement.to}: ₹${settlement.amount.toFixed(2)}\n`;
+    payers.forEach(p => {
+      message += `● ${p.name} Pay ${sym}${Math.abs(p.balance).toFixed(2)} to ADMIN\n`;
+    });
+    message += `\n`;
+    receivers.forEach(r => {
+      message += `● ${r.name} Receive ${sym}${Math.abs(r.balance).toFixed(2)} from ADMIN\n`;
     });
   }
 
-  message += `\n\nSent from TripSplit App a product of AiSpace.co.in`;
+  message += `\nSent from TripSplit App a product of AiSpace.co.in`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(whatsappUrl, '_blank');
