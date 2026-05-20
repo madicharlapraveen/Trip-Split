@@ -54,7 +54,7 @@ async function shareOnWhatsApp() {
     });
   }
 
-  message += `\nSent from TripSplit App a product of AiSpace.co.in`;
+  message += `\n\nSent from TripSplit App a product of AiSpace.co.in`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(whatsappUrl, '_blank');
@@ -96,7 +96,7 @@ async function shareIndividualOnWhatsApp(participantId) {
     message += `👈 Receive ₹${Math.abs(individualBalance).toFixed(2)} from ADMIN\n`;
   }
 
-  message += `\nSent from TripSplit App a product of AiSpace.co.in`;
+  message += `\n\nSent from TripSplit App a product of AiSpace.co.in`;
 
   // Ask for phone number
   const phone = prompt(`Enter phone number for ${participant.name} (with country code, e.g., 919876543210):`, participant.phone || '');

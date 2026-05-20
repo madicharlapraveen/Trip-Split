@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v24-simplified-average-share';
+const CACHE_NAME = 'tripsplit-v25-whatsapp-footer-alignment';
 const urlsToCache = [
   './',
   './index.html',
