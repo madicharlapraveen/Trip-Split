@@ -53,9 +53,15 @@ async function loadTripNotes() {
         `;
         itineraryList.appendChild(emptyState);
         
-        // Default center on Ooty or default coords if map present
+        // Default center on Ooty or default coords if map present - delayed to avoid 0x0 hidden container projection bug
         if (leafletMap) {
-            leafletMap.setView([11.4102, 76.6950], 11);
+            setTimeout(() => {
+                if (leafletMap) {
+                    leafletMap.invalidateSize();
+                    leafletMap.setView([11.4102, 76.6950], 11);
+                }
+                checkOfflineTilesCache();
+            }, 200);
         }
         return;
     }
@@ -165,17 +171,18 @@ async function loadTripNotes() {
 
     // 4. Auto adjust map view to fit all bounds beautifully
     if (leafletMap) {
-        if (bounds.length > 0) {
-            leafletMap.fitBounds(bounds, { padding: [50, 50] });
-        } else {
-            leafletMap.setView([11.4102, 76.6950], 11);
-        }
-        
-        // Force refresh leaflet size to handle hidden section transitions
+        // Force refresh leaflet size to handle hidden section transitions and compute bounds perfectly
         setTimeout(() => {
-            leafletMap.invalidateSize();
+            if (leafletMap) {
+                leafletMap.invalidateSize();
+                if (bounds.length > 0) {
+                    leafletMap.fitBounds(bounds, { padding: [50, 50] });
+                } else {
+                    leafletMap.setView([11.4102, 76.6950], 11);
+                }
+            }
             checkOfflineTilesCache();
-        }, 150);
+        }, 200);
     }
 }
 

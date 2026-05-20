@@ -187,6 +187,7 @@ window.subscribeToTripUpdates = function(shareId) {
                 if (currentTripId === cloudTripRecord.trip_data.trip.id) {
                     if (currentScreen === 'expenses') loadExpenses();
                     if (currentScreen === 'split') calculateSplit();
+                    if (currentScreen === 'plan') loadTripNotes();
                     if (currentScreen === 'home') { loadHomeData(); loadTripsCapsules(); }
                 }
                 
