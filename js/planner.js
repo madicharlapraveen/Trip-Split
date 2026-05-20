@@ -216,6 +216,32 @@ async function checkOfflineTilesCache() {
     }
 }
 
+window.toggleManualCoords = function() {
+    const container = document.getElementById('manual-coords-inputs');
+    if (container) {
+        container.classList.toggle('hidden');
+    }
+};
+
+window.syncManualCoords = function() {
+    const latManual = document.getElementById('place-lat-manual');
+    const lngManual = document.getElementById('place-lng-manual');
+    const latHidden = document.getElementById('place-lat');
+    const lngHidden = document.getElementById('place-lng');
+    const statusDiv = document.getElementById('search-status');
+    
+    if (latManual && lngManual && latHidden && lngHidden) {
+        latHidden.value = latManual.value;
+        lngHidden.value = lngManual.value;
+        
+        if (latManual.value && lngManual.value) {
+            statusDiv.innerHTML = `📍 Custom pinned: <span class="text-indigo-600 font-black">${parseFloat(latManual.value).toFixed(4)}, ${parseFloat(lngManual.value).toFixed(4)}</span> ✅`;
+        } else {
+            statusDiv.textContent = 'Enter custom latitude & longitude to map stop!';
+        }
+    }
+};
+
 // Search location using OpenStreetMap free geocoding database (Nominatim)
 async function searchGeocodingLocation() {
     const query = document.getElementById('place-search').value.trim();
@@ -259,6 +285,12 @@ async function searchGeocodingLocation() {
                 document.getElementById('place-lat').value = res.lat;
                 document.getElementById('place-lng').value = res.lon;
                 
+                // Update manual inputs if visible
+                const latManual = document.getElementById('place-lat-manual');
+                const lngManual = document.getElementById('place-lng-manual');
+                if (latManual) latManual.value = res.lat;
+                if (lngManual) lngManual.value = res.lon;
+                
                 resultsDiv.classList.add('hidden');
                 resultsDiv.innerHTML = '';
                 statusDiv.innerHTML = `📍 Pinned to: <span class="text-indigo-600 font-black">${shortName}</span> ✅`;
@@ -299,6 +331,23 @@ window.showAddPlaceModal = function() {
                 <div id="search-status" class="text-[10px] text-slate-400 font-bold mt-1.5 px-1">Search to automatically map pins and route directions!</div>
                 <input type="hidden" id="place-lat" value="">
                 <input type="hidden" id="place-lng" value="">
+                
+                <div class="mt-2.5 flex justify-between items-center px-1">
+                    <span class="text-[9px] text-slate-400 font-semibold">Offline or place not found?</span>
+                    <button type="button" onclick="toggleManualCoords()" class="text-[9px] text-indigo-600 font-bold hover:underline transition-all">
+                        🛠️ Enter Coordinates Manually
+                    </button>
+                </div>
+                <div id="manual-coords-inputs" class="grid grid-cols-2 gap-3 mt-3 hidden animate-scale-in">
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Latitude</label>
+                        <input type="number" step="any" id="place-lat-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 11.4102" oninput="syncManualCoords()">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Longitude</label>
+                        <input type="number" step="any" id="place-lng-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 76.6950" oninput="syncManualCoords()">
+                    </div>
+                </div>
             </div>
 
             <div>
@@ -387,10 +436,27 @@ window.showEditPlaceModal = async function(index) {
                 </div>
                 <div id="search-results-list" class="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-48 overflow-y-auto no-scrollbar z-50"></div>
                 <div id="search-status" class="text-[10px] text-slate-400 font-bold mt-1.5 px-1">
-                    ${item.lat ? `📍 Currently pinned to coordinate coordinates` : `⚠️ Currently not pinned to map`}
+                    ${item.lat ? `📍 Pinned to: <span class="text-indigo-600 font-black">${parseFloat(item.lat).toFixed(4)}, ${parseFloat(item.lng).toFixed(4)}</span> ✅` : `⚠️ Currently not pinned to map`}
                 </div>
                 <input type="hidden" id="place-lat" value="${item.lat || ''}">
                 <input type="hidden" id="place-lng" value="${item.lng || ''}">
+                
+                <div class="mt-2.5 flex justify-between items-center px-1">
+                    <span class="text-[9px] text-slate-400 font-semibold">Offline or place not found?</span>
+                    <button type="button" onclick="toggleManualCoords()" class="text-[9px] text-indigo-600 font-bold hover:underline transition-all">
+                        🛠️ Enter Coordinates Manually
+                    </button>
+                </div>
+                <div id="manual-coords-inputs" class="grid grid-cols-2 gap-3 mt-3 ${item.lat ? '' : 'hidden'} animate-scale-in">
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Latitude</label>
+                        <input type="number" step="any" id="place-lat-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 11.4102" value="${item.lat || ''}" oninput="syncManualCoords()">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Longitude</label>
+                        <input type="number" step="any" id="place-lng-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 76.6950" value="${item.lng || ''}" oninput="syncManualCoords()">
+                    </div>
+                </div>
             </div>
 
             <div>
