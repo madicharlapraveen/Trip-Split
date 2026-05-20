@@ -1868,7 +1868,9 @@ window.showSettings = async function() {
                 <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
             </div>
             
-            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">TripSplit v3.0 • A Product from Aispace.co.in</p>
+            <p class="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-4">
+                TripSplit v3.0 • A Product from <a href="https://aispace.co.in/" target="_blank" class="hover:text-indigo-400 transition-colors underline decoration-indigo-500/30 underline-offset-2">Aispace.co.in</a>
+            </p>
         </div>
     `;
     showModal(content);
