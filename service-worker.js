@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v22-settlements-whatsapp-fix';
+const CACHE_NAME = 'tripsplit-v23-simplified-whatsapp-share';
 const urlsToCache = [
   './',
   './index.html',

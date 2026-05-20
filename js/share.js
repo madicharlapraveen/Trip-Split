@@ -75,31 +75,25 @@ async function shareIndividualOnWhatsApp(participantId) {
   const perPersonShare = splitData.perPersonShare;
 
   let message = `*${trip.tripName} - Expense Split for ${participant.name}*\n\n`;
-  message += `📊 *Total Trip Expense:* ₹${totalExpense.toFixed(2)}\n`;
-  message += `👥 *Total Members:* ${totalParticipants}\n`;
-  message += `🧮 *Average Share Calculation:* ₹${totalExpense.toFixed(2)} ÷ ${totalParticipants} = ₹${perPersonShare.toFixed(2)} per head\n\n`;
+  message += `🧮 Total Expenses ÷ (${totalParticipants} Members) = ₹${perPersonShare.toFixed(2)}\n\n`;
   
   message += `👤 *Your Details:*\n`;
   message += `   - Paid / Spent: ₹${balance.totalSpent.toFixed(2)}\n`;
-  message += `   - Expected Share: ₹${balance.expectedShare.toFixed(2)}\n`;
+  
+  const expectedShareStr = balance.expectedShare.toFixed(2);
+  message += `   - Share: -₹${expectedShareStr}\n`;
   
   const status = balance.balance >= 0 ? 'Receives' : 'Owes';
   const resultSign = balance.balance >= 0 ? '+' : '-';
-  message += `   - Result (Paid - Share): ${resultSign}₹${Math.abs(balance.balance).toFixed(2)} (${status})\n\n`;
+  message += `   - Total Result: ₹${balance.totalSpent.toFixed(2)} - ₹${expectedShareStr} = ${resultSign}₹${Math.abs(balance.balance).toFixed(2)} (${status})\n\n`;
 
   message += `💳 *Settlement for You:*\n`;
-  // Filter settlements involving this participant
-  const mySettlements = splitData.settlements.filter(s => s.from === participant.name || s.to === participant.name);
-  if (mySettlements.length > 0) {
-    mySettlements.forEach(s => {
-      if (s.from === participant.name) {
-        message += `👉 Pay ₹${s.amount.toFixed(2)} to ${s.to}\n`;
-      } else {
-        message += `👈 Receive ₹${s.amount.toFixed(2)} from ${s.from}\n`;
-      }
-    });
+  if (Math.abs(balance.balance) < 0.01) {
+    message += `✅ All settled! No payments needed.\n`;
+  } else if (balance.balance < 0) {
+    message += `👉 Pay ₹${Math.abs(balance.balance).toFixed(2)} to ADMIN\n`;
   } else {
-    message += `0 (No payments needed)\n`;
+    message += `👈 Receive ₹${Math.abs(balance.balance).toFixed(2)} from ADMIN\n`;
   }
 
   message += `\nSent from TripSplit App a product of AiSpace.co.in`;
