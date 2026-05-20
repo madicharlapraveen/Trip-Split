@@ -80,20 +80,20 @@ async function shareIndividualOnWhatsApp(participantId) {
   message += `👤 *Your Details:*\n`;
   message += `   - Paid / Spent: ₹${balance.totalSpent.toFixed(2)}\n`;
   
-  const expectedShareStr = balance.expectedShare.toFixed(2);
-  message += `   - Share: -₹${expectedShareStr}\n`;
+  const expectedShareStr = perPersonShare.toFixed(2);
+  message += `   - Share: - ₹${expectedShareStr}\n`;
   
-  const status = balance.balance >= 0 ? 'Receives' : 'Owes';
-  const resultSign = balance.balance >= 0 ? '+' : '-';
-  message += `   - Total Result: ₹${balance.totalSpent.toFixed(2)} - ₹${expectedShareStr} = ${resultSign}₹${Math.abs(balance.balance).toFixed(2)} (${status})\n\n`;
+  const individualBalance = balance.totalSpent - perPersonShare;
+  const status = individualBalance >= 0 ? 'Receives' : 'Owes';
+  message += `   - Total Result: ₹${Math.abs(individualBalance).toFixed(2)} (${status})\n\n`;
 
   message += `💳 *Settlement for You:*\n`;
-  if (Math.abs(balance.balance) < 0.01) {
+  if (Math.abs(individualBalance) < 0.01) {
     message += `✅ All settled! No payments needed.\n`;
-  } else if (balance.balance < 0) {
-    message += `👉 Pay ₹${Math.abs(balance.balance).toFixed(2)} to ADMIN\n`;
+  } else if (individualBalance < 0) {
+    message += `👉 Pay ₹${Math.abs(individualBalance).toFixed(2)} to ADMIN\n`;
   } else {
-    message += `👈 Receive ₹${Math.abs(balance.balance).toFixed(2)} from ADMIN\n`;
+    message += `👈 Receive ₹${Math.abs(individualBalance).toFixed(2)} from ADMIN\n`;
   }
 
   message += `\nSent from TripSplit App a product of AiSpace.co.in`;
