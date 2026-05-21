@@ -260,61 +260,138 @@ async function calculateSplit() {
     splitDetails.appendChild(balanceDiv);
   });
 
-  // Display settlement plan list
+  // Display settlement plan section
   const settlementHeader = document.createElement('h3');
   settlementHeader.className = 'text-lg font-bold text-slate-800 mt-8 mb-4';
   settlementHeader.textContent = 'Settlement Plan';
   splitDetails.appendChild(settlementHeader);
 
+  // Fetch role and paid settlements list
+  const currentTripData = await getTrip(currentTripId);
+  const myRole = currentTripData ? (currentTripData.myRole || 'viewer') : 'viewer';
+  const isAdmin = myRole === 'owner';
+  const paidSettlements = currentTripData ? (currentTripData.paid_settlements || []) : [];
+
+  // Calculate summary stats
+  const totalSettlementAmount = settlements.reduce((sum, s) => sum + s.amount, 0);
+  const paidAmount = settlements
+    .filter(s => paidSettlements.includes(`${s.from}-->${s.to}`))
+    .reduce((sum, s) => sum + s.amount, 0);
+  const pendingAmount = totalSettlementAmount - paidAmount;
+  const progressPct = totalSettlementAmount > 0 ? Math.round((paidAmount / totalSettlementAmount) * 100) : (settlements.length === 0 ? 100 : 0);
+  const isFullySettled = settlements.length === 0 || progressPct === 100;
+
+  // ── Summary Bar (TOP of section) ──────────────────────────────────────────
+  const summaryBar = document.createElement('div');
+  summaryBar.className = 'mb-5 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden';
+  summaryBar.innerHTML = `
+    <div class="px-4 pt-4 pb-3">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Progress</p>
+        <span class="text-xs font-black px-2 py-0.5 rounded-full ${isFullySettled ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}">${progressPct}% ${isFullySettled ? '✅' : 'done'}</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-2.5 mb-4 overflow-hidden">
+        <div class="h-2.5 rounded-full transition-all duration-700 ${isFullySettled ? 'bg-emerald-500' : 'bg-indigo-500'}" style="width:${progressPct}%"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <div class="bg-emerald-50 rounded-xl p-2.5 text-center border border-emerald-100">
+          <p class="text-[9px] text-emerald-600 font-black uppercase tracking-wider mb-1">Settled</p>
+          <p class="text-sm font-black text-emerald-700">${symbol}${paidAmount.toFixed(0)}</p>
+        </div>
+        <div class="bg-amber-50 rounded-xl p-2.5 text-center border border-amber-100">
+          <p class="text-[9px] text-amber-600 font-black uppercase tracking-wider mb-1">Pending</p>
+          <p class="text-sm font-black text-amber-700">${symbol}${pendingAmount.toFixed(0)}</p>
+        </div>
+        <div class="bg-indigo-50 rounded-xl p-2.5 text-center border border-indigo-100">
+          <p class="text-[9px] text-indigo-600 font-black uppercase tracking-wider mb-1">Total</p>
+          <p class="text-sm font-black text-indigo-700">${symbol}${totalSettlementAmount.toFixed(0)}</p>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
+      <p class="text-[9px] text-slate-400 font-black uppercase tracking-wider mb-2">Expenses vs Settlements</p>
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-slate-500 font-semibold">Total Trip Expenses</span>
+          <span class="font-black text-slate-700">${symbol}${totalExpense.toFixed(2)}</span>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-slate-500 font-semibold">Total to Settle</span>
+          <span class="font-black text-slate-700">${symbol}${totalSettlementAmount.toFixed(2)}</span>
+        </div>
+        <div class="h-px bg-slate-200 my-1"></div>
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-emerald-600 font-bold">Settled So Far</span>
+          <span class="font-black text-emerald-600">${symbol}${paidAmount.toFixed(2)}</span>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-amber-600 font-bold">Still Pending</span>
+          <span class="font-black text-amber-600">${symbol}${pendingAmount.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  splitDetails.appendChild(summaryBar);
+
+  // ── Settlement Cards ───────────────────────────────────────────────────────
   const settlementContainer = document.createElement('div');
   settlementContainer.className = 'premium-card bg-slate-900 text-white border-none mb-10';
 
   if (settlements.length === 0) {
     settlementContainer.innerHTML = `
-        <div class="flex flex-col items-center py-6 text-emerald-400">
-            <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <p class="font-bold">Everything is perfectly balanced!</p>
-        </div>`;
+      <div class="flex flex-col items-center py-8 text-emerald-400">
+        <svg class="w-14 h-14 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p class="font-black text-base">Everything is perfectly balanced!</p>
+        <p class="text-emerald-500/70 text-xs font-medium mt-1">No payments needed</p>
+      </div>`;
   } else {
-    settlementContainer.innerHTML = '<div class="space-y-4"></div>';
+    settlementContainer.innerHTML = '<div class="space-y-3"></div>';
     const list = settlementContainer.querySelector('div');
-    
-    const currentTrip = await getTrip(currentTripId);
-    const pending = currentTrip.pending_settlements || [];
-    
+
     settlements.forEach(settlement => {
-      const isPending = pending.find(p => p.from === settlement.from && p.to === settlement.to);
-      const isOwner = currentTrip.is_owner || false; // Owner tag added during sync
-      
+      const settlementKey = `${settlement.from}-->${settlement.to}`;
+      const isPaid = paidSettlements.includes(settlementKey);
+
       let actionHtml = '';
-      if (isPending) {
-          if (isOwner) {
-              actionHtml = `<button onclick="confirmSettlement('${isPending.id}')" class="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/30">Confirm</button>`;
-          } else {
-              actionHtml = `<span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-[10px] font-bold rounded-lg border border-amber-500/30 animate-pulse">Pending...</span>`;
-          }
+      if (isAdmin) {
+        if (isPaid) {
+          actionHtml = `
+            <button onclick="markSettlementPaid('${settlement.from}', '${settlement.to}', ${settlement.amount}, false)"
+              class="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all">
+              <span>↩</span> Undo → Pending
+            </button>`;
+        } else {
+          actionHtml = `
+            <button onclick="markSettlementPaid('${settlement.from}', '${settlement.to}', ${settlement.amount}, true)"
+              class="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[10px] font-black rounded-xl transition-all shadow-lg shadow-emerald-500/30">
+              <span>✓</span> Mark as Paid
+            </button>`;
+        }
       } else {
-          actionHtml = `<button onclick="requestSettlement('${settlement.from}', '${settlement.to}', ${settlement.amount})" class="px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold rounded-lg transition-all">Pay Now</button>`;
+        actionHtml = isPaid
+          ? `<span class="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-black rounded-xl border border-emerald-500/30">✅ Paid</span>`
+          : `<span class="px-3 py-1.5 bg-amber-500/20 text-amber-300 text-[10px] font-black rounded-xl border border-amber-500/30 animate-pulse">⏳ Pending</span>`;
       }
 
       const item = document.createElement('div');
-      item.className = 'flex flex-col p-4 bg-white/5 rounded-2xl border border-white/10 space-y-3';
+      item.className = `flex flex-col p-4 rounded-2xl border transition-all duration-300 space-y-3 ${isPaid ? 'bg-emerald-900/30 border-emerald-700/30' : 'bg-white/5 border-white/10'}`;
       item.innerHTML = `
         <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="text-right">
-                    <p class="text-xs font-bold text-white">${settlement.from}</p>
-                    <p class="text-[8px] text-slate-400 uppercase">Pays to</p>
-                </div>
-                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M3 12h18"></path></svg>
-                <p class="text-xs font-bold text-indigo-400">${settlement.to}</p>
-            </div>
+          <div class="flex items-center space-x-3">
             <div class="text-right">
-                <p class="text-lg font-black text-emerald-400">${symbol}${settlement.amount.toFixed(0)}</p>
+              <p class="text-xs font-bold text-white">${settlement.from}</p>
+              <p class="text-[8px] text-slate-400 uppercase tracking-wider">Pays to</p>
             </div>
+            <svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M3 12h18"></path></svg>
+            <p class="text-xs font-bold text-indigo-400">${settlement.to}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xl font-black ${isPaid ? 'text-emerald-400/50 line-through' : 'text-emerald-400'}">${symbol}${settlement.amount.toFixed(2)}</p>
+            ${isPaid ? '<p class="text-[9px] text-emerald-500 font-black uppercase tracking-wider">PAID ✓</p>' : ''}
+          </div>
         </div>
         <div class="flex justify-end pt-2 border-t border-white/10">
-            ${actionHtml}
+          ${actionHtml}
         </div>
       `;
       list.appendChild(item);
@@ -332,61 +409,71 @@ async function calculateSplit() {
   };
 }
 
-// Settlement Action Functions
-window.requestSettlement = async function(from, to, amount) {
-    const trip = await getTrip(currentTripId);
-    if (!trip.pending_settlements) trip.pending_settlements = [];
-    trip.pending_settlements.push({ id: Date.now().toString(), from, to, amount, status: 'pending' });
-    await updateTrip(currentTripId, trip);
-    
-    if (window.showToast) window.showToast(`Payment request sent to owner for approval`, 'success');
-    if (typeof triggerBackgroundSync === 'function') triggerBackgroundSync(`${from} paid ${to}`);
-    calculateSplit(); // refresh UI
-}
+// ── Settlement Action: Admin-only Mark as Paid / Undo ────────────────────────
+window.markSettlementPaid = async function(from, to, amount, paid) {
+  const trip = await getTrip(currentTripId);
+  if (!trip) return;
 
-window.confirmSettlement = async function(requestId) {
-    const trip = await getTrip(currentTripId);
-    if (!trip || !trip.pending_settlements) return;
-    
-    const requestIndex = trip.pending_settlements.findIndex(p => p.id === requestId);
-    if (requestIndex === -1) return;
-    
-    const req = trip.pending_settlements[requestIndex];
-    
+  const settlementKey = `${from}-->${to}`;
+  if (!trip.paid_settlements) trip.paid_settlements = [];
+
+  if (paid) {
+    // 1. Add to paid list
+    if (!trip.paid_settlements.includes(settlementKey)) {
+      trip.paid_settlements.push(settlementKey);
+    }
+
+    // 2. Option B: Create a balancing settlement expense in the ledger
     const participants = await getParticipants(currentTripId);
-    const fromParticipant = participants.find(p => p.name === req.from);
-    const toParticipant = participants.find(p => p.name === req.to);
-    
-    const fromId = fromParticipant ? fromParticipant.id : req.from;
-    const toId = toParticipant ? toParticipant.id : req.to;
-    
-    // To balance the ledger, we add an Expense where "from" pays "amount" and it is split ONLY to "to"
-    const settlementExpense = {
+    const fromParticipant = participants.find(p => p.name === from);
+    const toParticipant = participants.find(p => p.name === to);
+
+    if (fromParticipant && toParticipant) {
+      const settlementExpense = {
         tripId: currentTripId,
         id: Date.now(),
-        description: `Settlement: ${req.from} → ${req.to}`,
-        amount: req.amount,
-        totalAmount: req.amount,
-        paidBy: fromId,
+        title: `Settlement: ${from} → ${to}`,
+        description: `Settlement: ${from} → ${to}`,
+        amount: amount,
+        totalAmount: amount,
+        paidBy: fromParticipant.id,
         splitMethod: 'exact',
-        splitBetween: [toId],
-        splits: { [toId]: req.amount },
+        splitBetween: [toParticipant.id],
+        splits: { [toParticipant.id]: amount },
         date: new Date().toISOString().split('T')[0],
-        isSettlement: true
-    };
-    
-    const data = JSON.parse(localStorage.getItem('tripsplit_data'));
-    data.expenses.push(settlementExpense);
-    localStorage.setItem('tripsplit_data', JSON.stringify(data));
-    
-    // Remove the request
-    trip.pending_settlements.splice(requestIndex, 1);
+        createdAt: new Date().toISOString(),
+        isSettlement: true,
+        settlementKey: settlementKey
+      };
+
+      const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
+      // Remove any old settlement for same pair (avoid duplicates on re-mark)
+      storageData.expenses = storageData.expenses.filter(e => !(e.isSettlement && e.settlementKey === settlementKey));
+      storageData.expenses.push(settlementExpense);
+      localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+    }
+
     await updateTrip(currentTripId, trip);
-    
-    if (window.showToast) window.showToast(`Payment confirmed!`, 'success');
-    if (typeof triggerBackgroundSync === 'function') triggerBackgroundSync(`Confirmed payment from ${req.from}`);
-    calculateSplit(); // refresh UI
-}
+    if (window.showToast) window.showToast(`Payment marked as Paid ✅`, 'success');
+
+  } else {
+    // Undo: remove from paid list
+    trip.paid_settlements = trip.paid_settlements.filter(k => k !== settlementKey);
+    await updateTrip(currentTripId, trip);
+
+    // Remove the settlement expense from ledger
+    const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
+    storageData.expenses = storageData.expenses.filter(e => !(e.isSettlement && e.settlementKey === settlementKey));
+    localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+
+    if (window.showToast) window.showToast(`Payment reverted to Pending ⏳`, 'info');
+  }
+
+  if (typeof triggerBackgroundSync === 'function') {
+    triggerBackgroundSync(paid ? `${from} paid ${to}` : `${from} payment reverted`);
+  }
+  calculateSplit(); // Refresh UI
+};
 
 // Load split data when split screen is shown
 function loadSplitData() {
