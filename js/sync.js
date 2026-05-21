@@ -329,23 +329,29 @@ async function handleManagePermissions() {
                 const isEditor = p.role === 'editor';
                 const isOwnerRow = p.role === 'owner';
                 memberRows += `
-                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm ${isOwnerRow ? 'bg-indigo-100 text-indigo-600' : isEditor ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}">
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl gap-2">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center font-black text-sm ${isOwnerRow ? 'bg-indigo-100 text-indigo-600' : isEditor ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}">
                                 ${(p.device_name || 'U').charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                                <p class="font-bold text-sm text-slate-700">${p.device_name || 'Unknown Device'}</p>
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-slate-700 truncate">${p.device_name || 'Unknown Device'}</p>
                                 <p class="text-[10px] text-slate-400">${isOwnerRow ? '👑 Admin' : isEditor ? '✏️ Editor' : '👁️ Viewer'}</p>
                             </div>
                         </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
                         ${isOwnerRow ? 
                             `<span class="px-3 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white">Admin</span>` :
                             `<button onclick="togglePerm('${trip.share_id}', '${p.device_id}', '${isEditor ? 'viewer' : 'editor'}')" 
-                                class="px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${isEditor ? 'bg-emerald-500 text-white hover:bg-rose-500' : 'bg-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white'}">
-                                ${isEditor ? '✏️ Editor — Tap to revoke' : '👁️ Viewer — Tap to grant'}
+                                class="px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${isEditor ? 'bg-emerald-500 text-white hover:bg-amber-500' : 'bg-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white'}">
+                                ${isEditor ? '✏️ Editor' : '👁️ Viewer'}
+                            </button>
+                            <button onclick="removeMember('${trip.share_id}', '${p.device_id}', '${(p.device_name || 'this member').replace(/'/g, '')}')" 
+                                class="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all active:scale-95 border border-rose-100 hover:border-rose-500" title="Remove member">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>`
                         }
+                        </div>
                     </div>
                 `;
             });
@@ -387,6 +393,18 @@ window.togglePerm = async function(shareId, targetId, newRole) {
     }
 };
 
+window.removeMember = async function(shareId, targetDeviceId, deviceName) {
+    const confirmed = confirm(`Remove "${deviceName}" from this trip?\nThey will lose access and be removed from the members list.`);
+    if (!confirmed) return;
+    try {
+        await removeCloudMember(shareId, targetDeviceId);
+        if (window.showToast) window.showToast(`${deviceName} removed from trip`, 'success');
+        handleManagePermissions(); // refresh UI
+    } catch (e) {
+        alert('Failed to remove member: ' + e.message);
+    }
+};
+
 async function getCloudPermissions(shareId) {
     const deviceId = getDeviceId();
     const { data, error } = await supabase.rpc('get_permissions', {
@@ -405,6 +423,18 @@ async function updateCloudPermission(shareId, targetDeviceId, role) {
         p_owner_device_id: deviceId,
         p_target_device_id: targetDeviceId,
         p_role: role
+    });
+
+    if (error) throw new Error(error.message);
+    return true;
+}
+
+async function removeCloudMember(shareId, targetDeviceId) {
+    const deviceId = getDeviceId();
+    const { error } = await supabase.rpc('remove_member', {
+        p_share_id: shareId,
+        p_owner_device_id: deviceId,
+        p_target_device_id: targetDeviceId
     });
 
     if (error) throw new Error(error.message);
