@@ -1779,27 +1779,76 @@ window.showSettings = async function() {
     const trip = currentTripId ? await getTrip(currentTripId) : null;
     const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
 
+    // Determine role clearly — owner if no share_id (local trip) or myRole === 'owner'
+    const myRole = trip ? (trip.myRole || (trip.share_id ? 'viewer' : 'owner')) : null;
+    const isOwner = myRole === 'owner';
+    const isEditor = myRole === 'editor';
+    const isViewer = myRole === 'viewer';
+    const canEdit = isOwner || isEditor;
+
+    // Role badge styling
+    const roleBadge = myRole === 'owner'
+        ? `<span class="px-3 py-1 rounded-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest">👑 Admin</span>`
+        : myRole === 'editor'
+        ? `<span class="px-3 py-1 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest">✏️ Editor</span>`
+        : myRole === 'viewer'
+        ? `<span class="px-3 py-1 rounded-full bg-slate-400 text-white text-[10px] font-black uppercase tracking-widest">👁️ Viewer</span>`
+        : '';
+
     const content = `
-        <div class="space-y-6 relative">
-            <!-- Top Right Close Icon Button -->
+        <div class="space-y-5 relative">
+            <!-- Close Button -->
             <button onclick="hideModal()" class="absolute -top-1 -right-1 p-2 text-slate-400 hover:text-slate-600 hover:scale-110 active:scale-95 transition-all cursor-pointer" title="Close Settings">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
 
-            <div class="flex items-center space-x-4 mb-6 pr-8">
+            <!-- Profile Header -->
+            <div class="flex items-center space-x-4 mb-4 pr-8">
                 <div class="w-16 h-16 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-2xl font-bold shadow-xl shadow-indigo-100">
                     ${(profile ? profile.name : 'Guest').charAt(0).toUpperCase()}
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-slate-800">${profile ? profile.name : 'Guest User'}</h3>
-                    <p class="text-sm text-slate-400">Settings & Offline Sync Controls</p>
+                    <p class="text-sm text-slate-400 mb-1">Settings &amp; Sync Controls</p>
+                    ${trip ? `<div class="flex items-center gap-2">${roleBadge}<span class="text-[10px] text-slate-400 font-bold">${trip.tripName}</span></div>` : ''}
                 </div>
             </div>
 
+            ${trip ? `
+            <!-- Role Rules Card -->
+            <div class="rounded-2xl border-2 ${isOwner ? 'border-indigo-200 bg-indigo-50' : isEditor ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'} p-4">
+                <p class="text-[10px] font-black uppercase tracking-widest mb-3 ${isOwner ? 'text-indigo-600' : isEditor ? 'text-emerald-600' : 'text-slate-500'}">Trip Access Rules</p>
+                <div class="space-y-2">
+                    <div class="flex items-start gap-3">
+                        <span class="text-sm mt-0.5">👑</span>
+                        <div>
+                            <p class="text-xs font-black text-slate-700">Admin (Trip Creator)</p>
+                            <p class="text-[10px] text-slate-500">Full access — create, edit, delete expenses, plan stops, manage members, assign editors, delete trip</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-sm mt-0.5">✏️</span>
+                        <div>
+                            <p class="text-xs font-black text-slate-700">Editor (Permission granted by Admin)</p>
+                            <p class="text-[10px] text-slate-500">Can add/edit/delete expenses &amp; plan stops. Changes sync to all devices instantly</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-sm mt-0.5">👁️</span>
+                        <div>
+                            <p class="text-xs font-black text-slate-700">Viewer (Default for joined members)</p>
+                            <p class="text-[10px] text-slate-500">Read-only. Can view expenses, plan &amp; splits. Cannot modify anything. Ask Admin for Editor access</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- Account -->
             <div class="space-y-3">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Account & Preferences</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Account &amp; Preferences</p>
                 
                 <button onclick="showProfileModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
@@ -1812,28 +1861,28 @@ window.showSettings = async function() {
                 </button>
             </div>
 
+            <!-- Trip Options -->
             <div class="space-y-3 pt-4 border-t border-slate-100">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Trip Options</p>
                 
-                ${(typeof window.canEditCurrentTrip === 'function' ? await window.canEditCurrentTrip() : true) ? `
+                ${canEdit ? `
                 <button onclick="showEditTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            📝
-                        </div>
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">📝</div>
                         <span class="font-bold text-slate-700">Edit Trip Details</span>
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
                 ` : ''}
 
-                ${trip && trip.share_id && trip.myRole === 'owner' ? `
+                ${isOwner ? `
                 <button onclick="handleManagePermissions()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                            👥
+                        <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">👥</div>
+                        <div>
+                            <span class="font-bold text-slate-700 block">Manage Editors</span>
+                            <span class="text-[10px] text-slate-400">${trip && trip.share_id ? 'Grant/revoke edit access to members' : 'Sync to cloud first to manage editors'}</span>
                         </div>
-                        <span class="font-bold text-slate-700">Manage Editors</span>
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
@@ -1841,29 +1890,26 @@ window.showSettings = async function() {
 
                 <button onclick="showJoinTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-slate-100 text-slate-600 rounded-lg">
-                            📥
-                        </div>
+                        <div class="p-2 bg-slate-100 text-slate-600 rounded-lg">📥</div>
                         <span class="font-bold text-slate-700">Join Friend's Cloud Trip</span>
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
 
+                ${isOwner ? `
                 <button onclick="handleDeleteTripFromSettings()" class="w-full flex items-center justify-between p-4 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-all">
-                            🗑️
-                        </div>
+                        <div class="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-all">🗑️</div>
                         <span class="font-bold text-rose-600">Delete Current Trip</span>
                     </div>
                     <svg class="w-5 h-5 text-rose-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
+                ` : ''}
             </div>
 
-            <!-- F2: Local Backups -->
+            <!-- Local Backups -->
             <div class="space-y-4 pt-4 border-t border-slate-100">
                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Local Database Backups</p>
-
                <div class="grid grid-cols-2 gap-2">
                    <button id="export-json-btn-settings" class="p-4 bg-slate-100 text-slate-600 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:bg-slate-200 transition-all">
                        <span class="text-[10px] font-bold text-center">Export Backup</span>
@@ -1874,16 +1920,13 @@ window.showSettings = async function() {
                </div>
             </div>
 
-            <!-- Push Notifications Section -->
+            <!-- Push Notifications -->
             <div class="space-y-3 pt-4 border-t border-slate-100">
-               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Push Notifications & Alerts</p>
-               
+               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Push Notifications &amp; Alerts</p>
                <div class="flex flex-col gap-2">
                    <button id="enable-notifications-btn" onclick="requestNotificationPermission()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                        <div class="flex items-center space-x-3">
-                           <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all" id="notif-icon">
-                               🔔
-                           </div>
+                           <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all" id="notif-icon">🔔</div>
                            <span class="font-bold text-slate-700" id="notif-text">Enable Push Notifications</span>
                        </div>
                        <span id="notif-status-badge" class="pill bg-slate-200 text-[10px] font-black text-slate-500">Disabled</span>
@@ -1891,7 +1934,7 @@ window.showSettings = async function() {
                </div>
             </div>
 
-            <div class="pt-6 border-t border-slate-100">
+            <div class="pt-4 border-t border-slate-100">
                 <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold">Close Settings</button>
             </div>
             
@@ -1900,6 +1943,7 @@ window.showSettings = async function() {
             </p>
         </div>
     `;
+
     showModal(content);
 
     // Call updateNotificationSettingsUI to sync UI state

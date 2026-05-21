@@ -298,39 +298,80 @@ async function handleManagePermissions() {
     if (!currentTripId) return;
     try {
         const trip = await getTrip(currentTripId);
-        if (!trip || !trip.share_id) return alert('Sync this trip to the cloud first.');
+        if (!trip) return;
+        
+        // If not yet synced to cloud, prompt to sync first
+        if (!trip.share_id) {
+            showModal(`
+                <div class="space-y-4 text-center py-4">
+                    <div class="text-4xl">☁️</div>
+                    <h3 class="font-bold text-slate-800 text-lg">Sync Required</h3>
+                    <p class="text-sm text-slate-500">You need to sync this trip to the cloud before you can manage editors.<br/>Tap the Cloud Sync button on the home screen first.</p>
+                    <button onclick="hideModal(); handleCloudSync();" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all">Sync to Cloud Now</button>
+                    <button onclick="hideModal()" class="w-full py-3 text-slate-400 font-bold">Cancel</button>
+                </div>
+            `);
+            return;
+        }
         
         const perms = await getCloudPermissions(trip.share_id);
         
-        let html = `
-            <div class="mb-4">
-                <h3 class="font-bold text-slate-800">Manage Editors</h3>
-                <p class="text-xs text-slate-500">Toggle switch to allow users to edit the trip.</p>
-            </div>
-            <div class="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
-        `;
-        
+        let memberRows = '';
         if (perms.length === 0) {
-            html += `<p class="text-xs text-slate-400 italic">No one has joined this trip yet.</p>`;
+            memberRows = `
+                <div class="text-center py-8 text-slate-400">
+                    <div class="text-3xl mb-2">👥</div>
+                    <p class="text-sm font-bold">No members yet</p>
+                    <p class="text-xs mt-1">Share Trip ID <span class="font-black text-indigo-600">${trip.share_id}</span> with friends so they can join</p>
+                </div>`;
         } else {
             perms.forEach(p => {
                 const isEditor = p.role === 'editor';
-                html += `
+                const isOwnerRow = p.role === 'owner';
+                memberRows += `
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                        <div>
-                            <p class="font-bold text-sm text-slate-700">${p.device_name || 'Unknown Device'}</p>
-                            <p class="text-[10px] text-slate-400">${p.device_id.substring(0,10)}...</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm ${isOwnerRow ? 'bg-indigo-100 text-indigo-600' : isEditor ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}">
+                                ${(p.device_name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm text-slate-700">${p.device_name || 'Unknown Device'}</p>
+                                <p class="text-[10px] text-slate-400">${isOwnerRow ? '👑 Admin' : isEditor ? '✏️ Editor' : '👁️ Viewer'}</p>
+                            </div>
                         </div>
-                        <button onclick="togglePerm('${trip.share_id}', '${p.device_id}', '${isEditor ? 'viewer' : 'editor'}')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all ${isEditor ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'}">
-                            ${isEditor ? 'Editor' : 'Viewer'}
-                        </button>
+                        ${isOwnerRow ? 
+                            `<span class="px-3 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white">Admin</span>` :
+                            `<button onclick="togglePerm('${trip.share_id}', '${p.device_id}', '${isEditor ? 'viewer' : 'editor'}')" 
+                                class="px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${isEditor ? 'bg-emerald-500 text-white hover:bg-rose-500' : 'bg-slate-200 text-slate-600 hover:bg-emerald-500 hover:text-white'}">
+                                ${isEditor ? '✏️ Editor — Tap to revoke' : '👁️ Viewer — Tap to grant'}
+                            </button>`
+                        }
                     </div>
                 `;
             });
         }
         
-        html += `<button onclick="hideModal()" class="w-full mt-6 py-4 font-bold text-slate-400">Close</button>`;
-        showModal(html);
+        showModal(`
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">Manage Editors</h3>
+                        <p class="text-xs text-slate-400">Trip ID: <span class="font-black text-indigo-600">${trip.share_id}</span></p>
+                    </div>
+                    <button onclick="hideModal()" class="p-2 text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+                
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p class="text-xs font-bold text-amber-700">📋 Rules</p>
+                    <p class="text-[10px] text-amber-600 mt-1">Editors can add/edit/delete expenses and plan stops. Their changes sync instantly to all devices. Viewers can only view — they cannot modify anything.</p>
+                </div>
+                
+                <div class="space-y-2 max-h-[50vh] overflow-y-auto">
+                    ${memberRows}
+                </div>
+                <button onclick="hideModal()" class="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Done</button>
+            </div>
+        `);
         
     } catch (e) {
         alert('Could not fetch permissions: ' + e.message);
