@@ -80,11 +80,18 @@ async function saveCloudTripBundle(bundle, overrideRole) {
     const tripId = bundle.trip.id;
     
     // Role resolution priority:
-    // 1. overrideRole passed explicitly (e.g. from joinTripFromCloud response)
-    // 2. existing local role (owner must never be downgraded by realtime updates)
-    // 3. 'viewer' as default for unknown new devices
+    // 1. If the existing local trip is 'owner', ALWAYS keep 'owner' — never allow any cloud
+    //    operation (echo, realtime, or join) to downgrade the trip creator.
+    // 2. If overrideRole is explicitly passed (e.g. from joinTripFromCloud), use it.
+    // 3. If the local trip already has a role, preserve it.
+    // 4. Default to 'viewer' for brand new unknown devices.
     const existingTrip = data.trips.find(t => String(t.id) === String(tripId));
-    const role = overrideRole || (existingTrip && existingTrip.myRole) || 'viewer';
+    let role;
+    if (existingTrip && existingTrip.myRole === 'owner') {
+        role = 'owner'; // Owner is PERMANENT — never downgrade
+    } else {
+        role = overrideRole || (existingTrip && existingTrip.myRole) || 'viewer';
+    }
 
     // Remove existing local data for this trip
     data.trips = data.trips.filter(t => String(t.id) !== String(tripId));

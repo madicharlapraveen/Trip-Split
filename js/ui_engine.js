@@ -1779,8 +1779,20 @@ window.showSettings = async function() {
     const trip = currentTripId ? await getTrip(currentTripId) : null;
     const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
 
-    // Determine role clearly — owner if no share_id (local trip) or myRole === 'owner'
-    const myRole = trip ? (trip.myRole || (trip.share_id ? 'viewer' : 'owner')) : null;
+    // Determine role clearly:
+    // - No share_id means this is a local trip created on THIS device → always 'owner'
+    // - Otherwise use stored myRole, fallback to 'viewer' for cloud-joined trips
+    let myRole = null;
+    if (trip) {
+        if (!trip.share_id) {
+            // Pure local trip — this device created it, must be owner
+            myRole = 'owner';
+            // Repair corrupted role silently
+            if (trip.myRole !== 'owner') await updateTrip(trip.id, { myRole: 'owner' });
+        } else {
+            myRole = trip.myRole || 'viewer';
+        }
+    }
     const isOwner = myRole === 'owner';
     const isEditor = myRole === 'editor';
     const isViewer = myRole === 'viewer';
@@ -1885,6 +1897,19 @@ window.showSettings = async function() {
                         </div>
                     </div>
                     <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                ` : ''}
+
+                ${isViewer && trip && trip.share_id ? `
+                <button onclick="claimOwnerRole()" class="w-full flex items-center justify-between p-4 bg-amber-50 hover:bg-amber-100 rounded-2xl transition-all group border border-amber-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-amber-100 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-all">👑</div>
+                        <div>
+                            <span class="font-bold text-amber-700 block">I Created This Trip</span>
+                            <span class="text-[10px] text-amber-500">If you are the trip creator, tap to reclaim Admin access</span>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
                 </button>
                 ` : ''}
 
@@ -2512,4 +2537,35 @@ window.initUI = function() {
 
   // Initial render calls
   switchAppMode(window.currentAppMode, true);
+};
+
+// Self-repair function: lets a trip creator reclaim Admin role if stuck as Viewer
+window.claimOwnerRole = async function() {
+    if (!currentTripId) return;
+    const trip = await getTrip(currentTripId);
+    if (!trip) return;
+
+    const confirmed = confirm(
+        'Only the original trip creator should use this.\n\n' +
+        'This will set your role to Admin for "' + trip.tripName + '".\n\n' +
+        'Proceed?'
+    );
+    if (!confirmed) return;
+
+    // Force local role to owner
+    await updateTrip(currentTripId, { myRole: 'owner' });
+
+    // Re-sync to cloud so the server records this device as owner
+    if (typeof syncTripToCloud === 'function') {
+        try {
+            await syncTripToCloud(currentTripId, 'Claimed owner role');
+            if (window.showToast) window.showToast('Admin role claimed! You now have full access.', 'success');
+        } catch(e) {
+            if (window.showToast) window.showToast('Role updated locally. Sync when online to confirm.', 'info');
+        }
+    }
+
+    hideModal();
+    // Re-open settings with updated role
+    setTimeout(() => showSettings(), 300);
 };
