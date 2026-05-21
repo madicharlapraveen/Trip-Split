@@ -49,7 +49,7 @@ async function shareOnWhatsApp() {
     });
   }
 
-  message += `\nSent from TripSplit App a product of AiSpace.co.in`;
+  message += `\n\nTripSplit v3.0 • A Product from Aispace.co.in`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(whatsappUrl, '_blank');
@@ -120,8 +120,7 @@ async function shareIndividualOnWhatsApp(participantId) {
     message += `  Pay ${sym}${Math.abs(individualBalance).toFixed(2)} to ADMIN\n`;
   }
 
-  // ── Footer ───────────────────────────────────────────
-  message += `\n\nSent from TripSplit App\na product of AiSpace.co.in`;
+  message += `\n\nTripSplit v3.0 • A Product from Aispace.co.in`;
 
   // Ask for phone number
   const phone = prompt(`Enter phone number for ${participant.name} (with country code, e.g., 919876543210):`, participant.phone || '');
@@ -137,7 +136,9 @@ function initShare() {
   if (shareBtn) {
     shareBtn.addEventListener('click', shareOnWhatsApp);
   }
-}async function shareAllExpensesOnWhatsApp() {
+}
+
+async function shareAllExpensesOnWhatsApp() {
   if (!currentTripId) {
     alert('Please select a trip first');
     return;
@@ -158,7 +159,7 @@ function initShare() {
   const participantMap = {};
   participants.forEach(p => participantMap[p.id] = p.name);
 
-  let message = * - All Expenses Log*\n\n;
+  let message = `${trip.tripName} - All Expenses Log\n\n`;
 
   let totalSpent = 0;
 
@@ -169,20 +170,19 @@ function initShare() {
     const payerName = participantMap[exp.paidBy] || 'Unknown';
     const dateStr = new Date(exp.createdAt).toLocaleDateString();
 
-    message += ${index + 1}. \n;
-    message +=    Amount: \n;
-    message +=    Paid By: \n;
+    message += `${index + 1}. *${desc}*\n`;
+    message += `   Amount: ${sym}${amount.toFixed(2)}\n`;
+    message += `   Paid By: ${payerName}\n`;
     if (exp.category) {
-      message +=    Category: \n;
+      message += `   Category: ${exp.category.toUpperCase()}\n`;
     }
-    message +=    Date: \n\n;
+    message += `   Date: ${dateStr}\n\n`;
   });
 
-  message += ────────────────────────\n;
-  message += Total Trip Expenses: \n\n;
+  message += `────────────────────────\n`;
+  message += `Total Trip Expenses: ${sym}${totalSpent.toFixed(2)}\n\n`;
+  message += `TripSplit v3.0 • A Product from Aispace.co.in`;
 
-  message += Sent from TripSplit App a product of AiSpace.co.in;
-
-  const whatsappUrl = https://wa.me/?text=;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(whatsappUrl, '_blank');
 }
