@@ -12,6 +12,12 @@ async function loadTripNotes() {
     if (!trip) return;
     const itinerary = trip.itinerary || [];
     const canEdit = trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id;
+
+    // Show/hide the Add Stop header button based on role
+    const addPlaceHeaderBtn = document.getElementById('add-place-btn');
+    if (addPlaceHeaderBtn) {
+        addPlaceHeaderBtn.style.display = canEdit ? '' : 'none';
+    }
     
     const itineraryList = document.getElementById('itinerary-list');
     if (!itineraryList) return;
@@ -155,11 +161,20 @@ async function loadTripNotes() {
                         </div>
                         ${canEdit ? `
                         <div class="flex space-x-1.5">
-                            <button onclick="showEditPlaceModal(${index})" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100" title="Edit details & location">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            <button onclick="showEditPlaceModal(${index})" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all text-[11px] font-black shadow-sm" title="Edit stop details & location">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                Edit
                             </button>
-                            <button onclick="deletePlace(${index})" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all border border-slate-100" title="Remove stop">
+                            <button onclick="deletePlace(${index})" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all border border-slate-100" title="Remove stop">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                        <div class="flex space-x-1.5">
+                            <button onclick="moveStop(${index}, -1)" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-all border border-slate-100 ${index === 0 ? 'opacity-30 pointer-events-none' : ''}" title="Move stop up">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"></path></svg>
+                            </button>
+                            <button onclick="moveStop(${index}, 1)" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-all border border-slate-100 ${index === itinerary.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="Move stop down">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
                         </div>
                         ` : ''}
@@ -426,7 +441,11 @@ window.showAddPlaceModal = async function() {
             await updateTrip(currentTripId, { itinerary });
             hideModal();
             loadTripNotes();
-            if (window.showToast) window.showToast('Added roadmap stop! 📍', 'success');
+            if (window.showToast) window.showToast('Stop added to roadmap! 📍', 'success');
+            // Auto-sync to cloud for editors and owners
+            if (typeof syncTripToCloud === 'function') {
+                syncTripToCloud(currentTripId, 'Added plan stop').catch(e => console.log('Auto-sync (plan add):', e.message));
+            }
         }
     });
 };
@@ -534,7 +553,11 @@ window.showEditPlaceModal = async function(index) {
                 await updateTrip(currentTripId, { itinerary });
                 hideModal();
                 loadTripNotes();
-                if (window.showToast) window.showToast('Updated stop details! 📝', 'success');
+                if (window.showToast) window.showToast('Stop updated! 📝', 'success');
+                // Auto-sync to cloud for editors and owners
+                if (typeof syncTripToCloud === 'function') {
+                    syncTripToCloud(currentTripId, 'Edited plan stop').catch(e => console.log('Auto-sync (plan edit):', e.message));
+                }
             }
         }
     });
@@ -547,18 +570,40 @@ async function toggleVisit(index) {
         itinerary[index].visited = !itinerary[index].visited;
         await updateTrip(currentTripId, { itinerary });
         loadTripNotes();
+        if (typeof syncTripToCloud === 'function') {
+            syncTripToCloud(currentTripId, 'Toggled stop visit').catch(e => console.log('Auto-sync (toggle visit):', e.message));
+        }
     }
 }
 
 async function deletePlace(index) {
-    if (confirm('Remove this place from your itinerary?')) {
+    if (confirm('Remove this place from your roadmap?')) {
         const trip = await getTrip(currentTripId);
         const itinerary = trip.itinerary || [];
         itinerary.splice(index, 1);
         await updateTrip(currentTripId, { itinerary });
         loadTripNotes();
+        if (window.showToast) window.showToast('Stop removed from roadmap.', 'info');
+        if (typeof syncTripToCloud === 'function') {
+            syncTripToCloud(currentTripId, 'Deleted plan stop').catch(e => console.log('Auto-sync (plan delete):', e.message));
+        }
     }
 }
+
+// Move a stop up (-1) or down (+1) in the itinerary order
+window.moveStop = async function(index, direction) {
+    const trip = await getTrip(currentTripId);
+    const itinerary = trip.itinerary || [];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= itinerary.length) return;
+    // Swap
+    [itinerary[index], itinerary[newIndex]] = [itinerary[newIndex], itinerary[index]];
+    await updateTrip(currentTripId, { itinerary });
+    loadTripNotes();
+    if (typeof syncTripToCloud === 'function') {
+        syncTripToCloud(currentTripId, 'Reordered plan stops').catch(e => console.log('Auto-sync (reorder):', e.message));
+    }
+};
 
 // Initialize planner
 function initPlanner() {
