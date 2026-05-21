@@ -1,6 +1,7 @@
 // planner.js - Trip planning functionality (Itinerary with Leaflet Maps, Route polyline & Directions)
 
 let leafletMap = null;
+window.leafletMap = null; // expose globally for showScreen invalidateSize
 let mapMarkers = [];
 let routeLine = null;
 
@@ -10,6 +11,7 @@ async function loadTripNotes() {
     const trip = await getTrip(currentTripId);
     if (!trip) return;
     const itinerary = trip.itinerary || [];
+    const canEdit = trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id;
     
     const itineraryList = document.getElementById('itinerary-list');
     if (!itineraryList) return;
@@ -23,6 +25,7 @@ async function loadTripNotes() {
                 zoomControl: false,
                 fadeAnimation: true
             });
+            window.leafletMap = leafletMap; // expose for external invalidateSize calls
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap contributors'

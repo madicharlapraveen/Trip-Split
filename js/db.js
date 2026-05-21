@@ -74,14 +74,17 @@ async function updateTrip(id, updates) {
     }
 }
 
-async function saveCloudTripBundle(bundle) {
+async function saveCloudTripBundle(bundle, overrideRole) {
     if (!bundle || !bundle.trip) return;
     
     const tripId = bundle.trip.id;
     
-    // Preserve existing role, otherwise default to viewer for cloud joined trips
+    // Role resolution priority:
+    // 1. overrideRole passed explicitly (e.g. from joinTripFromCloud response)
+    // 2. existing local role (owner must never be downgraded by realtime updates)
+    // 3. 'viewer' as default for unknown new devices
     const existingTrip = data.trips.find(t => String(t.id) === String(tripId));
-    const role = existingTrip && existingTrip.myRole ? existingTrip.myRole : 'viewer';
+    const role = overrideRole || (existingTrip && existingTrip.myRole) || 'viewer';
 
     // Remove existing local data for this trip
     data.trips = data.trips.filter(t => String(t.id) !== String(tripId));

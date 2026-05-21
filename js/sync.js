@@ -212,6 +212,12 @@ async function syncTripToCloud(tripId, actionDesc = "Updated trip") {
         const trip = await getTrip(tripId);
         if (!trip) throw new Error("Trip not found locally.");
 
+        // Ensure the syncing user is flagged as owner if no role set yet
+        if (!trip.myRole || trip.myRole === 'viewer') {
+            await updateTrip(tripId, { myRole: 'owner' });
+            trip.myRole = 'owner';
+        }
+
         // Get full data bundle
         const allParticipants = await getParticipants(tripId);
         const allExpenses = await getExpenses(tripId);
@@ -270,8 +276,11 @@ async function joinTripFromCloud(shareId) {
         if (error) throw new Error(error.message);
         if (!tripBundle || !tripBundle.trip) throw new Error("Invalid trip data on cloud.");
 
-        // We have the bundle. Save it locally.
-        await saveCloudTripBundle(tripBundle);
+        // role comes from server permissions table (viewer/editor/owner)
+        const serverRole = tripBundle.my_role || 'viewer';
+        
+        // Save locally with the server-assigned role
+        await saveCloudTripBundle(tripBundle, serverRole);
         return tripBundle.trip.id;
     } catch (e) {
         console.error("Join failed:", e);

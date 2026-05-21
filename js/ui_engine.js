@@ -58,7 +58,11 @@ window.showScreen = function(screenId) {
   // Load screen-specific data
   if (screenId === 'home') loadHomeData();
   if (screenId === 'expenses') loadExpenses();
-  if (screenId === 'plan') loadTripNotes();
+  if (screenId === 'plan') {
+    loadTripNotes();
+    // Force leaflet to recalculate after becoming visible
+    setTimeout(() => { if (window.leafletMap) window.leafletMap.invalidateSize(); }, 250);
+  }
   if (screenId === 'split') calculateSplit();
   if (screenId === 'trips') loadTrips();
   if (screenId === 'my') loadMyData();
@@ -733,6 +737,7 @@ async function loadHomeData(silentModeSwitch = false) {
 
   const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
   window.currentTripSymbol = tripSymbol;
+  const canEdit = trip ? (trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id) : true;
 
   // Active theme sync
   document.body.className = window.currentAppMode === 'adviser' ? 'theme-adviser' : 'theme-split';
