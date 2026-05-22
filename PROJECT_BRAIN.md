@@ -19,58 +19,116 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 
 ---
 
-## 🎭 2. Dual App Modes (v2 — Mode-Aware Architecture)
+## 👥 2. User Roles & Collaboration Permissions
+
+TripSplit implements a role-based permission system to allow group collaboration while keeping the data secure:
+
+| Role | Allowed Actions | UI Experience |
+|------|-----------------|---------------|
+| 👑 **Owner / Admin** | • Edit trip details (budget, dates, names)<br>• Add/edit/delete participants<br>• Add/edit/delete expenses<br>• Create/delete presets & templates<br>• Mark settlements as Paid / Revert to Pending | Full read/write access. Can reclaim original admin credentials via "Claim Owner Role" in Settings. |
+| ✍️ **Editor** | • Add/edit/delete expenses<br>• Add/edit participants<br>• View & toggle Settlement Plan statuses | Write access to operational items. Allowed to mark transactions as Paid or Undo to Pending. |
+| 👁️ **Viewer** | • Read-only access to all tabs (Home, List, Plan, Me)<br>• View interactive charts & stats | Read-only. Action buttons are hidden or disabled. Toggle settlement buttons are replaced with static `⏳ Pending` or `✅ Paid` badges. |
+
+---
+
+## 🎭 3. Dual App Modes (v2 — Mode-Aware Architecture)
 
 The app has two primary modes switchable from the Home screen:
 
 | Mode | Key UI Widgets | Color Theme |
 |------|---------------|-------------|
 | 🎒 **Adviser Mode** | Itinerary preview, Travel Guidelines, Memories Gallery | Indigo/Purple gradient |
-| 💰 **Split Mode** | Crew list, Recent Expenses, Settlement Breakdown, Budget stats | Indigo/Purple (same palette, stat additions) |
+| 💰 **Split Mode** | Crew list, Recent Expenses dropdown, Settlement Plan dropdown, Detailed Participants dropdown, Budget stats | Indigo/Purple (same palette, stat additions) |
 
 Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchAppMode(mode, silent)` function in `ui_engine.js` handles all switching, immediately adding the active theme class (`theme-adviser` or `theme-split`) to the `body` element. This transitions all background gradients and primary color styles instantly on click without reload.
 
 ---
 
-## 🎨 3. Design System (Premium Aesthetics)
+## 🧮 4. Settlement Mathematics & Ledger Logic
+
+To keep ledger data consistent across calculations and avoid rounding drift, TripSplit uses a greedy ledger minimization algorithm implemented in `js/split.js`.
+
+### 1. Balance Calculations
+For any selected trip, the individual net balance $B_p$ for participant $p$ is calculated as:
+$$B_p = S_p - E_p$$
+Where:
+- $S_p$ = Total actual amount spent by participant $p$ on all ledger expenses.
+- $E_p$ = Expected share of participant $p$. 
+- The expected share is computed uniformly:
+$$E_p = \frac{\text{Total Trip Expense}}{\text{Total Participants}}$$
+
+### 2. Path Minimization Algorithm
+1. Filter participants into two sorted arrays:
+   - **Creditors ($B_p > 0.01$)** sorted in descending order of balance.
+   - **Debtors ($B_p < -0.01$)** sorted in ascending order of balance (most negative first).
+2. While both arrays are non-empty:
+   - Match the top Creditor $c$ with the top Debtor $d$.
+   - Calculate settlement amount $A = \min(B_c, -B_d)$.
+   - Record a transaction: **"$d$ pays $\$A$ to $c$"**.
+   - Subtract $A$ from $B_c$ and add $A$ to $B_d$.
+   - Remove participant from active arrays if their balance is fully resolved ($< 0.01$).
+
+### 3. Option B Ledger Settlement Strategy
+When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid** by an Owner or Editor:
+1. **Metadata Registry**: The string key `"X-->Y"` is appended to the trip's `paid_settlements` array.
+2. **Balancing Expense Injection**: A virtual expense with the flag `isSettlement: true` is appended directly to the transaction ledger:
+   ```json
+   {
+     "tripId": 123,
+     "id": 1779180991863,
+     "title": "Settlement: X → Y",
+     "amount": A,
+     "totalAmount": A,
+     "paidBy": "X's ID",
+     "splitMethod": "exact",
+     "splitBetween": ["Y's ID"],
+     "splits": { "Y's ID": A },
+     "isSettlement": true,
+     "settlementKey": "X-->Y"
+   }
+   ```
+   Injecting this balancing entry guarantees that the standard balance formula $B_p = S_p - E_p$ evaluates correctly for both members, updating their net balances to exactly $\$0$ without changing the math loop.
+3. **Reverting to Pending**: If marked as **Pending** (Undo), the key `"X-->Y"` is deleted from `paid_settlements`, and the matching settlement expense is filtered out of the ledger array.
+
+---
+
+## 🎨 5. Design System (Premium Aesthetics)
 *   **Theme**: "Super Cool" Glassmorphism (High-blur backdrops, translucent cards, animated ambient background blobs).
 *   **Typography**: `Outfit` (Google Fonts) for a modern, tech-forward feel. Brand title in persistent header is sized at `text-2xl font-extrabold` and paired with a tight, perfectly aligned tagline `SPLIT BILLS, SHARE MEMORIES` (`text-[8px] font-bold` sub-label) that fits precisely within the title bounds.
 *   **Palette**:
     *   **Primary**: Deep Indigo (`#4f46e5`) to Purple gradient (`--primary-gradient`). Toggles instantly to Violet-to-Orange in Adviser Mode, and Royal Blue-to-Cyan in Split Mode.
     *   **Success/Warning/Danger**: Emerald, Amber, Rose (Tailwind standard colors).
     *   **Neutral**: Slate-50 to Slate-900.
-*   **Key Components**:
-    *   **Splash Screen**: Full-screen startup intro with a bouncing brand avatar (`icon-192.png`) and staggered fade-slide titles that auto-remove after 1 second.
-    *   **Floating Nav Dock**: iOS-style bottom pill with scale-in icon animations.
-    *   **Glass Modals**: Centered, bouncy animated overlays (`animate-scale-in`).
-    *   **Hero Trip Card**: Stunning gradient card with budget progress visualization.
+*   **Collapsible Animation Systems**:
+    *   **Chevron Rotations**: Headers contain rotating SVG chevrons (`duration-300 transform`) transitioning dynamically between $0^\circ$ and $180^\circ$ on toggle action.
+    *   **State Class**: Content containers use the `.hidden` utility toggled dynamically by element references to maximize rendering speed.
 
 ---
 
-## 🗺️ 4. Module Map (File Architecture)
+## 🗺️ 6. Module Map (File Architecture)
 
 ### 📂 Root Files
-*   [index.html](file:///e:/Trip%20Split/index.html): Main layout, screen sections, shared modal overlays. Contains My-screen and Gallery sub-tab in Plan screen.
+*   [index.html](file:///e:/Trip%20Split/index.html): Main layout, screen sections, shared modal overlays. Includes collapsible Home widgets, My-screen tab, and gallery canvas.
 *   [service-worker.js](file:///e:/Trip%20Split/service-worker.js): Caching logic for offline functionality.
 *   [manifest.json](file:///e:/Trip%20Split/manifest.json): PWA configuration and brand assets.
 
 ### 📂 /js (Logic)
 *   [app.js](file:///e:/Trip%20Split/js/app.js): Orchestrates app lifecycle, splash screen timing, and PWA install prompts.
-*   [ui_engine.js](file:///e:/Trip%20Split/js/ui_engine.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and all 9 upgraded feature UIs (receipt capture, sync indicator, inline delete, My tab, templates, multi-currency, recurring, gallery).
-*   [sync.js](file:///e:/Trip%20Split/js/sync.js): **The Cloud Bridge.** Handles Supabase authentication, real-time WebSockets, push notification subscriptions, and cloud-to-local data merging. Call `clearPendingSync()` after a successful cloud push.
-*   [db.js](file:///e:/Trip%20Split/js/db.js): Data access layer. Handles all `localStorage` CRUD. Now includes `saveTemplateFromTrip`, `getTemplates`, `deleteTemplateFromDB`, `addTripPhoto`, `deleteTripPhoto`, `clearPendingSync`.
-*   [split.js](file:///e:/Trip%20Split/js/split.js): Core mathematics. Calculates settlement logic, bill splitting, and per-person balances.
+*   [ui_engine.js](file:///e:/Trip%20Split/js/ui_engine.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and collapsibles (Recent Expenses, Settlement Plan, Participant Details).
+*   [sync.js](file:///e:/Trip%20Split/js/sync.js): **The Cloud Bridge.** Handles Supabase authentication, real-time WebSockets, push notification subscriptions, and cloud-to-local data merging.
+*   [db.js](file:///e:/Trip%20Split/js/db.js): Data access layer. Handles all `localStorage` CRUD.
+*   [split.js](file:///e:/Trip%20Split/js/split.js): Core mathematics. Calculates settlement logic, bill splitting, per-person balances, and renders home settlement elements.
 *   [planner.js](file:///e:/Trip%20Split/js/planner.js): Manages the itinerary timeline ("Bubbles & Plates" UI) and visit toggles.
 *   [ai.js](file:///e:/Trip%20Split/js/ai.js): API bridge for Gemini AI itinerary generation.
 *   [share.js](file:///e:/Trip%20Split/js/share.js): Native sharing API integration.
-*   [presets.js](file:///e:/Trip%20Split/js/presets.js): **NEW.** Offline split preset manager. Stores named presets per trip in `tripsplit_presets` localStorage key. Key functions: `getPresetsForTrip`, `savePreset`, `deletePreset`, `getPresetForCategory`, `showManagePresetsModal`.
+*   [presets.js](file:///e:/Trip%20Split/js/presets.js): Offline split preset manager. Stores named presets per trip in `tripsplit_presets`.
 
 ### 📂 /css (Styles)
 *   [style.css](file:///e:/Trip%20Split/css/style.css): Global variables, animation keyframes (`splash-reveal`, `pulse-dot`), and premium component styles.
 
 ---
 
-## 💾 5. Data Schema (`tripsplit_data`)
+## 💾 7. Data Schema (`tripsplit_data`)
 
 ```json
 {
@@ -89,6 +147,7 @@ Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchApp
       "createdAt": "2026-05-15T...", "notes": "Annual trip",
       "estimatedBudget": 50000, "currency": "INR", "currencySymbol": "₹",
       "tripStartDate": "2026-06-01", "tripEndDate": "2026-06-05",
+      "paid_settlements": ["Alice-->Bob"],
       "photos": [
         { "id": 111, "imageData": "data:image/jpeg;base64,...", "caption": "Sunset", "addedAt": "..." }
       ],
@@ -121,81 +180,24 @@ Mode is persisted to `localStorage` via `tripsplit_app_mode` key. The `switchApp
 
 ---
 
-## 🛠️ 6. 11 Upgraded Features (v2)
+## 🛠️ 8. Upgraded Features Overview
 
-| # | Feature | Mode | Where |
-|---|---------|------|-------|
-| F1 | Receipt Photo Capture | 💰 Split | Add Expense modal → camera input → `window._receiptImage` → stored on expense.receiptImage |
-| F2 | Offline Sync Indicator | 🔗 Both | Hero card `#live-sync-indicator` → `updateSyncIndicator()` → reads `pendingSync` flag |
-| F3 | Inline Expense Delete | 💰 Split | Home screen Recent Expenses → `deleteExpenseInline(id)` |
-| F4 | Smart Split Presets | 💰 Split | Category dropdown change → `getPresetForCategory()` auto-checks participants. Manage via Settings → Split Presets |
-| F5 | My Personal Tab | 💰 Split | "Me" nav button → `my-screen` → `loadMyData()` → profile name match → personal balance |
-| F6 | Trip Templates | 🔗 Both | Trips screen "📋 TEMPLATE" button → `saveCurrentTripAsTemplate()`. Use via Settings → My Templates |
-| F7 | Multi-Currency | 💰 Split | Add Expense → 💱 toggle → local amount + exchange rate → auto-calculates base amount |
-| F8 | Recurring Expenses | 💰 Split | Add Expense → 🔄 checkbox → `createRecurringExpense()` → creates N daily copies |
-| F9 | Memories Gallery | 🎒 Adviser | Plan screen → Memories tab → `loadGallery()` → `addTripPhoto()` → max 20 photos, 600px JPEG 0.65 |
-| F10 | Interactive Map Canvas & Routing | 🎒 Adviser | Plan screen → Maps tab → Leaflet.js canvas, auto-geocoded location search database, stop card list, map-drawn routing lines, Google Maps deep linking directions, and offline tile caching |
-| F11 | Active Trip Persistence & Dock Glow | 🔗 Both | Launches home screen with last-active trip automatically from localStorage (`tripsplit_active_trip_id`). If no trip selected, bottom dock Trips button glows with dynamic breathing halo animation (`glowing-pulse-nav`) |
+| Feature | Key User Value | Implementation Point |
+|---------|----------------|----------------------|
+| **Collapsible Dropdowns** | Saves screen space on mobile dashboards | UI bindings for chevrons on Recent Expenses, Participant Details, and Settlement Plan. |
+| **Receipt Photo Capture** | Eliminates manual receipt entry | Uses standard camera capture interfaces storing compressed Base64 images directly inside the expense object. |
+| **Offline Live-Sync Indicator** | Immediate visual feedback on connection status | Sync indicator pill flashes green (`Synced`) or amber (`Offline / Sync Pending`). |
+| **Trip Templates** | Speeds up setting up recurring itineraries | Serializes a trip's settings and members, allowing users to clone blueprints instantly. |
+| **Interactive Map Canvas** | Map timeline visualization | Geocodes timeline nodes onto Leaflet map layers with route rendering and navigation overlays. |
 
 ---
 
-## 🔄 7. Key Workflows
-
-### 📊 CSV Export (Google Sheets Ready)
-1.  User opens **Settings** > **Download for Google Sheets**.
-2.  `showExportSelectionModal()` renders trip options.
-3.  `exportTripToCSV()` flattens the nested JSON into a tabular structure with escaped characters.
-4.  A `Blob` is generated and triggered as a download.
-
-### ✨ AI Itinerary Planning
-1.  User inputs a destination/theme.
-2.  `askGeminiForPlan()` sends a prompt to the Gemini API.
-3.  Returned JSON is parsed and mapped into the `itinerary` array in `db.js`.
-4.  `planner.js` re-renders the "Bubbles" timeline.
-
-### 💰 Settlement Logic
-1.  `split.js` aggregates all expenses for the selected trip.
-2.  Calculates total spent vs. per-person share.
-3.  Generates a list of "who owes whom" to reach zero balance.
-4.  Same algorithm is duplicated inside `loadMyData()` in `ui_engine.js` to show personal-view settlements on the Me screen.
-
-### 🌐 Real-Time Cloud Sync & Collaboration
-1.  **Identity:** Users set their profile (Name, Email) which is saved to the `profiles` table.
-2.  **Sync:** Tapping "Live Sync" pushes local trip data to Supabase (`sync_trip` RPC) and generates a unique Share ID (e.g., `GOA-8492`).
-3.  After successful cloud push, call `clearPendingSync()` to reset the sync indicator to "Synced".
-4.  **Join:** Friends enter the Share ID in Settings > Join Trip. The app fetches the cloud bundle (`get_trip_data` RPC) and merges it locally.
-5.  **WebSockets:** `subscribeToTripUpdates()` listens for changes. If another user edits an expense, the app updates silently and triggers a push notification.
+## 🔄 9. Maintenance Checklist
+*   **Version Control**: Script tags use cache-busting identifiers (e.g. `?v=770060`). Increment on each deploy.
+*   **Aispace Footer Branding**: Keep correct official footer copy at all times: `TripSplit v3.0 • A Product from Aispace.co.in`.
+*   **String Trip ID Parsing**: Trip IDs may be numeric OR cloud-assigned hashes. Compare strictly as strings: `String(t.id) === String(savedId)`.
+*   **Offline First**: Verify that every storage change updates the matching `localStorage` key immediately before starting backend network operations.
 
 ---
 
-## 🧱 8. Navigation Map
-
-```
-Bottom Nav:
-  Home → home-screen → loadHomeData()
-  List → expenses-screen → loadExpenses()
-  [FAB +] context-aware action
-  Plan → plan-screen → loadTripNotes() + switchPlanTab('itinerary')
-       └ Gallery sub-tab → switchPlanTab('gallery') → loadGallery()
-  Me  → my-screen → loadMyData()
-
-  (Trips screen is accessible via trip capsule pill → showScreen('trips'))
-```
-
----
-
-## 🛠️ 9. Maintenance Checklist
-*   **Version Control**: Script tags use `?v=15`. Increment on each deploy to bust browser cache.
-*   **Asset Management**: Keep all icons in `/assets`. Use `icon-192.png` for splash/PWA.
-*   **Styles**: Avoid inline styles. Use the token system in `style.css`.
-*   **Persistence**: Always use `await` when calling `db.js` function to ensure data integrity before UI updates.
-*   **Photos**: All photos are stored as Base64 JPEG on the trip object. Max 20 per trip. Enforced by `addTripPhoto()`.
-*   **Sync Flag**: `saveData()` in `db.js` automatically sets `pendingSync = true`. Clear it by calling `clearPendingSync()` after a cloud push in `sync.js`.
-*   **Trip ID Comparison**: Trip IDs may be numeric (`Date.now()`) for local trips OR string-prefixed (e.g. `"GOA-8492"`) for cloud-synced trips. **Always compare as strings**: `String(t.id) === String(savedId)`. Never use `===` directly or `Number()` coercion. Updated in `app.js` and `ui_engine.js`.
-*   **Global currentTripId**: Declared as `var currentTripId` AND `window.currentTripId` in `index.html`. Both must be kept in sync whenever setting a new active trip — always assign to both `currentTripId = x; window.currentTripId = x;` in `app.js` (`selectTrip`, `deleteTrip`, `initApp`).
-*   **Inline onclick IDs**: When embedding trip.id into HTML template strings for onclick handlers (e.g. `selectTrip`), wrap with single quotes: `onclick="selectTrip('${trip.id}')"` to support alphanumeric cloud IDs without JS syntax errors.
-*   **Social Meta Tags**: Open Graph (`og:title`, `og:description`, `og:image`) and Twitter Card tags in `index.html` head. `og:image` should use absolute URL for production (e.g., `https://trip-split-e56d3.web.app/assets/icon-512.png`).
-
----
-
-*Last Updated: 2026-05-20 — Refactored settlements calculation flow, enhanced Split UI and global/individual WhatsApp sharing text with average share equations and individual pay/receive actions, fixed the startup and transition flow TypeErrors, and resolved the creator empty sync bug. Version strings bumped to ?v=15. Cache bumped to tripsplit-v21-settlements-whatsapp-fix.*
+*Last Updated: 2026-05-22 — Configured premium collapsible dashboard cards, introduced role-based editor authority for settlement plan toggles on both screens, validated Option B balancing settlement ledger injections, and deployed live.*
