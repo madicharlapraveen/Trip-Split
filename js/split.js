@@ -269,7 +269,7 @@ async function calculateSplit() {
   // Fetch role and paid settlements list
   const currentTripData = await getTrip(currentTripId);
   const myRole = currentTripData ? (currentTripData.myRole || 'viewer') : 'viewer';
-  const isAdmin = myRole === 'owner';
+  const isAdmin = myRole === 'owner' || myRole === 'editor';
   const paidSettlements = currentTripData ? (currentTripData.paid_settlements || []) : [];
 
   // Calculate summary stats
@@ -473,6 +473,229 @@ window.markSettlementPaid = async function(from, to, amount, paid) {
     triggerBackgroundSync(paid ? `${from} paid ${to}` : `${from} payment reverted`);
   }
   calculateSplit(); // Refresh UI
+};
+
+window.renderHomeSettlements = async function() {
+  const container = document.getElementById('home-settlements-details');
+  if (!container) return;
+
+  if (!currentTripId) {
+    container.innerHTML = `<p class="text-slate-400 text-center py-4 italic text-sm">No trip selected.</p>`;
+    return;
+  }
+
+  const participants = await getParticipants(currentTripId);
+  const expenses = await getExpenses(currentTripId);
+  const currentTripData = await getTrip(currentTripId);
+  const symbol = currentTripData ? (currentTripData.currencySymbol || '₹') : '₹';
+
+  if (participants.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-6 opacity-40">
+        <p class="text-xs font-bold text-slate-500">No participants to split with.</p>
+      </div>`;
+    return;
+  }
+
+  // Calculate Balances and Settlements
+  const balances = participants.map(p => ({
+    ...p,
+    totalSpent: 0,
+    expectedShare: 0,
+    balance: 0,
+    myExpenses: []
+  }));
+
+  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount || 0), 0);
+  const totalMembers = participants.length;
+  const perPersonShare = totalMembers > 0 ? totalExpense / totalMembers : 0;
+
+  expenses.forEach(e => {
+    const payer = balances.find(p => p.id === e.paidBy);
+    if (payer) {
+      payer.totalSpent += (e.totalAmount || e.amount || 0);
+      payer.myExpenses.push(e);
+    }
+  });
+
+  balances.forEach(b => {
+    b.expectedShare = perPersonShare;
+  });
+
+  balances.forEach(b => {
+    b.balance = b.totalSpent - b.expectedShare;
+  });
+
+  const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
+  const debtors = balances.filter(p => p.balance < -0.01).sort((a, b) => a.balance - b.balance);
+
+  let settlements = [];
+  let i = 0, j = 0;
+
+  const tempCreditors = creditors.map(c => ({...c}));
+  const tempDebtors = debtors.map(d => ({...d}));
+
+  while (i < tempCreditors.length && j < tempDebtors.length) {
+    const creditor = tempCreditors[i];
+    const debtor = tempDebtors[j];
+    const amount = Math.min(creditor.balance, -debtor.balance);
+
+    if (amount > 0.01) {
+      settlements.push({
+        from: debtor.name,
+        to: creditor.name,
+        amount: amount
+      });
+
+      creditor.balance -= amount;
+      debtor.balance += amount;
+
+      if (creditor.balance <= 0.01) i++;
+      if (debtor.balance >= -0.01) j++;
+    } else {
+      if (creditor.balance <= 0.01) i++;
+      if (debtor.balance >= -0.01) j++;
+    }
+  }
+
+  // Render Settlement Plan content
+  container.innerHTML = '';
+
+  const myRole = currentTripData ? (currentTripData.myRole || 'viewer') : 'viewer';
+  const canUpdate = myRole === 'owner' || myRole === 'editor';
+  const paidSettlements = currentTripData ? (currentTripData.paid_settlements || []) : [];
+
+  const totalSettlementAmount = settlements.reduce((sum, s) => sum + s.amount, 0);
+  const paidAmount = settlements
+    .filter(s => paidSettlements.includes(`${s.from}-->${s.to}`))
+    .reduce((sum, s) => sum + s.amount, 0);
+  const pendingAmount = totalSettlementAmount - paidAmount;
+  const progressPct = totalSettlementAmount > 0 ? Math.round((paidAmount / totalSettlementAmount) * 100) : (settlements.length === 0 ? 100 : 0);
+  const isFullySettled = settlements.length === 0 || progressPct === 100;
+
+  // Render Summary Bar
+  const summaryBar = document.createElement('div');
+  summaryBar.className = 'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-4 mb-2';
+  summaryBar.innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Progress</p>
+      <span class="text-xs font-black px-2 py-0.5 rounded-full ${isFullySettled ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}">${progressPct}% ${isFullySettled ? '✅' : 'done'}</span>
+    </div>
+    <div class="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
+      <div class="h-2 rounded-full transition-all duration-700 ${isFullySettled ? 'bg-emerald-500' : 'bg-indigo-500'}" style="width:${progressPct}%"></div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="bg-emerald-50 rounded-xl p-2 text-center border border-emerald-100">
+        <p class="text-[8px] text-emerald-600 font-black uppercase tracking-wider mb-1">Settled</p>
+        <p class="text-xs font-black text-emerald-700">${symbol}${paidAmount.toFixed(0)}</p>
+      </div>
+      <div class="bg-amber-50 rounded-xl p-2 text-center border border-amber-100">
+        <p class="text-[8px] text-amber-600 font-black uppercase tracking-wider mb-1">Pending</p>
+        <p class="text-xs font-black text-amber-700">${symbol}${pendingAmount.toFixed(0)}</p>
+      </div>
+      <div class="bg-indigo-50 rounded-xl p-2 text-center border border-indigo-100">
+        <p class="text-[8px] text-indigo-600 font-black uppercase tracking-wider mb-1">Total</p>
+        <p class="text-xs font-black text-indigo-700">${symbol}${totalSettlementAmount.toFixed(0)}</p>
+      </div>
+    </div>
+    <div class="border-t border-slate-100 pt-3 mt-1">
+      <p class="text-[8px] text-slate-400 font-black uppercase tracking-wider mb-2">Expenses vs Settlements</p>
+      <div class="space-y-1 text-[11px]">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-semibold">Total Trip Expenses</span>
+          <span class="font-black text-slate-700">${symbol}${totalExpense.toFixed(2)}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-semibold">Total to Settle</span>
+          <span class="font-black text-slate-700">${symbol}${totalSettlementAmount.toFixed(2)}</span>
+        </div>
+        <div class="h-px bg-slate-100 my-1"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-emerald-600 font-bold">Settled So Far</span>
+          <span class="font-black text-emerald-600">${symbol}${paidAmount.toFixed(2)}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-amber-600 font-bold">Still Pending</span>
+          <span class="font-black text-amber-600">${symbol}${pendingAmount.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(summaryBar);
+
+  // Render Settlement Cards
+  const settlementContainer = document.createElement('div');
+  settlementContainer.className = 'premium-card bg-slate-900 text-white border-none';
+
+  if (settlements.length === 0) {
+    settlementContainer.innerHTML = `
+      <div class="flex flex-col items-center py-6 text-emerald-400">
+        <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p class="font-black text-sm">Everything is perfectly balanced!</p>
+        <p class="text-emerald-500/70 text-[10px] font-medium mt-0.5">No payments needed</p>
+      </div>`;
+  } else {
+    settlementContainer.innerHTML = '<div class="space-y-3"></div>';
+    const list = settlementContainer.querySelector('div');
+
+    settlements.forEach(settlement => {
+      const settlementKey = `${settlement.from}-->${settlement.to}`;
+      const isPaid = paidSettlements.includes(settlementKey);
+
+      let actionHtml = '';
+      if (canUpdate) {
+        if (isPaid) {
+          actionHtml = `
+            <button onclick="markSettlementPaidHome('${settlement.from}', '${settlement.to}', ${settlement.amount}, false)"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-[9px] font-black rounded-lg transition-all">
+              <span>↩</span> Undo
+            </button>`;
+        } else {
+          actionHtml = `
+            <button onclick="markSettlementPaidHome('${settlement.from}', '${settlement.to}', ${settlement.amount}, true)"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[9px] font-black rounded-lg transition-all shadow-md shadow-emerald-500/20">
+              <span>✓</span> Paid
+            </button>`;
+        }
+      } else {
+        actionHtml = isPaid
+          ? `<span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black rounded-lg border border-emerald-500/30">✅ Paid</span>`
+          : `<span class="px-2.5 py-1 bg-amber-500/20 text-amber-300 text-[9px] font-black rounded-lg border border-amber-500/30 animate-pulse">⏳ Pending</span>`;
+      }
+
+      const item = document.createElement('div');
+      item.className = `flex flex-col p-3.5 rounded-2xl border transition-all duration-300 space-y-2.5 ${isPaid ? 'bg-emerald-900/30 border-emerald-700/30' : 'bg-white/5 border-white/10'}`;
+      item.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="text-right">
+              <p class="text-[11px] font-bold text-white">${settlement.from}</p>
+              <p class="text-[8px] text-slate-400 uppercase tracking-wider">Pays to</p>
+            </div>
+            <svg class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M3 12h18"></path></svg>
+            <p class="text-[11px] font-bold text-indigo-400">${settlement.to}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-base font-black ${isPaid ? 'text-emerald-400/50 line-through' : 'text-emerald-400'}">${symbol}${settlement.amount.toFixed(2)}</p>
+            ${isPaid ? '<p class="text-[8px] text-emerald-500 font-black uppercase tracking-wider">PAID ✓</p>' : ''}
+          </div>
+        </div>
+        <div class="flex justify-end pt-1.5 border-t border-white/10">
+          ${actionHtml}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  container.appendChild(settlementContainer);
+};
+
+window.markSettlementPaidHome = async function(from, to, amount, paid) {
+  await window.markSettlementPaid(from, to, amount, paid);
+  if (typeof window.renderHomeSettlements === 'function') {
+    await window.renderHomeSettlements();
+  }
 };
 
 // Load split data when split screen is shown

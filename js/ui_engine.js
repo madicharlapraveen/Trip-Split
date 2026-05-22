@@ -1001,6 +1001,11 @@ async function loadHomeData(silentModeSwitch = false) {
       });
     }
   }
+
+  // Populate Home settlements dropdown
+  if (typeof window.renderHomeSettlements === 'function') {
+    await window.renderHomeSettlements();
+  }
 }
 
 // Load full Expenses list screen
@@ -1206,6 +1211,16 @@ window.toggleExpenseSummaryDropdown = function() {
   }
 };
 
+window.toggleHomeSettlementsDropdown = function() {
+  const details = document.getElementById('home-settlements-details');
+  const arrow = document.getElementById('home-settlements-arrow');
+  if (details) {
+    const isHidden = details.classList.contains('hidden');
+    details.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180', !isHidden);
+  }
+};
+
 // Edit Participant details
 window.editParticipant = async function(participantId) {
   const participant = await getParticipant(participantId);
@@ -1273,7 +1288,8 @@ window.switchAppMode = function(mode, silent = false) {
 
   // Toggling Home Widgets Visibility
   const crewSection = document.getElementById('home-crew-section');
-  const settlementsCard = document.getElementById('home-settlements-card');
+  const settlementsCard = document.getElementById('home-settlements-card') || document.getElementById('home-quick-settlement-card');
+  const settlementsDropdownCard = document.getElementById('home-settlements-dropdown-card');
   const breakdownCard = document.getElementById('home-breakdown-card');
   const expensesCard = document.getElementById('home-expenses-card');
   const detailsCard = document.getElementById('home-details-card');
@@ -1285,6 +1301,7 @@ window.switchAppMode = function(mode, silent = false) {
   if (mode === 'adviser') {
     if (crewSection) crewSection.classList.add('hidden');
     if (settlementsCard) settlementsCard.classList.add('hidden');
+    if (settlementsDropdownCard) settlementsDropdownCard.classList.add('hidden');
     if (breakdownCard) breakdownCard.classList.add('hidden');
     if (expensesCard) expensesCard.classList.add('hidden');
     if (detailsCard) detailsCard.classList.add('hidden');
@@ -1297,6 +1314,7 @@ window.switchAppMode = function(mode, silent = false) {
     // Split mode layout overrides
     if (crewSection) crewSection.classList.remove('hidden');
     if (settlementsCard) settlementsCard.classList.remove('hidden');
+    if (settlementsDropdownCard) settlementsDropdownCard.classList.remove('hidden');
     if (breakdownCard) breakdownCard.classList.remove('hidden');
     if (expensesCard) expensesCard.classList.remove('hidden');
     if (detailsCard) detailsCard.classList.remove('hidden');
@@ -2521,6 +2539,11 @@ window.initUI = function() {
   const pToggle = document.getElementById('participants-toggle');
   if (pToggle) {
     pToggle.addEventListener('click', toggleParticipantsDropdown);
+  }
+
+  const sToggle = document.getElementById('home-settlements-toggle');
+  if (sToggle) {
+    sToggle.addEventListener('click', toggleHomeSettlementsDropdown);
   }
 
   // Header options gear and overlay close

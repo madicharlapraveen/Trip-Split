@@ -142,7 +142,7 @@
             </div>
 
             <!-- Quick Action Card -->
-            <button id="home-settlements-card" onclick="showScreen('split')" class="w-full glass-card flex justify-between items-center mt-4 border-none text-left" style="cursor: pointer;">
+            <button id="home-quick-settlement-card" onclick="showScreen('split')" class="w-full glass-card flex justify-between items-center mt-4 border-none text-left" style="cursor: pointer;">
                 <div class="flex items-center gap-4">
                     <div class="btn-icon flex items-center justify-center" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
                         <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -175,14 +175,35 @@
             </div>
 
             <div id="home-expenses-card" class="glass-card mt-4">
-                <h3 class="text-lg mb-4">Recent Expenses</h3>
-                <div id="expense-details" class="flex flex-col gap-4"></div>
+                <button id="expense-summary-toggle" class="w-full flex justify-between items-center text-left py-1" style="background: none; border: none; cursor: pointer; color: inherit; font-family: inherit; font-size: inherit;">
+                    <h3 class="text-lg font-bold text-slate-800">Recent Expenses</h3>
+                    <svg id="expense-summary-arrow" class="w-5 h-5 transition-transform duration-300 transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="expense-details" class="flex flex-col gap-4 mt-4 hidden"></div>
+            </div>
+
+            <!-- Settlement Plan Card on Home Screen -->
+            <div id="home-settlements-dropdown-card" class="glass-card mt-4">
+                <button id="home-settlements-toggle" class="w-full flex justify-between items-center text-left py-1" style="background: none; border: none; cursor: pointer; color: inherit; font-family: inherit; font-size: inherit;">
+                    <h3 class="text-lg font-bold text-slate-800">Settlement Plan</h3>
+                    <svg id="home-settlements-arrow" class="w-5 h-5 transition-transform duration-300 transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="home-settlements-details" class="flex flex-col gap-4 mt-4 hidden"></div>
             </div>
 
             <!-- Detailed Participants -->
             <div id="home-details-card" class="glass-card mt-4 mb-8">
-                <h3 class="text-lg mb-4">Participant Details</h3>
-                <div id="participants-details" class="flex flex-col gap-4"></div>
+                <button id="participants-toggle" class="w-full flex justify-between items-center text-left py-1" style="background: none; border: none; cursor: pointer; color: inherit; font-family: inherit; font-size: inherit;">
+                    <h3 class="text-lg font-bold text-slate-800">Participant Details</h3>
+                    <svg id="participants-arrow" class="w-5 h-5 transition-transform duration-300 transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="participants-details" class="flex flex-col gap-4 mt-4 hidden"></div>
             </div>
 
             <!-- ================= ADVISER MODE WIDGETS ================= -->
@@ -315,15 +336,15 @@
 
     <!-- Core Logic Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/db.js?v=770059"></script>
-    <script src="js/sync.js?v=770059"></script>
-    <script src="js/recovery.js?v=770059"></script>
-    <script src="js/split.js?v=770059"></script>
-    <script src="js/planner.js?v=770059"></script>
-    <script src="js/share.js?v=770059"></script>
-    <script src="js/ai.js?v=770059"></script>
-    <script src="js/presets.js?v=770059"></script>
-    <script src="js/ui_engine.js?v=770059"></script>
-    <script src="js/app.js?v=770059"></script>
+    <script src="js/db.js?v=770060"></script>
+    <script src="js/sync.js?v=770060"></script>
+    <script src="js/recovery.js?v=770060"></script>
+    <script src="js/split.js?v=770060"></script>
+    <script src="js/planner.js?v=770060"></script>
+    <script src="js/share.js?v=770060"></script>
+    <script src="js/ai.js?v=770060"></script>
+    <script src="js/presets.js?v=770060"></script>
+    <script src="js/ui_engine.js?v=770060"></script>
+    <script src="js/app.js?v=770060"></script>
 </body>
 </html>
