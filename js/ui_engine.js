@@ -2458,6 +2458,9 @@ window.handleCloudSync = async function() {
     if (window.showToast) window.showToast('Syncing trip data...', 'info');
 
     try {
+        if (typeof syncLocalRoleWithCloud === 'function') {
+            await syncLocalRoleWithCloud(currentTripId);
+        }
         await syncTripToCloud(currentTripId);
         if (window.showToast) window.showToast('Trip fully synced to cloud! 🟢', 'success');
         loadHomeData();

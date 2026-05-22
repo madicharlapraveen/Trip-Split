@@ -133,6 +133,9 @@ async function initApp() {
     const activeTrip = trips.find(t => String(t.id) === String(currentTripId));
     if (activeTrip && activeTrip.share_id && typeof subscribeToTripUpdates === 'function') {
         subscribeToTripUpdates(activeTrip.share_id);
+        if (typeof syncLocalRoleWithCloud === 'function') {
+            syncLocalRoleWithCloud(currentTripId);
+        }
     } else {
         if (typeof updateLiveStatusIndicator === 'function') {
             updateLiveStatusIndicator(false);
@@ -179,6 +182,9 @@ async function selectTrip(tripId) {
   const trip = await getTrip(tripId);
   if (trip && trip.share_id && typeof subscribeToTripUpdates === 'function') {
       subscribeToTripUpdates(trip.share_id);
+      if (typeof syncLocalRoleWithCloud === 'function') {
+          syncLocalRoleWithCloud(tripId);
+      }
   } else {
       if (typeof realtimeSubscription !== 'undefined' && realtimeSubscription) {
           supabase.removeChannel(realtimeSubscription);

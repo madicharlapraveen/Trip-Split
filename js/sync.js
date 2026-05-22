@@ -440,3 +440,41 @@ async function removeCloudMember(shareId, targetDeviceId) {
     if (error) throw new Error(error.message);
     return true;
 }
+
+window.syncLocalRoleWithCloud = async function(tripId) {
+    try {
+        const trip = await getTrip(tripId);
+        if (!trip || !trip.share_id) return;
+
+        const deviceId = getDeviceId();
+        const { data: cloudRole, error } = await supabase.rpc('check_my_role', {
+            p_share_id: trip.share_id,
+            p_device_id: deviceId
+        });
+
+        if (error) {
+            console.error("Failed to check cloud role:", error.message);
+            return;
+        }
+
+        if (cloudRole && trip.myRole !== cloudRole) {
+            // Protect local owner role from accidental downgrade on active device
+            if (trip.myRole === 'owner' && cloudRole !== 'owner') {
+                console.log("Local role is 'owner', bypassing downgrade to:", cloudRole);
+                return;
+            }
+            console.log(`Updating local role for trip ${tripId} from ${trip.myRole} to ${cloudRole}`);
+            await updateTrip(tripId, { myRole: cloudRole });
+            
+            // Silently refresh UI screens to apply updated permission rules dynamically
+            if (String(window.currentTripId) === String(tripId)) {
+                if (typeof loadHomeData === 'function') loadHomeData();
+                if (typeof loadExpenses === 'function') loadExpenses();
+                if (typeof calculateSplit === 'function') calculateSplit();
+                if (typeof loadTripNotes === 'function') loadTripNotes();
+            }
+        }
+    } catch (e) {
+        console.error("Error in syncLocalRoleWithCloud:", e);
+    }
+};
