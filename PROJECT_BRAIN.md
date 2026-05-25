@@ -11,11 +11,13 @@ TripSplit is a premium, privacy-first Progressive Web App (PWA) designed for mod
 *   **Database**: Supabase (Postgres) for real-time synchronization and cloud persistence.
 *   **Storage**: Local-first architecture using `localStorage` (Key: `tripsplit_data`) with background cloud syncing. All new features (photos, templates, presets) are also stored 100% locally.
 *   **Real-Time**: Supabase WebSockets (Channels) for instant collaboration across devices.
-*   **Deployment**: Automated GitHub-to-Firebase workflow via GitHub Actions.
+*   **Deployment**: Automated GitHub-to-Firebase workflow via Firebase CLI / Github.
 *   **Identity**: Device-based identity with optional profile linking (Name, Email, Mobile).
 *   **AI**: Integrated Google Gemini AI for automated trip itinerary generation.
 *   **Intro Animation**: Snappy 1-second custom logo intro splash screen on startup featuring smooth scale bounce-in and staggered fade-out animations.
 *   **Link Previews**: Open Graph and Twitter Card meta tags in `index.html` for social sharing icons (WhatsApp, Twitter, Facebook, etc.). Uses `assets/icon-512.png` as `og:image`.
+*   **Routing & Distances**: Open Source Routing Machine (OSRM) driving API for exact road-driving distances (matching Google Maps) with parallel non-blocking `Promise.all` fetching and a 1.5s timeout fallback to the offline Haversine formula.
+*   **Submit geocoding fallback**: Robust, multi-channel coordinate extraction (loose text coordinate regex search, manual forms, full maps links) with automatic background geocoding on submit.
 
 ---
 
@@ -114,11 +116,11 @@ When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid**
 
 ### 📂 /js (Logic)
 *   [app.js](file:///e:/Trip%20Split/js/app.js): Orchestrates app lifecycle, splash screen timing, and PWA install prompts.
-*   [ui_engine.js](file:///e:/Trip%20Split/js/ui_engine.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and collapsibles (Recent Expenses, Settlement Plan, Participant Details).
+*   [ui_engine.js](file:///e:/Trip%20Split/js/ui_engine.js): **The Engine.** Manages screen switching, modal rendering, navigation highlighting, and collapsibles (Recent Expenses, Settlement Plan, Participant Details). Holds the global comprehensive App Guide Modal (`showAppGuideModal`).
 *   [sync.js](file:///e:/Trip%20Split/js/sync.js): **The Cloud Bridge.** Handles Supabase authentication, real-time WebSockets, push notification subscriptions, and cloud-to-local data merging.
 *   [db.js](file:///e:/Trip%20Split/js/db.js): Data access layer. Handles all `localStorage` CRUD.
 *   [split.js](file:///e:/Trip%20Split/js/split.js): Core mathematics. Calculates settlement logic, bill splitting, per-person balances, and renders home settlement elements.
-*   [planner.js](file:///e:/Trip%20Split/js/planner.js): Manages the itinerary timeline ("Bubbles & Plates" UI) and visit toggles.
+*   [planner.js](file:///e:/Trip%20Split/js/planner.js): Manages the itinerary timeline ("Bubbles & Plates" UI), geocoding fallback coordinate resolution, inputs cache clearing, and Leaflet offline map layer tiles cache.
 *   [ai.js](file:///e:/Trip%20Split/js/ai.js): API bridge for Gemini AI itinerary generation.
 *   [share.js](file:///e:/Trip%20Split/js/share.js): Native sharing API integration.
 *   [presets.js](file:///e:/Trip%20Split/js/presets.js): Offline split preset manager. Stores named presets per trip in `tripsplit_presets`.
@@ -146,7 +148,6 @@ When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid**
       "id": 123456789, "tripName": "Goa Trip",
       "createdAt": "2026-05-15T...", "notes": "Annual trip",
       "estimatedBudget": 50000, "currency": "INR", "currencySymbol": "₹",
-      "tripStartDate": "2026-06-01", "tripEndDate": "2026-06-05",
       "paid_settlements": ["Alice-->Bob"],
       "photos": [
         { "id": 111, "imageData": "data:image/jpeg;base64,...", "caption": "Sunset", "addedAt": "..." }
@@ -189,15 +190,17 @@ When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid**
 | **Offline Live-Sync Indicator** | Immediate visual feedback on connection status | Sync indicator pill flashes green (`Synced`) or amber (`Offline / Sync Pending`). |
 | **Trip Templates** | Speeds up setting up recurring itineraries | Serializes a trip's settings and members, allowing users to clone blueprints instantly. |
 | **Interactive Map Canvas** | Map timeline visualization | Geocodes timeline nodes onto Leaflet map layers with route rendering and navigation overlays. |
+| **OSRM Driving Distances** | Replaces straight line math with real road distances | Queries OSRM API in parallel with AbortController timeout & Haversine formula fallback. |
+| **Onboarding App Guide** | Quick popup helper detailing all features | Sleek interactive modal popup triggered by a help button on the Profile page tab. |
 
 ---
 
 ## 🔄 9. Maintenance Checklist
-*   **Version Control**: Script tags use cache-busting identifiers (e.g. `?v=770060`). Increment on each deploy.
+*   **Version Control**: Script tags use cache-busting identifiers. Current versions: `js/planner.js?v=770063`, `js/ui_engine.js?v=770061`.
 *   **Aispace Footer Branding**: Keep correct official footer copy at all times: `TripSplit v3.0 • A Product from Aispace.co.in`.
 *   **String Trip ID Parsing**: Trip IDs may be numeric OR cloud-assigned hashes. Compare strictly as strings: `String(t.id) === String(savedId)`.
 *   **Offline First**: Verify that every storage change updates the matching `localStorage` key immediately before starting backend network operations.
 
 ---
 
-*Last Updated: 2026-05-22 — Configured premium collapsible dashboard cards, introduced role-based editor authority for settlement plan toggles on both screens, validated Option B balancing settlement ledger injections, and deployed live.*
+*Last Updated: 2026-05-25 — Integrated OSRM road driving distances with parallel fetching, resolved manual coordinate submit bypasses, and added a premium App Guide popup and Profile trigger button.*
