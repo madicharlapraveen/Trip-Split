@@ -277,6 +277,61 @@ window.syncManualCoords = function() {
     }
 };
 
+// Parse copy-pasted coordinates or mapping links (Google Maps, Apple Maps, OpenStreetMap, Geo URI)
+function parseCoordinatesFromLinkOrText(text) {
+    if (!text) return null;
+    text = text.trim();
+
+    // 1. Raw coordinates (e.g. "15.2993, 74.1240" or "15.2993 74.1240" or "15.2993,74.1240")
+    const rawCoordsRegex = /^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/;
+    const rawMatch = text.match(rawCoordsRegex);
+    if (rawMatch) {
+        const lat = parseFloat(rawMatch[1]);
+        const lng = parseFloat(rawMatch[2]);
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat, lng };
+        }
+    }
+
+    // 2. Geo URI: "geo:15.2993,74.1240"
+    if (text.startsWith('geo:')) {
+        const geoMatch = text.match(/geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+        if (geoMatch) {
+            return { lat: parseFloat(geoMatch[1]), lng: parseFloat(geoMatch[2]) };
+        }
+    }
+
+    // 3. Google Maps share links containing "@lat,lng" (e.g. @15.2993,74.1240)
+    const googleAtRegex = /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
+    const atMatch = text.match(googleAtRegex);
+    if (atMatch) {
+        return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+    }
+
+    // 4. URL parameters (query=lat,lng or q=lat,lng or ll=lat,lng)
+    const queryRegex = /[?&](?:query|q|ll)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
+    const queryMatch = text.match(queryRegex);
+    if (queryMatch) {
+        return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+    }
+
+    // 5. OpenStreetMap: "#map=19/15.2993/74.1240"
+    const osmRegex = /#map=\d+\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)/;
+    const osmMatch = text.match(osmRegex);
+    if (osmMatch) {
+        return { lat: parseFloat(osmMatch[1]), lng: parseFloat(osmMatch[2]) };
+    }
+
+    // 6. Generic place paths: "/place/15.2993,74.1240"
+    const pathCoordsRegex = /\/place\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
+    const pathMatch = text.match(pathCoordsRegex);
+    if (pathMatch) {
+        return { lat: parseFloat(pathMatch[1]), lng: parseFloat(pathMatch[2]) };
+    }
+
+    return null;
+}
+
 // Search location using OpenStreetMap free geocoding database (Nominatim)
 async function searchGeocodingLocation() {
     const query = document.getElementById('place-search').value.trim();
@@ -288,6 +343,59 @@ async function searchGeocodingLocation() {
     statusDiv.textContent = 'Searching location database... 🌐';
     resultsDiv.innerHTML = '';
     resultsDiv.classList.add('hidden');
+
+    // Friendly helper for shortened CORS-blocked URLs
+    if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
+        statusDiv.innerHTML = `⚠️ Shortened links require absolute coordinates (e.g. 15.2993, 74.1240) or search text! <br><span class="text-[9px] text-slate-400">Please paste full Google Maps URLs or direct lat/lng coordinates.</span>`;
+        return;
+    }
+
+    // Direct Coordinates & Map Links Auto-Parsing and Reverse Geocoding
+    const parsedCoords = parseCoordinatesFromLinkOrText(query);
+    if (parsedCoords) {
+        statusDiv.innerHTML = `📍 Parsed coordinates: <span class="text-indigo-600 font-black">${parsedCoords.lat.toFixed(4)}, ${parsedCoords.lng.toFixed(4)}</span>. Reverse geocoding name... 🌐`;
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${parsedCoords.lat}&lon=${parsedCoords.lng}&zoom=18`, {
+                headers: {
+                    'Accept-Language': 'en'
+                }
+            });
+            const res = await response.json();
+            
+            if (res && res.display_name) {
+                const shortName = res.display_name.split(',')[0] || 'Pinned Location';
+                document.getElementById('place-search').value = shortName;
+                document.getElementById('place-name').value = shortName; // Auto-populate place name field
+                document.getElementById('place-lat').value = parsedCoords.lat;
+                document.getElementById('place-lng').value = parsedCoords.lng;
+                
+                // Update manual inputs if visible
+                const latManual = document.getElementById('place-lat-manual');
+                const lngManual = document.getElementById('place-lng-manual');
+                if (latManual) latManual.value = parsedCoords.lat;
+                if (lngManual) lngManual.value = parsedCoords.lng;
+                
+                statusDiv.innerHTML = `📍 Pinned to: <span class="text-indigo-600 font-black">${shortName}</span> (${parsedCoords.lat.toFixed(4)}, ${parsedCoords.lng.toFixed(4)}) ✅`;
+                if (window.showToast) window.showToast(`Location detected: ${shortName}!`, 'success');
+            } else {
+                const fallbackName = `Custom Pin (${parsedCoords.lat.toFixed(4)}, ${parsedCoords.lng.toFixed(4)})`;
+                document.getElementById('place-search').value = fallbackName;
+                document.getElementById('place-name').value = fallbackName;
+                document.getElementById('place-lat').value = parsedCoords.lat;
+                document.getElementById('place-lng').value = parsedCoords.lng;
+                statusDiv.innerHTML = `📍 Pinned to custom coordinates ✅`;
+            }
+        } catch (err) {
+            const fallbackName = `Custom Pin (${parsedCoords.lat.toFixed(4)}, ${parsedCoords.lng.toFixed(4)})`;
+            document.getElementById('place-search').value = fallbackName;
+            document.getElementById('place-name').value = fallbackName;
+            document.getElementById('place-lat').value = parsedCoords.lat;
+            document.getElementById('place-lng').value = parsedCoords.lng;
+            statusDiv.innerHTML = `📍 Pinned to custom coordinates (offline fallback) ✅`;
+            console.error(err);
+        }
+        return;
+    }
 
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
