@@ -97,6 +97,54 @@ async function loadTripNotes() {
         return;
     }
 
+    // Fetch road distances in parallel for all consecutive stops that have coordinates
+    const distancePromises = [];
+    for (let i = 0; i < itinerary.length - 1; i++) {
+        const item = itinerary[i];
+        const nextItem = itinerary[i + 1];
+        if (item.lat && item.lng && nextItem.lat && nextItem.lng) {
+            distancePromises.push((async () => {
+                const lat1 = parseFloat(item.lat);
+                const lon1 = parseFloat(item.lng);
+                const lat2 = parseFloat(nextItem.lat);
+                const lon2 = parseFloat(nextItem.lng);
+                
+                // Baseline: compute straight-line Haversine distance
+                const haversineDist = calculateHaversineDistance(lat1, lon1, lat2, lon2);
+                
+                try {
+                    // Try fetching actual road driving distance from OSRM with a strict 1.5s timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1500);
+                    
+                    const response = await fetch(
+                        `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`,
+                        { signal: controller.signal }
+                    );
+                    clearTimeout(timeoutId);
+                    
+                    const data = await response.json();
+                    if (data && data.routes && data.routes[0]) {
+                        const roadDist = data.routes[0].distance / 1000; // convert meters to km
+                        return { index: i, distance: roadDist, isRoad: true };
+                    }
+                } catch (e) {
+                    console.warn(`OSRM road routing failed for leg ${i}, falling back to Haversine:`, e.message);
+                }
+                
+                return { index: i, distance: haversineDist, isRoad: false };
+            })());
+        } else {
+            distancePromises.push(Promise.resolve({ index: i, distance: null, isRoad: false }));
+        }
+    }
+
+    const resolvedDistances = await Promise.all(distancePromises);
+    const distanceMap = {};
+    resolvedDistances.forEach(d => {
+        if (d) distanceMap[d.index] = { distance: d.distance, isRoad: d.isRoad };
+    });
+
     const bounds = [];
     const routeCoords = [];
 
@@ -200,11 +248,9 @@ async function loadTripNotes() {
         // Compute and render location-to-location distance to next stop
         if (index < itinerary.length - 1) {
             const nextItem = itinerary[index + 1];
-            if (item.lat && item.lng && nextItem.lat && nextItem.lng) {
-                const dist = calculateHaversineDistance(
-                    parseFloat(item.lat), parseFloat(item.lng),
-                    parseFloat(nextItem.lat), parseFloat(nextItem.lng)
-                );
+            const distInfo = distanceMap[index];
+            if (distInfo && distInfo.distance !== null) {
+                const dist = distInfo.distance;
                 totalTripDistance += dist;
 
                 const distDiv = document.createElement('div');
@@ -213,7 +259,7 @@ async function loadTripNotes() {
                     <div class="absolute left-6 top-[-10px] bottom-[-10px] w-0.5 border-l border-dashed border-slate-300"></div>
                     <div class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full font-black text-[10px] tracking-wide shadow-sm">
                         <span>🚗</span>
-                        <span>Next Stop: <span class="font-extrabold text-indigo-600">${dist.toFixed(1)} km</span></span>
+                        <span>Next Stop: <span class="font-extrabold text-indigo-600">${dist.toFixed(1)} km</span> <span class="text-[8px] text-slate-400 font-semibold">(${distInfo.isRoad ? 'road route' : 'straight line'})</span></span>
                         <a href="https://www.google.com/maps/dir/?api=1&origin=${item.lat},${item.lng}&destination=${nextItem.lat},${nextItem.lng}&travelmode=driving" target="_blank" class="text-indigo-500 hover:text-indigo-700 underline no-underline ml-1">
                             Directions ↗
                         </a>
