@@ -196,7 +196,7 @@ When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid**
 ---
 
 ## 🔄 9. Maintenance Checklist
-*   **Version Control**: Script tags use cache-busting identifiers. Current versions: `js/planner.js?v=770064`, `js/ui_engine.js?v=770062`, `js/recovery.js?v=770061`.
+*   **Version Control**: Script tags use cache-busting identifiers. Current versions: `js/planner.js?v=770064`, `js/ui_engine.js?v=770063`, `js/app.js?v=770061`, `js/recovery.js?v=770061`.
 *   **Aispace Footer Branding**: Keep correct official footer copy at all times: `TripSplit v3.0 • A Product from Aispace.co.in`.
 *   **String Trip ID Parsing**: Trip IDs may be numeric OR cloud-assigned hashes. Compare strictly as strings: `String(t.id) === String(savedId)`.
 *   **Offline First**: Verify that every storage change updates the matching `localStorage` key immediately before starting backend network operations.

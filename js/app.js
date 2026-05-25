@@ -128,6 +128,16 @@ async function initApp() {
   await loadTripsCapsules();
   showScreen('home');
   
+  // Lightweight first-time onboarding check
+  const profileRecord = typeof getUserProfile === 'function' ? await getUserProfile() : null;
+  if (!profileRecord || !profileRecord.name) {
+    if (typeof showProfileModal === 'function') {
+      setTimeout(() => {
+        showProfileModal();
+      }, 500); // Small delay to let page settle beautifully
+    }
+  }
+  
   // Attach WebSocket if cloud connected
   if (currentTripId) {
     const activeTrip = trips.find(t => String(t.id) === String(currentTripId));

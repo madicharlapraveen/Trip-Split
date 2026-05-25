@@ -133,6 +133,7 @@ window.showModal = function(content) {
 };
 
 window.hideModal = function() {
+  if (window.isModalMandatory) return; // Prevent closing mandatory modals
   const modalOverlay = document.getElementById('modal-overlay');
   if (modalOverlay) {
     modalOverlay.classList.remove('active');
@@ -2231,17 +2232,36 @@ window.triggerTestNotification = function() {
     }
 };
 
-// Edit Profile settings
 window.showProfileModal = async function() {
     const profile = typeof getUserProfile === 'function' ? await getUserProfile() : null;
+    const isMandatory = !profile || !profile.name;
+    if (isMandatory) {
+        window.isModalMandatory = true;
+    }
     const content = `
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-xl font-bold text-slate-800">User Profile</h3>
-          <button onclick="showSettings()" class="text-slate-400 hover:text-slate-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-          </button>
+          ${isMandatory ? `
+            <span class="text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full shadow-sm">Setup Required</span>
+          ` : `
+            <button onclick="showSettings()" class="text-slate-400 hover:text-slate-600 hover:scale-110 active:scale-95 transition-all">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+          `}
         </div>
 
+        ${isMandatory ? `
+        <!-- Warm Welcome Greeting -->
+        <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start space-x-3 mb-5">
+            <span class="text-lg">👋</span>
+            <div class="flex-1">
+                <h4 class="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1">Welcome to TripSplit!</h4>
+                <p class="text-[11px] text-indigo-700 leading-relaxed font-semibold">
+                    To help you track expenses, split bills, and sync trips with friends, let's set up your profile name first. It takes just a second!
+                </p>
+            </div>
+        </div>
+        ` : `
         <!-- Local Storage and Backup Warning Note -->
         <div class="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start space-x-3 mb-5">
             <span class="text-lg">🔒</span>
@@ -2254,11 +2274,12 @@ window.showProfileModal = async function() {
                 </p>
             </div>
         </div>
+        `}
 
         <form id="profile-form" class="space-y-5">
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Profile Name</label>
-                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? profile.name : ''}" placeholder="E.g. Praveen" required>
+                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-semibold text-slate-800" value="${profile ? profile.name : ''}" placeholder="E.g. Antigravity" required>
                 <p class="text-[10px] text-slate-400 mt-1">This name is used to identify you on the "Me" screen and personal balance trackers.</p>
             </div>
             <div>
@@ -2273,13 +2294,14 @@ window.showProfileModal = async function() {
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone Mobile</label>
-                <input type="tel" id="profile-mobile" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" value="${profile ? (profile.mobile || '') : ''}" placeholder="+91 ...">
+                <input type="tel" id="profile-mobile" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-semibold text-slate-800" value="${profile ? (profile.mobile || '') : ''}" placeholder="+91 ...">
             </div>
             <div class="pt-4">
-                <button type="submit" class="w-full btn-primary py-4">Save Account Profile</button>
+                <button type="submit" class="w-full btn-primary py-4">${isMandatory ? 'Get Started & Save Profile' : 'Save Account Profile'}</button>
             </div>
         </form>
 
+        ${isMandatory ? '' : `
         <!-- CSV Export Option Tools -->
         <div class="space-y-3 pt-5 border-t border-slate-100 mt-5">
            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Local Data Export Tools</p>
@@ -2308,6 +2330,7 @@ window.showProfileModal = async function() {
                ` : ''}
            </div>
         </div>
+        `}
     `;
     showModal(content);
     
@@ -2346,6 +2369,7 @@ window.showProfileModal = async function() {
                 // The user entered a new email! Let's save other settings and redirect to sync OTP flow
                 const confirmLink = confirm(`To link and secure your account to "${email}", we need to send a quick verification code.\n\nSend verification code now?`);
                 if (confirmLink) {
+                    window.isModalMandatory = false; // Release mandatory block
                     // Save name & mobile locally first
                     await saveUserProfile({ name, email: '', mobile });
                     hideModal();
@@ -2362,8 +2386,18 @@ window.showProfileModal = async function() {
             } else {
                 // Standard profile update (email matches or empty)
                 await saveUserProfile({ name, email: currentEmail, mobile });
-                if (window.showToast) window.showToast('Profile saved successfully!', 'success');
-                showSettings();
+                window.isModalMandatory = false; // Release mandatory block
+                if (window.showToast) {
+                    if (isMandatory) {
+                        window.showToast('Welcome aboard! Profile saved successfully! 🎉', 'success');
+                    } else {
+                        window.showToast('Profile saved successfully!', 'success');
+                    }
+                }
+                hideModal();
+                if (!isMandatory) {
+                    showSettings();
+                }
             }
         } catch (error) {
             alert('Error saving profile: ' + error.message);
@@ -2690,6 +2724,7 @@ window.initUI = function() {
   if (overlay) {
     overlay.addEventListener('click', (e) => {
       if (e.target.id === 'modal-overlay') {
+        if (window.isModalMandatory) return; // Do not close if mandatory
         hideModal();
       }
     });
