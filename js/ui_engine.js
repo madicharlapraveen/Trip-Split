@@ -2279,7 +2279,7 @@ window.showProfileModal = async function() {
         <form id="profile-form" class="space-y-5">
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Profile Name</label>
-                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-semibold text-slate-800" value="${profile ? profile.name : ''}" placeholder="E.g. Antigravity" required>
+                <input type="text" id="profile-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-semibold text-slate-800" value="${profile ? profile.name : ''}" placeholder="E.g. Your Name" required>
                 <p class="text-[10px] text-slate-400 mt-1">This name is used to identify you on the "Me" screen and personal balance trackers.</p>
             </div>
             <div>
