@@ -547,3 +547,73 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     70% { transform: scale(1.2); opacity: 0; }
     100% { transform: scale(0.95); opacity: 0; }
 }
+
+/* --- Planner Timeline Roadmap Styling --- */
+.itinerary-list {
+    position: relative;
+    padding-left: 1rem;
+}
+
+.itinerary-bubble {
+    position: relative;
+    padding-left: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Timeline Vertical Line */
+.itinerary-bubble::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 24px;
+    bottom: -32px;
+    width: 2px;
+    background: #cbd5e1; /* Default slate connecting line */
+    z-index: 1;
+}
+
+.itinerary-bubble:last-child::before {
+    display: none; /* Hide line below last item */
+}
+
+/* Visited state connector line */
+.itinerary-bubble.visited::before {
+    background: #10b981; /* Green line if visited */
+}
+
+/* Timeline Dot / Indicator */
+.itinerary-dot {
+    position: absolute;
+    left: 16px;
+    top: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 3.5px solid #4f46e5; /* Primary indigo border */
+    z-index: 2;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    transition: all 0.3s ease;
+}
+
+.itinerary-bubble.visited .itinerary-dot {
+    border-color: #10b981; /* Green dot if visited */
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+/* Timeline Stop Card (Itinerary Plate) */
+.itinerary-plate {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 16px -6px rgba(15, 23, 42, 0.03); /* Beautiful dropdown shadow to separate cards */
+    border-radius: 24px;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s var(--transition-smooth);
+}
+
+.itinerary-plate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.1), 0 12px 20px -8px rgba(15, 23, 42, 0.05); /* Deeper drop shadow on hover */
+}
