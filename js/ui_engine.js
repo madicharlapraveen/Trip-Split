@@ -1455,6 +1455,104 @@ window.loadMyData = async function() {
   window.renderSyncCard();
 };
 
+window.showAppGuideModal = function() {
+    const content = `
+      <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">📖 Complete App Guide</h3>
+          <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+      </div>
+      
+      <div class="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pr-1 pb-4 text-slate-700">
+          
+          <!-- Section 1: Split & Expenses -->
+          <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/30">
+              <h4 class="font-extrabold text-sm text-indigo-700 flex items-center gap-1.5 mb-2">
+                  <span>💰</span> Expense Splitter & List Page
+              </h4>
+              <ul class="text-xs font-semibold text-slate-600 space-y-2 list-none pl-0">
+                  <li class="flex gap-2">
+                      <span class="text-indigo-500">➕</span>
+                      <span><b>Add Crew</b>: Go to the <b>Trips</b> tab, scroll down to <b>Participant Details</b>, and tap <code>Add Member</code> to build your travel group.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-indigo-500">📝</span>
+                      <span><b>Log Expenses</b>: Tap the bottom <code>➕</code> FAB, enter the title, total price, who paid, and who splits. You can also specify an <b>Advance Paid</b>.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-indigo-500">⚡</span>
+                      <span><b>Split Presets</b>: The app automatically remembers split configurations for different categories to save you time.</span>
+                  </li>
+              </ul>
+          </div>
+
+          <!-- Section 2: Itinerary & Plan -->
+          <div class="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/30">
+              <h4 class="font-extrabold text-sm text-amber-700 flex items-center gap-1.5 mb-2">
+                  <span>🎒</span> Itinerary & Plan Page
+              </h4>
+              <ul class="text-xs font-semibold text-slate-600 space-y-2 list-none pl-0">
+                  <li class="flex gap-2">
+                      <span class="text-amber-500">📍</span>
+                      <span><b>Pin Locations</b>: Copy-paste raw coordinates (e.g. <code>15.2993, 74.1240</code>) or Google/Apple maps links directly into the Search box, then tap <b>Add to Roadmap</b>.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-amber-500">🚗</span>
+                      <span><b>Road Distances</b>: Calculates actual driving road route distances (matching Google Maps) when online, and gracefully falls back to straight-line Haversine math when offline.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-amber-500">🧭</span>
+                      <span><b>Directions Link</b>: Click the direction icon on any timeline card to instantly launch Google Maps turn-by-turn driving routing.</span>
+                  </li>
+              </ul>
+          </div>
+
+          <!-- Section 3: Settlements -->
+          <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/30">
+              <h4 class="font-extrabold text-sm text-emerald-700 flex items-center gap-1.5 mb-2">
+                  <span>📊</span> Settlements & Split Page
+              </h4>
+              <ul class="text-xs font-semibold text-slate-600 space-y-2 list-none pl-0">
+                  <li class="flex gap-2">
+                      <span class="text-emerald-500">🤝</span>
+                      <span><b>Minimized Transactions</b>: Our splitting algorithm automatically aggregates and optimizes all transactions so that your crew pays back the absolute minimum number of payments.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-emerald-500">📲</span>
+                      <span><b>WhatsApp Sharing</b>: Click the <code>Share All</code> button in Settlements to copy a beautiful pre-formatted summary text that opens directly in WhatsApp for sharing with your group!</span>
+                  </li>
+              </ul>
+          </div>
+
+          <!-- Section 4: Cloud Sync & PWA -->
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <h4 class="font-extrabold text-sm text-slate-700 flex items-center gap-1.5 mb-2">
+                  <span>☁️</span> Cloud Sync, Profile & Offline PWA
+              </h4>
+              <ul class="text-xs font-semibold text-slate-600 space-y-2 list-none pl-0">
+                  <li class="flex gap-2">
+                      <span class="text-slate-400">👤</span>
+                      <span><b>Personal Summary</b>: Set your matching name in Settings to see your device's customized ledger, total spendings, and net creditor/debtor balance on the Profile tab.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-slate-400">🔐</span>
+                      <span><b>Secure Sync</b>: Link your email on the Profile tab to enable cloud backup and real-time multiplayer trip updates with your friends.</span>
+                  </li>
+                  <li class="flex gap-2">
+                      <span class="text-slate-400">📱</span>
+                      <span><b>Install PWA</b>: Install TripSplit to your home screen to use it 100% offline. The app will cache OpenStreetMap tiles locally so your itinerary maps continue working offline!</span>
+                  </li>
+              </ul>
+          </div>
+          
+      </div>
+      
+      <button onclick="hideModal()" class="w-full btn-primary py-4 mt-4">Got It!</button>
+    `;
+    showModal(content);
+};
+
 window.syncFlowState = window.syncFlowState || {
     email: '',
     mode: 'initial', // 'initial', 'restore_input', 'otp'
