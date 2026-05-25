@@ -5,6 +5,19 @@ window.leafletMap = null; // expose globally for showScreen invalidateSize
 let mapMarkers = [];
 let routeLine = null;
 
+// Haversine formula to compute great-circle distance between two points on sphere
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+}
+
 async function loadTripNotes() {
     if (!currentTripId) return;
 
@@ -12,6 +25,7 @@ async function loadTripNotes() {
     if (!trip) return;
     const itinerary = trip.itinerary || [];
     const canEdit = trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id;
+    let totalTripDistance = 0;
 
     // Show/hide the Add Stop header button based on role
     const addPlaceHeaderBtn = document.getElementById('add-place-btn');
@@ -183,7 +197,51 @@ async function loadTripNotes() {
             </div>
         `;
         itineraryList.appendChild(itemDiv);
+
+        // Compute and render location-to-location distance to next stop
+        if (index < itinerary.length - 1) {
+            const nextItem = itinerary[index + 1];
+            if (item.lat && item.lng && nextItem.lat && nextItem.lng) {
+                const dist = calculateHaversineDistance(
+                    parseFloat(item.lat), parseFloat(item.lng),
+                    parseFloat(nextItem.lat), parseFloat(nextItem.lng)
+                );
+                totalTripDistance += dist;
+
+                const distDiv = document.createElement('div');
+                distDiv.className = 'my-2 pl-[52px] flex items-center gap-2 animate-scale-in relative';
+                distDiv.innerHTML = `
+                    <div class="absolute left-6 top-[-10px] bottom-[-10px] w-0.5 border-l border-dashed border-slate-300"></div>
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full font-black text-[10px] tracking-wide shadow-sm">
+                        <span>🚗</span>
+                        <span>Next Stop: <span class="font-extrabold text-indigo-600">${dist.toFixed(1)} km</span></span>
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=${item.lat},${item.lng}&destination=${nextItem.lat},${nextItem.lng}&travelmode=driving" target="_blank" class="text-indigo-500 hover:text-indigo-700 underline no-underline ml-1">
+                            Directions ↗
+                        </a>
+                    </div>
+                `;
+                itineraryList.appendChild(distDiv);
+            } else {
+                // Render standard connector line for non-geocoded consecutive stops
+                const distDiv = document.createElement('div');
+                distDiv.className = 'h-6 pl-[52px] relative';
+                distDiv.innerHTML = `
+                    <div class="absolute left-6 top-[-10px] bottom-[-10px] w-0.5 border-l border-dashed border-slate-200"></div>
+                `;
+                itineraryList.appendChild(distDiv);
+            }
+        }
     });
+
+    // Update dynamically calculated total distance in header subtitle
+    const subtitle = document.getElementById('planner-subtitle');
+    if (subtitle) {
+        if (totalTripDistance > 0) {
+            subtitle.innerHTML = `Offline-Ready Pinned Map • 🗺️ Total: <span class="text-indigo-600 font-extrabold">${totalTripDistance.toFixed(1)} km</span>`;
+        } else {
+            subtitle.textContent = 'Offline-Ready Pinned Map';
+        }
+    }
 
     // 3. Draw dashed route lines
     if (leafletMap && routeCoords.length > 1) {
