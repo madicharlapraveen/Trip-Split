@@ -1,5 +1,26 @@
 // share.js - WhatsApp sharing functionality
 
+// Helper to launch direct mobile app deep links on mobile, or WhatsApp Web on desktop
+function openWhatsApp(message, phone = '') {
+  const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+  const encodedText = encodeURIComponent(message);
+  
+  if (phone) {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (isMobile) {
+      window.location.href = `whatsapp://send?phone=${cleanPhone}&text=${encodedText}`;
+    } else {
+      window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`, '_blank');
+    }
+  } else {
+    if (isMobile) {
+      window.location.href = `whatsapp://send?text=${encodedText}`;
+    } else {
+      window.open(`https://web.whatsapp.com/send?text=${encodedText}`, '_blank');
+    }
+  }
+}
+
 async function shareOnWhatsApp() {
   if (!currentTripId) {
     alert('Please select a trip first');
@@ -51,8 +72,7 @@ async function shareOnWhatsApp() {
 
   message += `\n\nTripSplit v3.0 • A Product from Aispace.co.in`;
 
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-  window.open(whatsappUrl, '_blank');
+  openWhatsApp(message);
 }
 
 async function shareIndividualOnWhatsApp(participantId) {
@@ -126,8 +146,7 @@ async function shareIndividualOnWhatsApp(participantId) {
   const phone = prompt(`Enter phone number for ${participant.name} (with country code, e.g., 919876543210):`, participant.phone || '');
   if (phone === null) return; // Cancelled
 
-  const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-  window.open(whatsappUrl, '_blank');
+  openWhatsApp(message, phone);
 }
 
 // Initialize share functionality
@@ -183,6 +202,5 @@ async function shareAllExpensesOnWhatsApp() {
   message += `Total Trip Expenses: ${sym}${totalSpent.toFixed(2)}\n\n`;
   message += `TripSplit v3.0 • A Product from Aispace.co.in`;
 
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-  window.open(whatsappUrl, '_blank');
+  openWhatsApp(message);
 }
