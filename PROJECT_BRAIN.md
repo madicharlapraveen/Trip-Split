@@ -196,11 +196,11 @@ When a settlement transaction "$X \rightarrow Y$ of $\$A$" is marked as **Paid**
 ---
 
 ## 🔄 9. Maintenance Checklist
-*   **Version Control**: Script tags use cache-busting identifiers. Current versions: `js/planner.js?v=770063`, `js/ui_engine.js?v=770061`.
+*   **Version Control**: Script tags use cache-busting identifiers. Current versions: `js/planner.js?v=770064`, `js/ui_engine.js?v=770061`, `js/recovery.js?v=770061`.
 *   **Aispace Footer Branding**: Keep correct official footer copy at all times: `TripSplit v3.0 • A Product from Aispace.co.in`.
 *   **String Trip ID Parsing**: Trip IDs may be numeric OR cloud-assigned hashes. Compare strictly as strings: `String(t.id) === String(savedId)`.
 *   **Offline First**: Verify that every storage change updates the matching `localStorage` key immediately before starting backend network operations.
 
 ---
 
-*Last Updated: 2026-05-25 — Integrated OSRM road driving distances with parallel fetching, resolved manual coordinate submit bypasses, and added a premium App Guide popup and Profile trigger button.*
+*Last Updated: 2026-05-25 — Implemented a sequential signup fallback for user profile verification (handling both email and signup OTP types seamlessly for new account registration), resolved concurrent execution race conditions causing duplicated timeline stops, and updated all script version cache-busters.*

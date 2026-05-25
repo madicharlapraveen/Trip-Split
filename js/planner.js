@@ -4,6 +4,7 @@ let leafletMap = null;
 window.leafletMap = null; // expose globally for showScreen invalidateSize
 let mapMarkers = [];
 let routeLine = null;
+let loadTripNotesCallId = 0;
 
 // Haversine formula to compute great-circle distance between two points on sphere
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
@@ -21,8 +22,11 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 async function loadTripNotes() {
     if (!currentTripId) return;
 
+    const callId = ++loadTripNotesCallId;
+
     const trip = await getTrip(currentTripId);
     if (!trip) return;
+    if (callId !== loadTripNotesCallId) return; // Abort if a newer call has started
     const itinerary = trip.itinerary || [];
     const canEdit = trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id;
     let totalTripDistance = 0;
@@ -140,6 +144,7 @@ async function loadTripNotes() {
     }
 
     const resolvedDistances = await Promise.all(distancePromises);
+    if (callId !== loadTripNotesCallId) return; // Abort if a newer call has started
     const distanceMap = {};
     resolvedDistances.forEach(d => {
         if (d) distanceMap[d.index] = { distance: d.distance, isRoad: d.isRoad };

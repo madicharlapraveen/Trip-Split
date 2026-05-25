@@ -15,18 +15,33 @@ window.sendEmailOTP = async function(email) {
     return data;
 };
 
-// Verify the OTP code
+// Verify the OTP code (tries standard passwordless sign-in, then falls back to new signup confirmation)
 window.verifyEmailOTP = async function(email, token) {
     console.log('Verifying OTP code for:', email);
-    const { data, error } = await supabase.auth.verifyOtp({
-        email: email,
-        token: token,
-        type: 'email'
-    });
-    if (error) {
-        throw error;
+    try {
+        // Try type: 'email' (standard passwordless sign-in)
+        const { data, error } = await supabase.auth.verifyOtp({
+            email: email,
+            token: token,
+            type: 'email'
+        });
+        if (!error && data && data.user) {
+            return data;
+        }
+        if (error) throw error;
+    } catch (err1) {
+        console.warn('verifyOtp with type "email" failed, trying type "signup":', err1.message);
+        // Try type: 'signup' (fallback for new user creation signup confirmation)
+        const { data, error } = await supabase.auth.verifyOtp({
+            email: email,
+            token: token,
+            type: 'signup'
+        });
+        if (error) {
+            throw error;
+        }
+        return data;
     }
-    return data; // Returns { user, session }
 };
 
 // Query the Supabase profiles table to check if a profile is linked to an email
