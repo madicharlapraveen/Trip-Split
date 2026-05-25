@@ -386,7 +386,82 @@ function parseCoordinatesFromLinkOrText(text) {
         return { lat: parseFloat(pathMatch[1]), lng: parseFloat(pathMatch[2]) };
     }
 
+    // 7. Loose coordinate search in text (must contain decimal points to avoid matching zip codes / IDs)
+    const looseCoordsRegex = /(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/;
+    const looseMatch = text.match(looseCoordsRegex);
+    if (looseMatch) {
+        const lat = parseFloat(looseMatch[1]);
+        const lng = parseFloat(looseMatch[2]);
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat, lng };
+        }
+    }
+
     return null;
+}
+
+// Helper to resolve coordinates from search input, manual inputs, or silent geocoding fallback on submit
+async function resolveStopCoordinates(searchVal, nameVal, latManualVal, lngManualVal) {
+    // 1. Check manual inputs first
+    if (latManualVal && lngManualVal) {
+        const lat = parseFloat(latManualVal);
+        const lng = parseFloat(lngManualVal);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            return { lat: lat.toString(), lng: lng.toString() };
+        }
+    }
+
+    // 2. Parse search value for direct coordinates/links
+    if (searchVal) {
+        const parsed = parseCoordinatesFromLinkOrText(searchVal);
+        if (parsed) {
+            return { lat: parsed.lat.toString(), lng: parsed.lng.toString() };
+        }
+    }
+
+    // 3. Parse name value for direct coordinates/links
+    if (nameVal) {
+        const parsed = parseCoordinatesFromLinkOrText(nameVal);
+        if (parsed) {
+            return { lat: parsed.lat.toString(), lng: parsed.lng.toString() };
+        }
+    }
+
+    // 4. Silent geocoding fallback for search value text
+    if (searchVal) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchVal)}&limit=1`, {
+                headers: {
+                    'Accept-Language': 'en'
+                }
+            });
+            const results = await response.json();
+            if (results && results.length > 0) {
+                return { lat: results[0].lat, lng: results[0].lon };
+            }
+        } catch (err) {
+            console.warn('Silent geocoding for searchVal failed:', err);
+        }
+    }
+
+    // 5. Silent geocoding fallback for name value text
+    if (nameVal) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(nameVal)}&limit=1`, {
+                headers: {
+                    'Accept-Language': 'en'
+                }
+            });
+            const results = await response.json();
+            if (results && results.length > 0) {
+                return { lat: results[0].lat, lng: results[0].lon };
+            }
+        } catch (err) {
+            console.warn('Silent geocoding for nameVal failed:', err);
+        }
+    }
+
+    return { lat: '', lng: '' };
 }
 
 // Search location using OpenStreetMap free geocoding database (Nominatim)
@@ -582,13 +657,35 @@ window.showAddPlaceModal = async function() {
         }
     });
 
+    // Clear coordinates when the user starts typing a new query in the search box
+    document.getElementById('place-search').addEventListener('input', () => {
+        document.getElementById('place-lat').value = '';
+        document.getElementById('place-lng').value = '';
+        const statusDiv = document.getElementById('search-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `⚠️ Search query changed. Tap <b>Find Stop</b> or submit to update location pin!`;
+        }
+    });
+
     document.getElementById('add-place-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const placeName = document.getElementById('place-name').value.trim();
         const time = document.getElementById('place-time').value.trim();
         const notes = document.getElementById('place-notes').value.trim();
-        const lat = document.getElementById('place-lat').value;
-        const lng = document.getElementById('place-lng').value;
+        
+        let lat = document.getElementById('place-lat').value;
+        let lng = document.getElementById('place-lng').value;
+
+        // Fallback: if coordinate fields are empty, resolve them from search, manual inputs, or silent geocoding
+        if (!lat || !lng) {
+            const searchVal = document.getElementById('place-search').value.trim();
+            const latManual = document.getElementById('place-lat-manual') ? document.getElementById('place-lat-manual').value.trim() : '';
+            const lngManual = document.getElementById('place-lng-manual') ? document.getElementById('place-lng-manual').value.trim() : '';
+            
+            const resolved = await resolveStopCoordinates(searchVal, placeName, latManual, lngManual);
+            lat = resolved.lat;
+            lng = resolved.lng;
+        }
 
         if (placeName) {
             const trip = await getTrip(currentTripId);
@@ -695,13 +792,35 @@ window.showEditPlaceModal = async function(index) {
         }
     });
 
+    // Clear coordinates when the user starts typing a new query in the search box
+    document.getElementById('place-search').addEventListener('input', () => {
+        document.getElementById('place-lat').value = '';
+        document.getElementById('place-lng').value = '';
+        const statusDiv = document.getElementById('search-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `⚠️ Search query changed. Tap <b>Find Stop</b> or submit to update location pin!`;
+        }
+    });
+
     document.getElementById('edit-place-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const placeName = document.getElementById('place-name').value.trim();
         const time = document.getElementById('place-time').value.trim();
         const notes = document.getElementById('place-notes').value.trim();
-        const lat = document.getElementById('place-lat').value;
-        const lng = document.getElementById('place-lng').value;
+        
+        let lat = document.getElementById('place-lat').value;
+        let lng = document.getElementById('place-lng').value;
+
+        // Fallback: if coordinate fields are empty, resolve them from search, manual inputs, or silent geocoding
+        if (!lat || !lng) {
+            const searchVal = document.getElementById('place-search').value.trim();
+            const latManual = document.getElementById('place-lat-manual') ? document.getElementById('place-lat-manual').value.trim() : '';
+            const lngManual = document.getElementById('place-lng-manual') ? document.getElementById('place-lng-manual').value.trim() : '';
+            
+            const resolved = await resolveStopCoordinates(searchVal, placeName, latManual, lngManual);
+            lat = resolved.lat;
+            lng = resolved.lng;
+        }
 
         if (placeName) {
             const trip = await getTrip(currentTripId);
