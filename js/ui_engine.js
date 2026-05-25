@@ -2263,20 +2263,13 @@ window.showProfileModal = async function() {
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
-                ${profile && profile.email ? `
-                    <div class="relative">
-                        <input type="hidden" id="profile-email" value="${profile.email}">
-                        <input type="email" class="w-full p-4 bg-emerald-50/50 border border-emerald-100 text-emerald-800 font-bold rounded-2xl focus:outline-none cursor-not-allowed text-xs" value="${profile.email}" readonly>
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full shadow-sm">✓ Verified</span>
-                    </div>
-                ` : `
-                    <div class="relative">
-                        <input type="hidden" id="profile-email" value="">
-                        <input type="email" class="w-full p-4 bg-slate-100/50 border border-slate-100 text-slate-400 rounded-2xl focus:outline-none cursor-not-allowed text-xs" placeholder="Not linked" readonly>
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-600 text-[10px] font-bold hover:underline cursor-pointer" onclick="hideModal(); showScreen('my');">Link Email ➔</span>
-                    </div>
-                `}
-                <p class="text-[10px] text-slate-400 mt-1">To link, change, or recover your email account, please use the sync panel on the "My Summary" screen.</p>
+                <div class="relative">
+                    <input type="email" id="profile-email" class="w-full p-4 rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-xs ${profile && profile.email ? 'bg-emerald-50/30 border border-emerald-100 text-emerald-800 font-bold pr-20' : 'bg-slate-50 border-none'}" placeholder="E.g. name@domain.com" value="${profile ? (profile.email || '') : ''}" data-original="${profile ? (profile.email || '') : ''}">
+                    ${profile && profile.email ? `
+                        <span id="profile-email-badge" class="absolute right-4 top-1/2 -translate-y-1/2 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full shadow-sm transition-all duration-200">✓ Verified</span>
+                    ` : ''}
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Linking an email address enables secure cloud backups and collaborative trip syncing.</p>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone Mobile</label>
@@ -2318,17 +2311,60 @@ window.showProfileModal = async function() {
     `;
     showModal(content);
     
+    // Bind dynamic verification badge state
+    const profileEmailInput = document.getElementById('profile-email');
+    const profileEmailBadge = document.getElementById('profile-email-badge');
+    if (profileEmailInput && profileEmailBadge) {
+        profileEmailInput.addEventListener('input', (e) => {
+            const currentVal = e.target.value.trim().toLowerCase();
+            const originalVal = e.target.getAttribute('data-original').trim().toLowerCase();
+            if (currentVal === originalVal) {
+                profileEmailBadge.style.opacity = '1';
+                profileEmailBadge.style.pointerEvents = 'auto';
+                profileEmailInput.classList.add('bg-emerald-50/30', 'border', 'border-emerald-100', 'text-emerald-800', 'font-bold', 'pr-20');
+                profileEmailInput.classList.remove('bg-slate-50', 'border-none');
+            } else {
+                profileEmailBadge.style.opacity = '0';
+                profileEmailBadge.style.pointerEvents = 'none';
+                profileEmailInput.classList.remove('bg-emerald-50/30', 'border', 'border-emerald-100', 'text-emerald-800', 'font-bold', 'pr-20');
+                profileEmailInput.classList.add('bg-slate-50', 'border-none');
+            }
+        });
+    }
+    
     // Bind form submission
     document.getElementById('profile-form').onsubmit = async (e) => {
         e.preventDefault();
         const name = document.getElementById('profile-name').value.trim();
-        const email = document.getElementById('profile-email').value.trim();
+        const email = document.getElementById('profile-email').value.trim().toLowerCase();
         const mobile = document.getElementById('profile-mobile').value.trim();
         
         try {
-            await saveUserProfile({ name, email, mobile });
-            if (window.showToast) window.showToast('Profile saved successfully!', 'success');
-            showSettings();
+            const currentEmail = (profile && profile.email) ? profile.email.toLowerCase() : '';
+            
+            if (email && email !== currentEmail) {
+                // The user entered a new email! Let's save other settings and redirect to sync OTP flow
+                const confirmLink = confirm(`To link and secure your account to "${email}", we need to send a quick verification code.\n\nSend verification code now?`);
+                if (confirmLink) {
+                    // Save name & mobile locally first
+                    await saveUserProfile({ name, email: '', mobile });
+                    hideModal();
+                    
+                    // Switch to profile sync page, populate input and trigger verification
+                    showScreen('my');
+                    const syncInput = document.getElementById('sync-email-input');
+                    if (syncInput) {
+                        syncInput.value = email;
+                        window.handleStartLinkEmail();
+                    }
+                    return;
+                }
+            } else {
+                // Standard profile update (email matches or empty)
+                await saveUserProfile({ name, email: currentEmail, mobile });
+                if (window.showToast) window.showToast('Profile saved successfully!', 'success');
+                showSettings();
+            }
         } catch (error) {
             alert('Error saving profile: ' + error.message);
         }
