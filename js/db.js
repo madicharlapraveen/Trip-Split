@@ -18,12 +18,12 @@ if (!data.templates) data.templates = [];
 
 
 
-function saveData() {
+function saveData(actionDesc = "updated the trip") {
     data.pendingSync = true;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     // Auto-sync if connected to cloud
     if (typeof triggerBackgroundSync === 'function') {
-        triggerBackgroundSync();
+        triggerBackgroundSync(actionDesc);
     }
 }
 
@@ -70,7 +70,7 @@ async function updateTrip(id, updates) {
             ...updates,
             updatedAt: new Date().toISOString()
         };
-        saveData();
+        saveData("updated trip settings");
     }
 }
 
@@ -116,7 +116,7 @@ async function deleteTripFromDB(id) {
     data.trips = data.trips.filter(t => String(t.id) !== String(id));
     data.participants = data.participants.filter(p => String(p.tripId) !== String(id));
     data.expenses = data.expenses.filter(e => String(e.tripId) !== String(id));
-    saveData();
+    saveData("deleted a trip");
 }
 
 async function duplicateTripFromDB(id) {
@@ -130,7 +130,7 @@ async function duplicateTripFromDB(id) {
             updatedAt: new Date().toISOString()
         };
         data.trips.push(newTrip);
-        saveData();
+        saveData("duplicated a trip");
         return newTrip.id;
     }
     return null;
@@ -184,7 +184,7 @@ async function addParticipant(participant) {
         totalSpent: 0
     };
     data.participants.push(newParticipant);
-    saveData();
+    saveData(`added member "${newParticipant.name}"`);
     return newParticipant.id;
 }
 
@@ -209,7 +209,7 @@ async function updateParticipant(id, updates) {
     if (index !== -1) {
         data.participants[index] = { ...data.participants[index], ...updates };
         touchTrip(data.participants[index].tripId);
-        saveData();
+        saveData(`updated member "${data.participants[index].name}"`);
     }
 }
 
@@ -220,7 +220,7 @@ async function deleteParticipantFromDB(id) {
     }
     data.participants = data.participants.filter(p => p.id !== id);
     data.expenses = data.expenses.filter(e => e.paidBy !== id);
-    saveData();
+    saveData(`removed member "${participant ? participant.name : 'Unknown'}"`);
 }
 
 // Expense operations
@@ -233,7 +233,7 @@ async function addExpense(expense) {
         createdAt: expense.createdAt || new Date().toISOString()
     };
     data.expenses.push(newExpense);
-    saveData();
+    saveData(`added expense "${newExpense.title}" (₹${newExpense.amount})`);
     return newExpense.id;
 }
 
@@ -260,7 +260,7 @@ async function updateExpense(id, updates) {
         }
         data.expenses[index] = { ...data.expenses[index], ...updates };
         touchTrip(data.expenses[index].tripId);
-        saveData();
+        saveData(`updated expense "${data.expenses[index].title}"`);
     }
 }
 
@@ -270,7 +270,7 @@ async function deleteExpenseFromDB(id) {
         touchTrip(expense.tripId);
     }
     data.expenses = data.expenses.filter(e => e.id !== id);
-    saveData();
+    saveData(`deleted expense "${expense ? expense.title : 'Unknown'}"`);
 }
 
 // CSV Export/Import functions
