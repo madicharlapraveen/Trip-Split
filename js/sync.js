@@ -288,6 +288,38 @@ async function joinTripFromCloud(shareId) {
     }
 }
 
+// Pull latest changes from the cloud for a synced trip
+async function pullTripFromCloud(tripId) {
+    try {
+        const trip = await getTrip(tripId);
+        if (!trip || !trip.share_id) return null;
+
+        const deviceId = getDeviceId();
+        const deviceName = getDeviceName();
+
+        const { data: tripBundle, error } = await supabase.rpc('get_trip_data', {
+            p_share_id: trip.share_id,
+            p_device_id: deviceId,
+            p_device_name: deviceName
+        });
+
+        if (error) {
+            console.warn("Pull from cloud failed:", error.message);
+            return null;
+        }
+
+        if (tripBundle && tripBundle.trip) {
+            const serverRole = tripBundle.my_role || 'viewer';
+            await saveCloudTripBundle(tripBundle, serverRole);
+            return tripBundle;
+        }
+    } catch (e) {
+        console.warn("Error pulling trip updates:", e);
+    }
+    return null;
+}
+window.pullTripFromCloud = pullTripFromCloud;
+
 // --- UI Handlers ---
 
 window.showManageEditorsModal = function() {

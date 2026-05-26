@@ -141,8 +141,24 @@ async function initApp() {
   // Attach WebSocket if cloud connected
   if (currentTripId) {
     const activeTrip = trips.find(t => String(t.id) === String(currentTripId));
-    if (activeTrip && activeTrip.share_id && typeof subscribeToTripUpdates === 'function') {
-        subscribeToTripUpdates(activeTrip.share_id);
+    if (activeTrip && activeTrip.share_id) {
+        // Asynchronously pull latest changes from the cloud to update local data & UI
+        if (typeof pullTripFromCloud === 'function') {
+            pullTripFromCloud(currentTripId).then(async (updatedBundle) => {
+                if (updatedBundle) {
+                    console.log("Trip data synced on app startup");
+                    await loadHomeData();
+                    await loadTrips();
+                    await loadTripsCapsules();
+                    if (window.currentScreen === 'expenses' && typeof loadExpenses === 'function') loadExpenses();
+                    if (window.currentScreen === 'split' && typeof calculateSplit === 'function') calculateSplit();
+                    if (window.currentScreen === 'plan' && typeof loadTripNotes === 'function') loadTripNotes();
+                }
+            });
+        }
+        if (typeof subscribeToTripUpdates === 'function') {
+            subscribeToTripUpdates(activeTrip.share_id);
+        }
         if (typeof syncLocalRoleWithCloud === 'function') {
             syncLocalRoleWithCloud(currentTripId);
         }
@@ -190,8 +206,22 @@ async function selectTrip(tripId) {
   
   // Attach WebSocket if cloud connected
   const trip = await getTrip(tripId);
-  if (trip && trip.share_id && typeof subscribeToTripUpdates === 'function') {
-      subscribeToTripUpdates(trip.share_id);
+  if (trip && trip.share_id) {
+      // Asynchronously pull latest changes from cloud to update local data & UI
+      if (typeof pullTripFromCloud === 'function') {
+          pullTripFromCloud(tripId).then(async (updatedBundle) => {
+              if (updatedBundle) {
+                  console.log("Trip data synced on trip selection");
+                  await loadHomeData();
+                  await loadExpenses();
+                  await loadTripNotes();
+                  await loadTripsCapsules();
+              }
+          });
+      }
+      if (typeof subscribeToTripUpdates === 'function') {
+          subscribeToTripUpdates(trip.share_id);
+      }
       if (typeof syncLocalRoleWithCloud === 'function') {
           syncLocalRoleWithCloud(tripId);
       }

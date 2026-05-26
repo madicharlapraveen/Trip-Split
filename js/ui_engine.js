@@ -2641,15 +2641,50 @@ window.handleCloudSync = async function() {
         return;
     }
 
+    const trip = await getTrip(currentTripId);
+    if (!trip) return;
+
     if (window.showToast) window.showToast('Syncing trip data...', 'info');
 
     try {
-        if (typeof syncLocalRoleWithCloud === 'function') {
-            await syncLocalRoleWithCloud(currentTripId);
+        if (trip.share_id) {
+            // 1. First sync user role with database to apply up-to-date role permissions
+            if (typeof syncLocalRoleWithCloud === 'function') {
+                await syncLocalRoleWithCloud(currentTripId);
+            }
+            
+            // Get updated local role
+            const updatedTrip = await getTrip(currentTripId);
+            const myRole = updatedTrip ? (updatedTrip.myRole || 'viewer') : 'viewer';
+
+            if (myRole === 'owner' || myRole === 'editor') {
+                // Editor/Owner: Bi-directional sync. Pull latest cloud updates first, then push local edits.
+                if (typeof pullTripFromCloud === 'function') {
+                    await pullTripFromCloud(currentTripId);
+                }
+                await syncTripToCloud(currentTripId);
+            } else {
+                // Viewer (Read-only): Pull only from the cloud.
+                if (typeof pullTripFromCloud === 'function') {
+                    const pulled = await pullTripFromCloud(currentTripId);
+                    if (!pulled) {
+                        throw new Error("Could not pull latest changes from cloud. Check your connection.");
+                    }
+                }
+            }
+            if (window.showToast) window.showToast('Trip fully synced! 🟢', 'success');
+        } else {
+            // Local Trip: Publish and push to cloud.
+            await syncTripToCloud(currentTripId);
+            if (window.showToast) window.showToast('Trip published and synced! 🟢', 'success');
         }
-        await syncTripToCloud(currentTripId);
-        if (window.showToast) window.showToast('Trip fully synced to cloud! 🟢', 'success');
-        loadHomeData();
+
+        // Re-render UI to show latest data
+        await loadHomeData();
+        if (window.currentScreen === 'expenses' && typeof loadExpenses === 'function') loadExpenses();
+        if (window.currentScreen === 'split' && typeof calculateSplit === 'function') calculateSplit();
+        if (window.currentScreen === 'plan' && typeof loadTripNotes === 'function') loadTripNotes();
+        await loadTripsCapsules();
     } catch (error) {
         alert('Sync error: ' + error.message);
     }
