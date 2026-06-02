@@ -147,9 +147,40 @@ window.subscribeToTripUpdates = function(shareId) {
             if (actorName !== myDeviceName) {
                 isApplyingCloudUpdate = true;
                 
-                // Show Mobile-Style Push Notification
-                if (window.showToast) {
-                    window.showToast(`${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`, 'info');
+                const actionDesc = cloudTripRecord.last_action_desc || 'updated the trip';
+                
+                // Parse expense details from action description if it's an expense add
+                // Format: 'added expense "Title" (₹Amount)'
+                const expenseMatch = actionDesc.match(/added expense "(.+?)"\s*\(([^)]+)\)/);
+                
+                if (expenseMatch && window.showRichExpenseNotification) {
+                    // Extract expense details
+                    const expenseTitle = expenseMatch[1];
+                    const amount = expenseMatch[2];
+                    
+                    // Try to get category from the new expenses in cloud data
+                    let category = 'other';
+                    if (cloudTripRecord.trip_data && cloudTripRecord.trip_data.expenses) {
+                        const latestExpense = cloudTripRecord.trip_data.expenses.find(
+                            e => e.title === expenseTitle
+                        );
+                        if (latestExpense && latestExpense.category) {
+                            category = latestExpense.category;
+                        }
+                    }
+                    
+                    window.showRichExpenseNotification(
+                        actorName, 
+                        expenseTitle, 
+                        amount, 
+                        category,
+                        () => { if (typeof showScreen === 'function') showScreen('expenses'); }
+                    );
+                } else {
+                    // Plain toast for other updates (participant added, trip edited, etc.)
+                    if (window.showToast) {
+                        window.showToast(`${actorName} ${actionDesc}`, 'info');
+                    }
                 }
 
                 // Show Native System Notification if permission is granted
@@ -157,7 +188,7 @@ window.subscribeToTripUpdates = function(shareId) {
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.ready.then(registration => {
                             registration.showNotification('TripSplit Update', {
-                                body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                                body: `${actorName} ${actionDesc}`,
                                 icon: './assets/icon-192.png',
                                 badge: './assets/icon-192.png',
                                 vibrate: [100, 50, 100],
@@ -169,13 +200,13 @@ window.subscribeToTripUpdates = function(shareId) {
                             });
                         }).catch(err => {
                             new Notification('TripSplit Update', {
-                                body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                                body: `${actorName} ${actionDesc}`,
                                 icon: './assets/icon-192.png'
                             });
                         });
                     } else {
                         new Notification('TripSplit Update', {
-                            body: `${actorName} ${cloudTripRecord.last_action_desc || 'updated the trip'}`,
+                            body: `${actorName} ${actionDesc}`,
                             icon: './assets/icon-192.png'
                         });
                     }

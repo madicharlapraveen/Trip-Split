@@ -217,32 +217,105 @@ window.hideModal = function() {
   }
 };
 
-// Premium Toast Alert system
+// Premium Toast Alert system (Dark Theme)
 window.showToast = function(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   
   const toast = document.createElement('div');
   const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
-  const bg = type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 
-             type === 'error' ? 'bg-rose-50 border-rose-100 text-rose-800' : 
-             'bg-white/90 border-slate-100 text-slate-800 backdrop-blur-xl shadow-2xl';
-             
-  toast.className = `p-4 rounded-2xl border flex items-start space-x-3 transition-all duration-500 transform translate-y-[-100%] opacity-0 ${bg}`;
+  
+  // Dark matte toast colors
+  let bgColor, borderColor, textColor;
+  if (type === 'success') {
+    bgColor = 'rgba(16, 185, 129, 0.12)';
+    borderColor = 'rgba(16, 185, 129, 0.25)';
+    textColor = '#6ee7b7'; // emerald-300
+  } else if (type === 'error') {
+    bgColor = 'rgba(239, 68, 68, 0.12)';
+    borderColor = 'rgba(239, 68, 68, 0.25)';
+    textColor = '#fca5a5'; // rose-300
+  } else {
+    bgColor = 'rgba(30, 30, 36, 0.95)';
+    borderColor = 'rgba(255, 255, 255, 0.1)';
+    textColor = '#e2e8f0'; // slate-200
+  }
+  
+  toast.style.cssText = `
+    background: ${bgColor};
+    border: 1px solid ${borderColor};
+    color: ${textColor};
+    padding: 14px 16px;
+    border-radius: 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: translateY(-20px);
+    opacity: 0;
+    font-family: 'Outfit', sans-serif;
+  `;
   toast.innerHTML = `
-      <div class="text-xl">${icon}</div>
-      <div class="flex-1 mt-0.5 font-bold text-xs leading-relaxed">${message}</div>
+    <div style="font-size:18px; flex-shrink:0; margin-top:1px;">${icon}</div>
+    <div style="flex:1; font-weight:700; font-size:13px; line-height:1.4;">${message}</div>
   `;
   
   container.appendChild(toast);
   requestAnimationFrame(() => {
-      toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
   });
   
   setTimeout(() => {
-      toast.classList.add('opacity-0', 'translate-y-[-100%]');
-      setTimeout(() => toast.remove(), 500);
+    toast.style.transform = 'translateY(-20px)';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 500);
   }, 4000);
+};
+
+// Rich Expense Notification — iOS-style banner for real-time expense updates
+window.showRichExpenseNotification = function(actorName, expenseTitle, amount, category, onTap) {
+  // Remove existing banner if any
+  const existing = document.getElementById('rich-notif-banner');
+  if (existing) existing.remove();
+
+  const categoryEmoji = {
+    food: '🍽️', transport: '🚗', hotel: '🏨', accommodation: '🏨',
+    activity: '🎭', entertainment: '🎉', shopping: '🛍️', health: '💊',
+    emergency: '🚨', other: '📌', misc: '📌', fuel: '⛽'
+  };
+  const icon = categoryEmoji[(category || 'other').toLowerCase()] || '💸';
+
+  const banner = document.createElement('div');
+  banner.id = 'rich-notif-banner';
+  banner.className = 'rich-notification';
+  banner.innerHTML = `
+    <div class="rich-notification-card" onclick="this.closest('.rich-notification').remove(); ${onTap ? '(' + onTap.toString() + ')()' : ''}">
+      <div class="rich-notification-icon">${icon}</div>
+      <div class="rich-notification-body">
+        <div class="rich-notification-title">TripSplit • New Expense</div>
+        <div class="rich-notification-headline">${expenseTitle || 'Expense Added'}</div>
+        <div class="rich-notification-sub">${actorName} added · Tap to view details</div>
+      </div>
+      <div class="rich-notification-amount">${amount}</div>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+  
+  // Animate in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => banner.classList.add('show'));
+  });
+
+  // Auto-dismiss after 6 seconds
+  setTimeout(() => {
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 600);
+  }, 6000);
 };
 
 // Sync status dot & sync trigger (F2)
@@ -278,11 +351,10 @@ async function loadTripsCapsules() {
     const isActive = String(currentTripId) === String(trip.id);
     const capsule = document.createElement('button');
     capsule.onclick = () => selectTrip(trip.id);
-    capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all ${
-      isActive 
-      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-105' 
-      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-    }`;
+    capsule.style.cssText = isActive
+      ? 'background: var(--primary-gradient); color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); transform: scale(1.05);'
+      : 'background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.08);';
+    capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all`;
     capsule.textContent = trip.tripName;
     container.appendChild(capsule);
   });
