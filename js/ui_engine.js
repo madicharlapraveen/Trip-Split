@@ -922,7 +922,8 @@ async function loadHomeData(silentModeSwitch = false) {
 
   const trip = await getTrip(currentTripId);
   const participants = await getParticipants(currentTripId);
-  const expenses = await getExpenses(currentTripId);
+  const allExpenses = await getExpenses(currentTripId);
+  const expenses = allExpenses.filter(e => !e.isSettlement);
 
   const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
   window.currentTripSymbol = tripSymbol;
@@ -1099,13 +1100,9 @@ async function loadHomeData(silentModeSwitch = false) {
     participantsList.innerHTML = '';
     participants.forEach(participant => {
       const card = document.createElement('div');
-      card.className = 'bg-white rounded-3xl p-4 min-w-[140px] shadow-sm border border-slate-100 flex flex-col items-center animate-scale-in relative group';
+      card.className = 'bg-white rounded-3xl p-4 min-w-[140px] shadow-sm border border-slate-100 flex flex-col items-center animate-scale-in relative group cursor-pointer hover:border-indigo-200 transition-all';
+      card.onclick = () => window.viewParticipantProfile(participant.id);
       card.innerHTML = `
-        ${canEdit ? `
-        <button onclick="editParticipant(${participant.id})" class="absolute top-2 right-2 p-1 bg-slate-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-          <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-        </button>
-        ` : ''}
         <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-3 font-bold text-lg">
           ${participant.name.charAt(0).toUpperCase()}
         </div>
@@ -1146,7 +1143,7 @@ async function loadHomeData(silentModeSwitch = false) {
         <div class="text-right flex items-center space-x-4">
           <div>
               <p class="font-bold text-slate-800">${tripSymbol}${participant.totalSpent.toFixed(2)}</p>
-              <button onclick="editParticipant(${participant.id})" class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Edit</button>
+              <button onclick="viewParticipantProfile(${participant.id})" class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Profile & Pay</button>
           </div>
         </div>
       `;
@@ -1247,7 +1244,8 @@ async function loadHomeData(silentModeSwitch = false) {
 async function loadExpenses() {
   if (!currentTripId) return;
 
-  const expenses = await getExpenses(currentTripId);
+  const allExpenses = await getExpenses(currentTripId);
+  const expenses = allExpenses.filter(e => !e.isSettlement);
   const participants = await getParticipants(currentTripId);
   const trip = await getTrip(currentTripId);
   
@@ -1560,6 +1558,295 @@ window.editParticipant = async function(participantId) {
       loadHomeData();
     }
   });
+};
+
+// ── Participant Profile & Settle Modal ───────────────────────────────────────
+window.viewParticipantProfile = async function(participantId) {
+  const participant = await getParticipant(participantId);
+  if (!participant) return;
+
+  const trip = await getTrip(currentTripId);
+  const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
+  const participants = await getParticipants(currentTripId);
+  const allExpenses = await getExpenses(currentTripId);
+  
+  const travelExpenses = allExpenses.filter(e => !e.isSettlement);
+  const settlements = allExpenses.filter(e => e.isSettlement);
+
+  const totalSpentOnTravel = travelExpenses
+    .filter(e => e.paidBy === participantId)
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const totalTravelCost = travelExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const perPersonShare = participants.length > 0 ? (totalTravelCost / participants.length) : 0;
+  
+  const sentPaymentsTotal = settlements
+    .filter(e => e.paidBy === participantId)
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const receivedPaymentsTotal = settlements
+    .filter(e => e.isSettlement && e.splitBetween && e.splitBetween.includes(participantId))
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const netBalance = (totalSpentOnTravel + sentPaymentsTotal) - (perPersonShare + receivedPaymentsTotal);
+  const isCreditor = netBalance >= 0;
+
+  const mySentPayments = settlements.filter(e => e.paidBy === participantId);
+  const myReceivedPayments = settlements.filter(e => e.isSettlement && e.splitBetween && e.splitBetween.includes(participantId));
+  const allMyPayments = [...mySentPayments, ...myReceivedPayments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const otherParticipants = participants.filter(p => p.id !== participantId);
+  const otherOptionsHtml = otherParticipants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+  let paymentsHistoryHtml = '';
+  if (allMyPayments.length > 0) {
+    paymentsHistoryHtml = allMyPayments.map(pay => {
+      const isSender = pay.paidBy === participantId;
+      const peerName = isSender 
+        ? (participants.find(p => p.id === pay.splitBetween[0])?.name || 'Unknown')
+        : (participants.find(p => p.id === pay.paidBy)?.name || 'Unknown');
+      
+      const paymentMethod = pay.description && pay.description.includes('Cash') ? '💵 Cash' : '💳 UPI / Transfer';
+
+      return `
+        <div class="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+          <div>
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-200">
+              ${isSender ? `👉 Paid <strong>${peerName}</strong>` : `👈 Recd from <strong>${peerName}</strong>`}
+            </p>
+            <p class="text-[9px] text-slate-400 mt-0.5">${paymentMethod} • ${new Date(pay.createdAt).toLocaleDateString()}</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="text-xs font-black ${isSender ? 'text-rose-500' : 'text-emerald-500'}">
+              ${isSender ? '-' : '+'}${tripSymbol}${pay.amount.toFixed(2)}
+            </span>
+            <button onclick="window.deleteDirectPayment(${pay.id}, ${participantId})" class="p-1 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:text-rose-700 rounded-lg transition-colors border border-rose-100 dark:border-rose-500/20" title="Delete Payment">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    paymentsHistoryHtml = `<p class="text-xs text-slate-400 dark:text-slate-500 italic text-center py-4">No payments recorded yet.</p>`;
+  }
+
+  const content = `
+    <div id="participant-profile-view">
+      <div class="flex justify-between items-start mb-6">
+        <div class="flex items-center space-x-4">
+          <div class="w-14 h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center font-extrabold text-2xl border border-indigo-500/20">
+            ${participant.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-slate-800 dark:text-white">${participant.name}</h3>
+            <p class="text-xs text-slate-400 font-medium mt-0.5">${participant.phone || 'No phone'} • ${participant.familyCount > 0 ? `+${participant.familyCount} family` : 'Individual'}</p>
+          </div>
+        </div>
+        <button onclick="window.toggleParticipantEditForm()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-black rounded-xl transition-all">
+          Edit Info
+        </button>
+      </div>
+
+      <!-- Financial Statistics Box -->
+      <div class="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 mb-6">
+        <p class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Financial Profile</p>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Total Spent</span>
+            <p class="text-sm font-black text-slate-800 dark:text-white mt-1">${tripSymbol}${totalSpentOnTravel.toLocaleString('en-IN')}</p>
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Expected Share</span>
+            <p class="text-sm font-black text-slate-800 dark:text-white mt-1">${tripSymbol}${perPersonShare.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+        <div class="flex justify-between items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3 shadow-sm">
+          <div>
+            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Net Status</span>
+            <p class="text-xs font-medium text-slate-400 mt-0.5">Including registered paybacks</p>
+          </div>
+          <div class="text-right">
+            <p class="text-base font-black ${isCreditor ? 'text-emerald-500' : 'text-rose-500'}">
+              ${isCreditor ? '+' : '-'}${tripSymbol}${Math.abs(netBalance).toFixed(2)}
+            </p>
+            <span class="text-[9px] font-bold uppercase tracking-wider ${isCreditor ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'text-rose-500 bg-rose-50 dark:bg-rose-500/10'} px-2 py-0.5 rounded-full inline-block mt-0.5">
+              ${isCreditor ? 'Receives back' : 'Owes total'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Record Direct Payment Entry Form -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 mb-6 shadow-sm">
+        <h4 class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-3">💸 Record Direct Payment</h4>
+        <form id="record-direct-payment-form" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Action</label>
+              <select id="payment-direction" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-semibold focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200">
+                <option value="sent">Paid To</option>
+                <option value="received">Received From</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Crew Member</label>
+              <select id="payment-peer" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-semibold focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200" required>
+                ${otherOptionsHtml}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Amount</label>
+              <input type="number" id="payment-amount" placeholder="₹ Amount" min="1" step="any" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-semibold focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200" required>
+            </div>
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Method</label>
+              <select id="payment-method" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-semibold focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200">
+                <option value="UPI">UPI / GPay / NetBanking</option>
+                <option value="Cash">Cash Handover</option>
+                <option value="Other">Other / Card</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-600/10">
+            Save Payment Record
+          </button>
+        </form>
+      </div>
+
+      <!-- Payment History list -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 shadow-sm max-h-[180px] overflow-y-auto no-scrollbar">
+        <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">📜 Payment History</h4>
+        <div class="space-y-1">${paymentsHistoryHtml}</div>
+      </div>
+      
+      <div class="pt-4 flex justify-end">
+        <button onclick="hideModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs transition-all">Close Profile</button>
+      </div>
+    </div>
+
+    <!-- Edit Info Form inside Modal (hidden by default) -->
+    <div id="participant-edit-form" class="hidden">
+      <h3 class="text-xl font-bold mb-6 text-slate-800 dark:text-white">Edit Crew Info</h3>
+      <form id="edit-profile-fields-form" class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Name</label>
+          <input type="text" id="edit-part-name" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 transition-all" value="${participant.name}" required>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Phone</label>
+            <input type="tel" id="edit-part-phone" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 transition-all" value="${participant.phone || ''}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Family Size</label>
+            <input type="number" id="edit-part-family" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 transition-all" min="0" value="${participant.familyCount}">
+          </div>
+        </div>
+        <div class="flex space-x-3 pt-4">
+          <button type="submit" class="flex-1 btn-primary py-4">Save Changes</button>
+          <button type="button" onclick="window.toggleParticipantEditForm()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Back to Profile</button>
+        </div>
+      </form>
+    </div>
+  `;
+  showModal(content);
+
+  // Wire up Record Payment form submit
+  document.getElementById('record-direct-payment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const direction = document.getElementById('payment-direction').value;
+    const peerId = parseInt(document.getElementById('payment-peer').value);
+    const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
+    const method = document.getElementById('payment-method').value;
+
+    if (amount > 0 && peerId) {
+      const peer = participants.find(p => p.id === peerId);
+      if (!peer) return;
+
+      const fromId = direction === 'sent' ? participantId : peerId;
+      const toId = direction === 'sent' ? peerId : participantId;
+      const fromName = direction === 'sent' ? participant.name : peer.name;
+      const toName = direction === 'sent' ? peer.name : participant.name;
+
+      const settlementKey = `${fromName}-->${toName}`;
+
+      const settlementExpense = {
+        tripId: currentTripId,
+        id: Date.now(),
+        title: `Payment: ${fromName} → ${toName}`,
+        description: `Direct Settle (${method}): ${fromName} → ${toName}`,
+        amount: amount,
+        totalAmount: amount,
+        paidBy: fromId,
+        category: 'Settlement',
+        splitMethod: 'exact',
+        splitBetween: [toId],
+        splits: { [toId]: amount },
+        date: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        isSettlement: true,
+        settlementKey: settlementKey
+      };
+
+      const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
+      if (!storageData.expenses) storageData.expenses = [];
+      storageData.expenses.push(settlementExpense);
+      localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+
+      if (typeof triggerBackgroundSync === 'function') {
+        triggerBackgroundSync(`Recorded direct payment from ${fromName} to ${toName}`);
+      }
+
+      if (window.showToast) window.showToast('Payment recorded successfully! 💸', 'success');
+
+      await window.viewParticipantProfile(participantId);
+      loadHomeData();
+    }
+  });
+
+  // Wire up edit info submit
+  document.getElementById('edit-profile-fields-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('edit-part-name').value.trim();
+    const phone = document.getElementById('edit-part-phone').value.trim();
+    const familyCount = parseInt(document.getElementById('edit-part-family').value) || 0;
+
+    if (name) {
+      await updateParticipant(participantId, { name, phone, familyCount });
+      await window.viewParticipantProfile(participantId);
+      loadHomeData();
+    }
+  });
+};
+
+window.toggleParticipantEditForm = function() {
+  const profileView = document.getElementById('participant-profile-view');
+  const editForm = document.getElementById('participant-edit-form');
+  if (profileView && editForm) {
+    const isEditing = profileView.classList.contains('hidden');
+    profileView.classList.toggle('hidden', !isEditing);
+    editForm.classList.toggle('hidden', isEditing);
+  }
+};
+
+window.deleteDirectPayment = async function(paymentId, participantId) {
+  if (confirm('Are you sure you want to delete this payment record?')) {
+    const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
+    storageData.expenses = storageData.expenses.filter(e => e.id !== paymentId);
+    localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+
+    if (typeof triggerBackgroundSync === 'function') {
+      triggerBackgroundSync(`Deleted payment record`);
+    }
+
+    if (window.showToast) window.showToast('Payment record deleted', 'info');
+
+    await window.viewParticipantProfile(participantId);
+    loadHomeData();
+  }
 };
 
 // Switch App Mode (silent persists changes quietly)
