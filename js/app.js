@@ -282,11 +282,17 @@ async function duplicateTrip(tripId) {
   const newTripId = await duplicateTripFromDB(tripId);
   if (newTripId) {
     const participants = await getParticipants(tripId);
+    
+    // Map old participant IDs to new participant IDs
+    const pIdMap = {};
+    
     for (const participant of participants) {
+      const oldId = participant.id;
       // Strip old id so addParticipant generates a fresh UUID
       const newParticipant = { ...participant, tripId: newTripId };
       delete newParticipant.id;
-      await addParticipant(newParticipant);
+      const newPId = await addParticipant(newParticipant);
+      pIdMap[oldId] = newPId;
     }
 
     const expenses = await getExpenses(tripId);
@@ -294,7 +300,24 @@ async function duplicateTrip(tripId) {
       // Strip old id so addExpense generates a fresh UUID
       const newExpense = { ...expense, tripId: newTripId };
       delete newExpense.id;
+      
+      // Remap paidBy to the new participant
+      if (pIdMap[newExpense.paidBy]) {
+          newExpense.paidBy = pIdMap[newExpense.paidBy];
+      }
+      
+      // Remap splitBetween array
+      if (newExpense.splitBetween && Array.isArray(newExpense.splitBetween)) {
+          newExpense.splitBetween = newExpense.splitBetween.map(id => pIdMap[id] || id);
+      }
+      
       await addExpense(newExpense);
+    }
+
+    // Remap leaderId if the trip uses it
+    const newTrip = await getTrip(newTripId);
+    if (newTrip && newTrip.leaderId && pIdMap[newTrip.leaderId]) {
+       await updateTrip(newTripId, { leaderId: pIdMap[newTrip.leaderId] });
     }
 
     loadTrips();
