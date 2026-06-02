@@ -10,8 +10,10 @@ window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 (function applyAppTheme() {
   const saved = localStorage.getItem('tripsplit_theme') || 'dark';
   if (saved === 'light') {
+    document.documentElement.classList.add('light-mode');
     document.body.classList.add('light-mode');
   } else {
+    document.documentElement.classList.remove('light-mode');
     document.body.classList.remove('light-mode');
   }
   // Update browser theme-color meta to match
@@ -21,6 +23,14 @@ window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 
 window.toggleAppTheme = function() {
   const isLight = document.body.classList.toggle('light-mode');
+  
+  // Keep HTML root in sync to prevent flashes on reload
+  if (isLight) {
+    document.documentElement.classList.add('light-mode');
+  } else {
+    document.documentElement.classList.remove('light-mode');
+  }
+  
   const theme = isLight ? 'light' : 'dark';
   localStorage.setItem('tripsplit_theme', theme);
 
@@ -28,7 +38,7 @@ window.toggleAppTheme = function() {
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) metaTheme.setAttribute('content', isLight ? '#f0f4ff' : '#121214');
 
-  // Update font on body explicitly for immediate effect
+  // Update font explicitly for immediate effect
   document.body.style.fontFamily = isLight ? "'Inter', sans-serif" : "'Outfit', sans-serif";
 
   // Show confirmation toast

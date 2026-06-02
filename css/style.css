@@ -105,8 +105,18 @@ body.theme-split {
 }
 
 /* ============================================================
-   LIGHT MODE — Applied when <body class="light-mode"> is set
+   LIGHT MODE — Works whether class is on <html> OR <body>
+   The <head> script sets html.light-mode instantly (before body exists).
+   ui_engine.js also sets body.light-mode when scripts load.
+   Both selectors ensure zero flash at every stage of page load.
    ============================================================ */
+
+/* Instant background on root — prevents dark flash before body renders */
+html.light-mode {
+    background: #f0f4ff;
+}
+
+html.light-mode body,
 body.light-mode {
     font-family: 'Inter', sans-serif;
 
@@ -121,14 +131,17 @@ body.light-mode {
 }
 
 /* Light mode ambient blobs */
+html.light-mode body::before,
 body.light-mode::before {
     background: rgba(124, 58, 237, 0.06);
 }
+html.light-mode body::after,
 body.light-mode::after {
     background: rgba(79, 70, 229, 0.06);
 }
 
 /* Light mode nav dock */
+html.light-mode .nav-dock,
 body.light-mode .nav-dock {
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(79, 70, 229, 0.12);
@@ -136,20 +149,30 @@ body.light-mode .nav-dock {
 }
 
 /* Light mode FAB shadow */
+html.light-mode .fab,
 body.light-mode .fab {
     box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
 }
 
 /* Light mode modal */
+html.light-mode .modal-content,
 body.light-mode .modal-content {
     background: #ffffff;
     box-shadow: 0 -8px 40px rgba(79, 70, 229, 0.12), 0 0 0 1px rgba(79, 70, 229, 0.08);
 }
+html.light-mode .modal-content::before,
 body.light-mode .modal-content::before {
     background: rgba(79, 70, 229, 0.15);
 }
 
 /* Light mode inputs */
+html.light-mode input[type="text"],
+html.light-mode input[type="number"],
+html.light-mode input[type="tel"],
+html.light-mode input[type="email"],
+html.light-mode input[type="password"],
+html.light-mode select,
+html.light-mode textarea,
 body.light-mode input[type="text"],
 body.light-mode input[type="number"],
 body.light-mode input[type="tel"],
@@ -163,31 +186,34 @@ body.light-mode textarea {
 }
 
 /* Light mode utility overrides */
-body.light-mode .bg-white { background-color: #ffffff !important; }
-body.light-mode .bg-slate-50 { background-color: #f8faff !important; }
-body.light-mode .bg-slate-100 { background-color: #eff1ff !important; }
-body.light-mode .bg-slate-200 { background-color: #e0e4f5 !important; }
-body.light-mode .text-slate-900 { color: #1e1b4b !important; }
-body.light-mode .text-slate-800 { color: #1e1b4b !important; }
-body.light-mode .text-slate-700 { color: #312e81 !important; }
-body.light-mode .text-slate-600 { color: #64748b !important; }
-body.light-mode .text-slate-500 { color: #64748b !important; }
-body.light-mode .text-slate-400 { color: #94a3b8 !important; }
-body.light-mode .border-slate-100 { border-color: rgba(79, 70, 229, 0.15) !important; }
-body.light-mode .border-slate-200 { border-color: rgba(79, 70, 229, 0.2) !important; }
+html.light-mode .bg-white, body.light-mode .bg-white { background-color: #ffffff !important; }
+html.light-mode .bg-slate-50, body.light-mode .bg-slate-50 { background-color: #f8faff !important; }
+html.light-mode .bg-slate-100, body.light-mode .bg-slate-100 { background-color: #eff1ff !important; }
+html.light-mode .bg-slate-200, body.light-mode .bg-slate-200 { background-color: #e0e4f5 !important; }
+html.light-mode .text-slate-900, body.light-mode .text-slate-900 { color: #1e1b4b !important; }
+html.light-mode .text-slate-800, body.light-mode .text-slate-800 { color: #1e1b4b !important; }
+html.light-mode .text-slate-700, body.light-mode .text-slate-700 { color: #312e81 !important; }
+html.light-mode .text-slate-600, body.light-mode .text-slate-600 { color: #64748b !important; }
+html.light-mode .text-slate-500, body.light-mode .text-slate-500 { color: #64748b !important; }
+html.light-mode .text-slate-400, body.light-mode .text-slate-400 { color: #94a3b8 !important; }
+html.light-mode .border-slate-100, body.light-mode .border-slate-100 { border-color: rgba(79, 70, 229, 0.15) !important; }
+html.light-mode .border-slate-200, body.light-mode .border-slate-200 { border-color: rgba(79, 70, 229, 0.2) !important; }
 
 /* Light mode menu list item */
+html.light-mode .menu-list-item,
 body.light-mode .menu-list-item {
     background: #ffffff;
     border: 1px solid rgba(79, 70, 229, 0.1);
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.05);
 }
+html.light-mode .menu-list-item:hover,
 body.light-mode .menu-list-item:hover {
     background: #f0f4ff;
     border-color: rgba(79, 70, 229, 0.2);
 }
 
 /* Light mode btn-icon (header buttons) */
+html.light-mode .btn-icon,
 body.light-mode .btn-icon {
     background: #ffffff;
     border: 1px solid rgba(79, 70, 229, 0.12);
@@ -196,6 +222,7 @@ body.light-mode .btn-icon {
 }
 
 /* Light mode glass card */
+html.light-mode .glass-card, html.light-mode .premium-card,
 body.light-mode .glass-card, body.light-mode .premium-card {
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(79, 70, 229, 0.1);
@@ -205,14 +232,17 @@ body.light-mode .glass-card, body.light-mode .premium-card {
 }
 
 /* Light mode itinerary */
+html.light-mode .itinerary-plate,
 body.light-mode .itinerary-plate {
     background: #ffffff;
     border: 1px solid rgba(79, 70, 229, 0.1);
     box-shadow: 0 4px 16px rgba(79, 70, 229, 0.07);
 }
+html.light-mode .itinerary-bubble::before,
 body.light-mode .itinerary-bubble::before {
     background: #c7d2fe; /* indigo-200 */
 }
+html.light-mode .itinerary-dot,
 body.light-mode .itinerary-dot {
     background: white;
     border-color: #4f46e5;
@@ -220,17 +250,22 @@ body.light-mode .itinerary-dot {
 }
 
 /* Light mode rich notification */
+html.light-mode .rich-notification-card,
 body.light-mode .rich-notification-card {
     background: rgba(255, 255, 255, 0.97);
     border: 1px solid rgba(79, 70, 229, 0.15);
     box-shadow: 0 20px 40px rgba(79, 70, 229, 0.12);
 }
+html.light-mode .rich-notification-title,
 body.light-mode .rich-notification-title { color: #64748b; }
+html.light-mode .rich-notification-headline,
 body.light-mode .rich-notification-headline { color: #1e1b4b; }
+html.light-mode .rich-notification-sub,
 body.light-mode .rich-notification-sub { color: #94a3b8; }
 
 /* Light mode splash screen */
-body.light-mode ~ .splash-screen, .light-mode .splash-screen {
+html.light-mode .splash-screen,
+body.light-mode .splash-screen {
     background: #f0f4ff;
 }
 
@@ -256,10 +291,12 @@ body.light-mode ~ .splash-screen, .light-mode .splash-screen {
     transform: rotate(0deg) scale(1);
 }
 
+html.light-mode #theme-toggle-btn .icon-sun,
 body.light-mode #theme-toggle-btn .icon-sun {
     opacity: 1;
     transform: rotate(0deg) scale(1);
 }
+html.light-mode #theme-toggle-btn .icon-moon,
 body.light-mode #theme-toggle-btn .icon-moon {
     opacity: 0;
     transform: rotate(-90deg) scale(0.5);
