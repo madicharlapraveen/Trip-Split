@@ -415,7 +415,19 @@ window.showTripSelectionModal = function() {
       content += '</div>';
       content += '<button onclick="showCreateTripModal()" class="w-full bg-slate-100 text-slate-700 font-bold py-4 rounded-2xl mt-6 hover:bg-slate-200 transition-colors">Create New Trip</button>';
     }
-      const content = `
+    showModal(content);
+  });
+};
+
+window.showCreateTripModal = async function() {
+  let templatesOptions = '';
+  let templates = [];
+  if (typeof getTemplates === 'function') {
+    templates = await getTemplates();
+    templatesOptions = templates.map(t => `<option value="${t.id}">${t.name} (Crew: ${t.crew ? t.crew.length : 0})</option>`).join('');
+  }
+  
+  const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">New Trip</h3>
     <form id="create-trip-form" class="space-y-5">
       <div>
@@ -511,21 +523,13 @@ window.showTripSelectionModal = function() {
           const t = list.find(x => x.id === tId);
           if (t && t.crew) {
              t.crew.forEach((c, idx) => {
-                leaderSelect.innerHTML += \`<option value="template_crew_\${idx}">\${c.name}</option>\`;
+                leaderSelect.innerHTML += `<option value="template_crew_${idx}">${c.name}</option>`;
              });
           }
         }
       });
     }
-  }, 50);on..."></textarea>
-      </div>
-      <div class="flex space-x-3 pt-4">
-        <button type="submit" class="flex-1 btn-primary py-4">Create Trip</button>
-        <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
-      </div>
-    </form>
-  `;
-  showModal(content);
+  }, 50);
 
   document.getElementById('create-trip-form').addEventListener('submit', async (e) => {
     e.preventDefault();
