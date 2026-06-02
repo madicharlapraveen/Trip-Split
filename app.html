@@ -11,7 +11,7 @@
     <!-- Open Graph Meta Tags for Link Previews -->
     <meta property="og:title" content="TripSplit - Premium Expense Manager">
     <meta property="og:description" content="Split bills, share memories. Track trip expenses and settle splits effortlessly.">
-    <meta property="og:image" content="assets/icon-512.png">
+    <meta property="og:image" content="https://trip-split-e56d3.web.app/assets/icon-512.png">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
     <meta property="og:image:type" content="image/png">
@@ -21,7 +21,7 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="TripSplit - Premium Expense Manager">
     <meta name="twitter:description" content="Split bills, share memories. Track trip expenses and settle splits effortlessly.">
-    <meta name="twitter:image" content="assets/icon-512.png">
+    <meta name="twitter:image" content="https://trip-split-e56d3.web.app/assets/icon-512.png">
     
     <!-- Tailwind CDN for utility classes used by ui_engine.js -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -96,7 +96,7 @@
                 <div class="flex justify-between items-start mb-6">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="pill">Active Trip</span>
+                            <span id="trip-style-pill" class="pill">Active Trip</span>
                             <div id="live-sync-indicator" class="flex items-center gap-1.5 bg-white/20 text-white/80 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all">
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Local
                             </div>

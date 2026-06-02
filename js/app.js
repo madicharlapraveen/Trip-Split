@@ -334,9 +334,21 @@ async function editExpense(expenseId) {
   if (!expense) return;
 
   const participants = await getParticipants(currentTripId);
-  const participantOptions = participants.map(p => 
-    `<option value="${p.id}" ${p.id === expense.paidBy ? 'selected' : ''}>${p.name}</option>`
-  ).join('');
+  const trip = await getTrip(currentTripId);
+  let leaderId = trip ? trip.leaderId : null;
+  if ((!leaderId || leaderId === 'creator') && participants.length > 0) {
+    leaderId = participants[0].id;
+  }
+
+  let participantOptions = '';
+  if (trip && trip.tripType === 'single_payer') {
+    const leader = participants.find(p => String(p.id) === String(leaderId)) || participants[0];
+    participantOptions = `<option value="${leader.id}" selected>${leader.name} (Leader)</option>`;
+  } else {
+    participantOptions = participants.map(p => 
+      `<option value="${p.id}" ${p.id === expense.paidBy ? 'selected' : ''}>${p.name}</option>`
+    ).join('');
+  }
 
   const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">Edit Expense</h3>

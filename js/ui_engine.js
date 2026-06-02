@@ -367,9 +367,19 @@ async function loadTripsCapsules() {
     const isActive = String(currentTripId) === String(trip.id);
     const capsule = document.createElement('button');
     capsule.onclick = () => selectTrip(trip.id);
-    capsule.style.cssText = isActive
-      ? 'background: var(--primary-gradient); color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); transform: scale(1.05);'
-      : 'background: white; color: #64748b; border: 1px solid rgba(79, 70, 229, 0.15); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.05);';
+    
+    if (trip.tripType === 'single_payer') {
+      // Warm Amber/Gold theme for Leader-Led trips
+      capsule.style.cssText = isActive
+        ? 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; box-shadow: 0 4px 12px rgba(245,158,11,0.4); transform: scale(1.05);'
+        : 'background: #fffbeb; color: #b45309; border: 1px solid rgba(245, 158, 11, 0.25); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.05);';
+    } else {
+      // Standard Indigo/Purple theme for Friends Split trips
+      capsule.style.cssText = isActive
+        ? 'background: var(--primary-gradient); color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); transform: scale(1.05);'
+        : 'background: white; color: #64748b; border: 1px solid rgba(79, 70, 229, 0.15); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.05);';
+    }
+
     capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all`;
     capsule.textContent = trip.tripName;
     container.appendChild(capsule);
@@ -672,7 +682,18 @@ window.showAddExpenseModal = async function() {
         return;
     }
 
-    const participantOptions = participants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    let leaderId = trip ? trip.leaderId : null;
+    if ((!leaderId || leaderId === 'creator') && participants.length > 0) {
+      leaderId = participants[0].id;
+    }
+
+    let participantOptions = '';
+    if (trip && trip.tripType === 'single_payer') {
+      const leader = participants.find(p => String(p.id) === String(leaderId)) || participants[0];
+      participantOptions = `<option value="${leader.id}" selected>${leader.name} (Leader)</option>`;
+    } else {
+      participantOptions = participants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
     const baseSymbol = window.currentTripSymbol || '₹';
 
     const content = `
@@ -995,6 +1016,16 @@ async function loadHomeData(silentModeSwitch = false) {
   const subtext = document.getElementById('trip-dates');
   if (subtext) {
       subtext.textContent = (trip && trip.notes) ? trip.notes : 'Manage your travel expenses';
+  }
+
+  // Update Trip Style Pill dynamically
+  const stylePill = document.getElementById('trip-style-pill');
+  if (stylePill && trip) {
+    stylePill.textContent = trip.tripType === 'single_payer' ? '👑 Leader Trip' : '👥 Friends Trip';
+    stylePill.style.background = trip.tripType === 'single_payer' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(79, 70, 229, 0.35)'; // Amber/Gold for leader, Indigo for friends
+  } else if (stylePill) {
+    stylePill.textContent = 'Active Trip';
+    stylePill.style.background = '';
   }
 
   // Dynamic Cover Photo Background for Active Hero Card
@@ -3542,7 +3573,7 @@ window.shareTripInvite = async function() {
     }
   }
 
-  const message = `Join my trip "${trip.tripName}" on TripSplit!\n\nUse this Trip ID to collaborate live:\n👉 *${trip.share_id}*\n\nTo join:\n1. Open TripSplit\n2. Go to Settings or Profile Tab\n3. Click "Join Trip"\n4. Enter the Trip ID above!\n\nSplit bills, share memories. A Product from Aispace.co.in`;
+  const message = `Join my trip "${trip.tripName}" on TripSplit!\n\n👉 App Link: https://trip-split-e56d3.web.app/\n\nUse this Trip ID to collaborate live:\n👉 *${trip.share_id}*\n\nTo join:\n1. Open TripSplit\n2. Go to Settings or Profile Tab\n3. Click "Join Trip"\n4. Enter the Trip ID above!\n\nSplit bills, share memories. A Product from Aispace.co.in`;
   
   if (navigator.share) {
     navigator.share({
