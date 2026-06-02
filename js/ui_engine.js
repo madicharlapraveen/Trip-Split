@@ -1296,20 +1296,51 @@ async function loadHomeData(silentModeSwitch = false) {
     const closeCard = document.createElement('div');
     closeCard.id = 'close-trip-card';
     if (trip.isClosed) {
+       let buttonsHtml = '';
+       
+       if (canEdit) {
+           buttonsHtml += `
+             <button onclick="broadcastDuesWhatsApp()" class="flex-1 max-w-[200px] py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+                Broadcast Dues
+             </button>
+             <button onclick="reopenTrip()" class="px-4 py-3 bg-white border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-all">
+                Reopen
+             </button>
+           `;
+       }
+       
+       const profile = await window.getUserProfile();
+       let myDebt = null;
+       if (profile && profile.name) {
+           const splitData = await window.calculateSplit();
+           myDebt = splitData.settlements.find(s => s.from.toLowerCase().trim() === profile.name.toLowerCase().trim());
+       }
+
+       if (myDebt && trip.paymentUpiId) {
+           buttonsHtml += `
+             <button onclick="showPaymentPopup('${myDebt.to}', ${myDebt.amount}, '${trip.paymentUpiId}', '${tripSymbol}')" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+                Pay via UPI
+             </button>
+           `;
+           
+           const hasSeenPopup = sessionStorage.getItem(`upi_popup_seen_${currentTripId}`);
+           if (!hasSeenPopup) {
+               setTimeout(() => {
+                   window.showPaymentPopup(myDebt.to, myDebt.amount, trip.paymentUpiId, tripSymbol);
+                   sessionStorage.setItem(`upi_popup_seen_${currentTripId}`, 'true');
+               }, 500);
+           }
+       }
+
        closeCard.className = 'premium-card bg-rose-50 border-rose-200 mt-6 mb-2 text-center';
        closeCard.innerHTML = `
          <div class="inline-block p-3 bg-rose-100 text-rose-500 rounded-full mb-3">
            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/></svg>
          </div>
-         <h4 class="text-sm font-bold text-rose-900 mb-1">Trip Closed & Locked</h4>
+         <h4 class="text-sm font-bold text-rose-900 mb-1">Trip Completed & Locked</h4>
          <p class="text-xs text-rose-600 mb-4">No new expenses can be added.</p>
-         <div class="flex gap-2 justify-center">
-            <button onclick="broadcastDuesWhatsApp()" class="flex-1 max-w-[200px] py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
-               Broadcast Dues
-            </button>
-            <button onclick="reopenTrip()" class="px-4 py-3 bg-white border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-all">
-               Reopen
-            </button>
+         <div class="flex gap-2 justify-center flex-wrap">
+            ${buttonsHtml}
          </div>
        `;
     } else {
@@ -3525,10 +3556,32 @@ window.shareTripInvite = async function() {
 };
 
 window.closeTrip = async function() {
-  if (!confirm("Are you sure you want to close this trip? This will lock all new expenses.")) return;
-  await updateTrip(currentTripId, { isClosed: true });
-  if (window.showToast) window.showToast('Trip Closed & Locked 🔒', 'success');
-  loadHomeData();
+  const content = `
+    <h3 class="text-xl font-bold mb-6 text-slate-800">Close & Lock Trip</h3>
+    <form id="close-trip-form" class="space-y-4">
+      <p class="text-sm text-slate-600 mb-2">This will lock all expenses. Please enter your UPI ID to receive payments.</p>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Your UPI ID</label>
+        <input type="text" id="leader-upi-id" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. name@okhdfcbank" required>
+      </div>
+      <div class="flex space-x-3 pt-4">
+        <button type="submit" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl transition-all shadow-md">Lock & Close</button>
+        <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
+      </div>
+    </form>
+  `;
+  window.showModal(content);
+
+  document.getElementById('close-trip-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const upiId = document.getElementById('leader-upi-id').value.trim();
+    if (upiId) {
+       await window.updateTrip(currentTripId, { isClosed: true, paymentUpiId: upiId });
+       window.hideModal();
+       if (window.showToast) window.showToast('Trip Closed & Locked 🔒', 'success');
+       window.loadHomeData();
+    }
+  });
 };
 
 window.reopenTrip = async function() {
@@ -3560,9 +3613,42 @@ window.broadcastDuesWhatsApp = async function() {
           msg += `• ${s.from} owes ${symbol}${s.amount.toFixed(0)} to ${s.to}\n`;
       });
   }
+  if (trip.paymentUpiId) {
+      msg += `\n*Pay via UPI:* ${trip.paymentUpiId}`;
+  }
   
-  msg += `\nPlease settle your dues at the earliest.`;
+  msg += `\n\nPlease settle your dues at the earliest.`;
   
   const encodedMsg = encodeURIComponent(msg);
   window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+};
+
+window.showPaymentPopup = function(leaderName, amount, upiId, symbol) {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=${upiId}&pn=${encodeURIComponent(leaderName)}&am=${amount}&cu=INR`;
+  const content = `
+    <div class="text-center animate-scale-in">
+      <div class="inline-block p-4 bg-emerald-100 text-emerald-600 rounded-full mb-4">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <h3 class="text-2xl font-black text-slate-800 mb-2">Trip Completed!</h3>
+      <p class="text-sm text-slate-500 mb-6">Please settle your final dues with <span class="font-bold text-slate-800">${leaderName}</span>.</p>
+      
+      <div class="bg-slate-50 rounded-3xl p-6 border border-slate-100 mb-6">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Amount Due</p>
+        <p class="text-4xl font-black text-rose-600 mb-4">${symbol}${amount.toFixed(2)}</p>
+        
+        <div class="bg-white p-2 rounded-2xl inline-block shadow-sm border border-slate-100 mb-4">
+           <img src="${qrUrl}" alt="UPI QR Code" class="w-48 h-48 object-contain">
+        </div>
+        
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">UPI ID</p>
+        <div class="flex items-center justify-center gap-2">
+           <p class="text-sm font-bold text-slate-800 bg-slate-200 px-3 py-1.5 rounded-lg select-all">${upiId}</p>
+        </div>
+      </div>
+      
+      <button onclick="hideModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-md">I'll Pay Now</button>
+    </div>
+  `;
+  window.showModal(content);
 };
