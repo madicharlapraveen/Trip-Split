@@ -2,6 +2,18 @@
 
 const STORAGE_KEY = 'tripsplit_data';
 
+// ── Safe UUID Generator ──────────────────────────────────────────────────────
+// Uses crypto.randomUUID() when available (all modern browsers + PWA contexts).
+// Falls back to a timestamp + random hex string that is globally unique enough.
+function generateId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID(); // e.g. '550e8400-e29b-41d4-a716-446655440000'
+    }
+    // Fallback: timestamp (13 chars) + 9 random hex chars = 22-char unique string
+    return Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Initialize data structure
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
     trips: [],
@@ -40,8 +52,9 @@ function touchTrip(tripId) {
 async function addTrip(trip) {
     const newTrip = {
         ...trip,
-        id: Date.now(),
-        myRole: 'owner', // Default role for local trips
+        id: generateId(),      // ← UUID, never collides
+        myRole: 'owner',
+        share_id: null,        // ← New trips always start local (no cloud link)
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -123,9 +136,14 @@ async function duplicateTripFromDB(id) {
     const trip = await getTrip(id);
     if (trip) {
         const newTrip = { 
-            ...trip, 
-            id: Date.now(), 
-            tripName: `${trip.tripName} (Copy)`, 
+            ...trip,
+            id: generateId(),                         // Fresh UUID — never same as original
+            tripName: `${trip.tripName} (Copy)`,
+            // ── Strip ALL cloud/sync metadata so the copy is a fresh local trip ──
+            share_id: null,                           // No cloud link — prevents overwriting original
+            myRole: 'owner',                          // The duplicator is always owner of the copy
+            pendingSync: false,
+            // ── Reset timestamps ──────────────────────────────────────────────
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -173,14 +191,117 @@ function clearPendingSync() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+// ======= Data Integrity Sanitizer =======
+// Runs once on app startup to fix any legacy ID collisions from old Date.now() usage.
+// Safe to run on clean data — it only acts if duplicates are actually found.
+window.sanitizeDataIntegrity = function() {
+    let dirty = false;
+
+    // 1. Deduplicate trips by ID — keep the one with the latest updatedAt
+    const tripMap = new Map();
+    data.trips.forEach(t => {
+        const existing = tripMap.get(String(t.id));
+        if (!existing || new Date(t.updatedAt) > new Date(existing.updatedAt)) {
+            tripMap.set(String(t.id), t);
+            if (existing) dirty = true; // Found a duplicate
+        } else {
+            dirty = true;
+        }
+    });
+    if (dirty) {
+        data.trips = Array.from(tripMap.values());
+    }
+
+    // 2. Deduplicate participants by ID
+    let pDirty = false;
+    const pMap = new Map();
+    data.participants.forEach(p => {
+        if (!pMap.has(String(p.id))) {
+            pMap.set(String(p.id), p);
+        } else {
+            pDirty = true;
+        }
+    });
+    if (pDirty) {
+        data.participants = Array.from(pMap.values());
+        dirty = true;
+    }
+
+    // 3. Deduplicate expenses by ID
+    let eDirty = false;
+    const eMap = new Map();
+    data.expenses.forEach(e => {
+        if (!eMap.has(String(e.id))) {
+            eMap.set(String(e.id), e);
+        } else {
+            eDirty = true;
+        }
+    });
+    if (eDirty) {
+        data.expenses = Array.from(eMap.values());
+        dirty = true;
+    }
+
+    // 4. Remove orphaned participants (tripId points to a non-existent trip)
+    const validTripIds = new Set(data.trips.map(t => String(t.id)));
+    const beforePCount = data.participants.length;
+    data.participants = data.participants.filter(p => validTripIds.has(String(p.tripId)));
+    if (data.participants.length !== beforePCount) dirty = true;
+
+    // 5. Remove orphaned expenses
+    const beforeECount = data.expenses.length;
+    data.expenses = data.expenses.filter(e => validTripIds.has(String(e.tripId)));
+    if (data.expenses.length !== beforeECount) dirty = true;
+
+    // 6. Fix duplicate share_ids — if two local trips share the same share_id, 
+    //    clear it from all but the one that is 'owner'
+    const shareIdMap = new Map();
+    data.trips.forEach(t => {
+        if (t.share_id) {
+            if (!shareIdMap.has(t.share_id)) {
+                shareIdMap.set(t.share_id, [t]);
+            } else {
+                shareIdMap.get(t.share_id).push(t);
+            }
+        }
+    });
+    shareIdMap.forEach((trips, shareId) => {
+        if (trips.length > 1) {
+            dirty = true;
+            // Keep share_id only on the owner trip (or first one found)
+            const ownerTrip = trips.find(t => t.myRole === 'owner') || trips[0];
+            trips.forEach(t => {
+                if (t.id !== ownerTrip.id) {
+                    const idx = data.trips.findIndex(dt => String(dt.id) === String(t.id));
+                    if (idx !== -1) {
+                        data.trips[idx].share_id = null; // Clear duplicate share_id
+                        data.trips[idx].myRole = 'owner';
+                        console.warn(`[Integrity] Cleared duplicate share_id '${shareId}' from trip '${data.trips[idx].tripName}'`);
+                    }
+                }
+            });
+        }
+    });
+
+    if (dirty) {
+        console.warn('[Integrity] Data issues found and repaired. Saving clean data...');
+        data.pendingSync = false; // Don't auto-sync integrity fix
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } else {
+        console.log('[Integrity] Data check passed. No issues found.');
+    }
+
+    return dirty; // returns true if repairs were made
+};
+
 
 // Participant operations
 async function addParticipant(participant) {
     touchTrip(participant.tripId);
     const newParticipant = {
         ...participant,
-        familyCount: participant.familyCount || 1, // Default to 1 (self)
-        id: Date.now() + Math.floor(Math.random() * 1000),
+        familyCount: participant.familyCount || 1,
+        id: generateId(),   // ← UUID, safe even in tight async loops
         totalSpent: 0
     };
     data.participants.push(newParticipant);
@@ -228,8 +349,8 @@ async function addExpense(expense) {
     touchTrip(expense.tripId);
     const newExpense = {
         ...expense,
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        description: expense.title || expense.description || '',  // ensure description field always set
+        id: generateId(),   // ← UUID, safe even in tight async loops
+        description: expense.title || expense.description || '',
         createdAt: expense.createdAt || new Date().toISOString()
     };
     data.expenses.push(newExpense);

@@ -41,6 +41,17 @@ window.addEventListener('DOMContentLoaded', () => {
 async function initApp() {
   console.log('TripSplit initializing...');
   
+  // ── Data Integrity Check (runs silently on every startup) ───────────────────────
+  // Repairs any legacy Date.now() ID collisions, duplicate share_ids, and orphaned records.
+  if (typeof window.sanitizeDataIntegrity === 'function') {
+    const hadIssues = window.sanitizeDataIntegrity();
+    if (hadIssues && window.showToast) {
+      // Quietly inform the user if their data needed a repair
+      setTimeout(() => window.showToast('🔧 Data integrity repaired. App is clean!', 'info'), 2000);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  
   // Register service worker
   if ('serviceWorker' in navigator) {
     try {
@@ -272,6 +283,7 @@ async function duplicateTrip(tripId) {
   if (newTripId) {
     const participants = await getParticipants(tripId);
     for (const participant of participants) {
+      // Strip old id so addParticipant generates a fresh UUID
       const newParticipant = { ...participant, tripId: newTripId };
       delete newParticipant.id;
       await addParticipant(newParticipant);
@@ -279,13 +291,16 @@ async function duplicateTrip(tripId) {
 
     const expenses = await getExpenses(tripId);
     for (const expense of expenses) {
+      // Strip old id so addExpense generates a fresh UUID
       const newExpense = { ...expense, tripId: newTripId };
       delete newExpense.id;
       await addExpense(newExpense);
     }
 
     loadTrips();
-    alert('Trip duplicated successfully!');
+    if (window.showToast) window.showToast('Trip duplicated! 🎉 New copy is ready.', 'success');
+  } else {
+    if (window.showToast) window.showToast('Could not duplicate trip. Try again.', 'error');
   }
 }
 
