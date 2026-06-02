@@ -5,6 +5,78 @@ console.log('ui_engine.js loading...');
 let currentScreen = 'home';
 window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 
+// Dynamic Trip Cover Photo Helper
+window.getTripCoverPhoto = function(tripName) {
+  const name = (tripName || '').toLowerCase();
+  if (name.includes('beach') || name.includes('sea') || name.includes('goa') || name.includes('bali') || name.includes('island') || name.includes('ocean') || name.includes('vizag') || name.includes('kerala')) {
+    return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80';
+  }
+  if (name.includes('mountain') || name.includes('hill') || name.includes('snow') || name.includes('trek') || name.includes('himalaya') || name.includes('manali') || name.includes('ooty') || name.includes('coorg')) {
+    return 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80';
+  }
+  if (name.includes('city') || name.includes('urban') || name.includes('london') || name.includes('paris') || name.includes('tokyo') || name.includes('ny') || name.includes('shopping') || name.includes('delhi') || name.includes('mumbai') || name.includes('bangalore')) {
+    return 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=600&q=80';
+  }
+  if (name.includes('road') || name.includes('drive') || name.includes('trip') || name.includes('car') || name.includes('bike') || name.includes('highway')) {
+    return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80';
+  }
+  if (name.includes('nature') || name.includes('forest') || name.includes('camp') || name.includes('green') || name.includes('jungle') || name.includes('waterfall') || name.includes('lake')) {
+    return 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=600&q=80';
+  }
+  // Default premium travel scenery background
+  return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=80';
+};
+
+// Beautiful overlapping avatars renderer
+window.renderAvatarsHtml = function(participants, maxCount = 3) {
+  if (!participants || participants.length === 0) {
+    return `<div class="w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-[9px] text-slate-400 font-bold">👤</div>`;
+  }
+  let html = '';
+  participants.slice(0, maxCount).forEach((p) => {
+    const colors = [
+      'bg-indigo-600 text-indigo-100',
+      'bg-purple-600 text-purple-100',
+      'bg-rose-600 text-rose-100',
+      'bg-emerald-600 text-emerald-100',
+      'bg-amber-600 text-amber-100',
+      'bg-cyan-600 text-cyan-100'
+    ];
+    const colorIndex = p.name.charCodeAt(0) % colors.length;
+    const initials = p.name.charAt(0).toUpperCase();
+    html += `
+      <div class="w-6 h-6 rounded-full border border-[#1f1f23] ${colors[colorIndex]} flex items-center justify-center text-[9px] font-bold shadow-sm" style="margin-left:-4px;" title="${p.name}">
+        ${initials}
+      </div>
+    `;
+  });
+  if (participants.length > maxCount) {
+    html += `
+      <div class="w-6 h-6 rounded-full border border-[#1f1f23] bg-zinc-800 text-slate-400 flex items-center justify-center text-[9px] font-bold shadow-sm" style="margin-left:-4px;">
+        +${participants.length - maxCount}
+      </div>
+    `;
+  }
+  return `<div class="flex pl-1.5 items-center">${html}</div>`;
+};
+
+// Favorites Toggle Helper
+window.toggleFavoriteTrip = function(tripId, event) {
+  if (event) event.stopPropagation();
+  let favorites = JSON.parse(localStorage.getItem('tripsplit_favorites') || '[]');
+  const tripIdStr = String(tripId);
+  const index = favorites.indexOf(tripIdStr);
+  if (index === -1) {
+    favorites.push(tripIdStr);
+    if (window.showToast) window.showToast('Added to Favorites ❤️', 'success');
+  } else {
+    favorites.splice(index, 1);
+    if (window.showToast) window.showToast('Removed from Favorites', 'info');
+  }
+  localStorage.setItem('tripsplit_favorites', JSON.stringify(favorites));
+  if (typeof loadTrips === 'function') loadTrips();
+};
+
 // Supported Currencies List (F7)
 const CURRENCIES = [
     { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
@@ -749,6 +821,51 @@ async function loadHomeData(silentModeSwitch = false) {
       subtext.textContent = (trip && trip.notes) ? trip.notes : 'Manage your travel expenses';
   }
 
+  // Dynamic Cover Photo Background for Active Hero Card
+  const heroCard = document.querySelector('.hero-card');
+  if (heroCard && trip) {
+    const coverPhoto = window.getTripCoverPhoto(trip.tripName);
+    heroCard.style.backgroundImage = `linear-gradient(180deg, rgba(18, 18, 20, 0.3) 0%, rgba(18, 18, 20, 0.9) 100%), url('${coverPhoto}')`;
+    heroCard.style.backgroundSize = 'cover';
+    heroCard.style.backgroundPosition = 'center';
+    heroCard.style.boxShadow = '0 15px 30px rgba(0, 0, 0, 0.4)';
+  } else if (heroCard) {
+    heroCard.style.backgroundImage = '';
+    heroCard.style.boxShadow = '';
+  }
+
+  // Dynamic Overlapping Invite Card CTA
+  let inviteCard = document.getElementById('home-invite-cta-card');
+  if (trip) {
+    if (!inviteCard) {
+      inviteCard = document.createElement('div');
+      inviteCard.id = 'home-invite-cta-card';
+      inviteCard.className = 'relative flex items-center justify-between p-4 bg-[#1f1f23] border border-white/5 rounded-3xl mt-4 animate-slide-up';
+      
+      const homeQuickSettlement = document.getElementById('home-quick-settlement-card');
+      if (homeQuickSettlement) {
+        homeQuickSettlement.parentNode.insertBefore(inviteCard, homeQuickSettlement);
+      }
+    }
+    
+    const avatarsHtml = window.renderAvatarsHtml(participants, 3);
+    inviteCard.innerHTML = `
+      <div class="flex items-center gap-3">
+        ${avatarsHtml}
+        <div style="margin-left: 8px;">
+          <p class="text-xs font-bold text-white">Share & Collaborate</p>
+          <p class="text-[9px] text-slate-400">Invite your crew to track live expenses!</p>
+        </div>
+      </div>
+      <button onclick="window.shareTripInvite()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-600/10">
+        Invite
+      </button>
+    `;
+    inviteCard.classList.remove('hidden');
+  } else if (inviteCard) {
+    inviteCard.classList.add('hidden');
+  }
+
   const totalExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   document.getElementById('total-expense').textContent = `${tripSymbol}${totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
@@ -1010,6 +1127,7 @@ async function loadHomeData(silentModeSwitch = false) {
 }
 
 // Load full Expenses list screen
+// Load full Expenses list screen
 async function loadExpenses() {
   if (!currentTripId) return;
 
@@ -1029,10 +1147,10 @@ async function loadExpenses() {
   if (expenses.length === 0) {
     expensesList.innerHTML = `
         <div class="text-center py-20 opacity-40">
-            <div class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <div class="w-20 h-20 bg-zinc-800 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
             </div>
-            <p class="font-bold">No expenses found</p>
+            <p class="font-bold text-slate-400">No expenses found</p>
         </div>`;
     return;
   }
@@ -1040,44 +1158,64 @@ async function loadExpenses() {
   const canEdit = typeof window.canEditCurrentTrip === 'function' ? await window.canEditCurrentTrip() : true;
 
   expenses.forEach(expense => {
+    const isSettlement = expense.isSettlement === true;
+    const categoryLetter = expense.category ? expense.category.charAt(0).toUpperCase() : 'E';
+    
+    // Choose beautiful background classes for categories
+    const colors = [
+      'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+      'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+      'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+      'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+      'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+    ];
+    const colorIdx = expense.category ? expense.category.charCodeAt(0) % colors.length : 0;
+    const catClass = isSettlement ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : colors[colorIdx];
+
     const card = document.createElement('div');
-    card.className = 'premium-card animate-scale-in';
+    card.className = 'relative overflow-hidden rounded-3xl border border-white/5 bg-[#1f1f23] p-5 shadow-md mb-4 transition-all duration-200 hover:scale-[1.01]';
     card.innerHTML = `
       <div class="flex justify-between items-start mb-4">
         <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                ${expense.category.charAt(0)}
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${catClass}">
+                ${isSettlement ? '✅' : categoryLetter}
             </div>
             <div>
-              <h4 class="font-bold text-slate-800 text-lg flex items-center">
+              <h4 class="font-extrabold text-white text-base flex items-center gap-1.5">
                 ${expense.title}
-                ${expense.isRecurring ? '<span class="text-xs text-indigo-500 font-bold ml-1.5" title="Recurring Daily Expense">🔄</span>' : ''}
+                ${expense.isRecurring ? '<span class="text-xs text-indigo-400 font-bold ml-1" title="Recurring Daily Expense">🔄</span>' : ''}
               </h4>
-              <p class="text-xs text-slate-400 font-medium">${expense.category} • Paid by ${participantMap[expense.paidBy] || 'Unknown'}</p>
+              <p class="text-xs text-slate-400 mt-1 font-medium">${isSettlement ? 'Settlement Settle' : expense.category} • Paid by <span class="text-slate-300 font-semibold">${participantMap[expense.paidBy] || 'Unknown'}</span></p>
             </div>
         </div>
         <div class="text-right">
-          <p class="font-black text-xl text-slate-900">${tripSymbol}${(expense.totalAmount || expense.amount).toFixed(2)}</p>
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${new Date(expense.createdAt).toLocaleDateString()}</p>
+          <p class="font-black text-lg text-white">${tripSymbol}${(expense.totalAmount || expense.amount).toFixed(2)}</p>
+          <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">${new Date(expense.createdAt).toLocaleDateString()}</p>
           ${expense.advancePay ? `
             <div class="mt-2 text-[10px] font-bold">
-                <span class="text-emerald-500">PAID: ${tripSymbol}${expense.advancePay.toFixed(0)}</span>
-                <span class="mx-1 text-slate-300">|</span>
-                <span class="text-rose-500">REM: ${tripSymbol}${((expense.totalAmount || expense.amount) - expense.advancePay).toFixed(0)}</span>
+                <span class="text-emerald-400">PAID: ${tripSymbol}${expense.advancePay.toFixed(0)}</span>
+                <span class="mx-1 text-slate-600">|</span>
+                <span class="text-rose-400">REM: ${tripSymbol}${((expense.totalAmount || expense.amount) - expense.advancePay).toFixed(0)}</span>
             </div>
           ` : ''}
         </div>
       </div>
-      ${canEdit ? `
-      <div class="flex space-x-4 pt-4 border-t border-slate-50">
-        <button onclick="editExpense(${expense.id})" class="flex items-center space-x-1 text-xs font-bold text-indigo-500 hover:text-indigo-700">
+      ${(canEdit && !isSettlement) ? `
+      <div class="flex space-x-4 pt-4 border-t border-white/5">
+        <button onclick="editExpense(${expense.id})" class="flex items-center space-x-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span>EDIT</span>
         </button>
-        <button onclick="deleteExpense(${expense.id})" class="flex items-center space-x-1 text-xs font-bold text-rose-500 hover:text-rose-700">
+        <button onclick="deleteExpense(${expense.id})" class="flex items-center space-x-1.5 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             <span>DELETE</span>
         </button>
+      </div>
+      ` : ''}
+      ${(canEdit && isSettlement) ? `
+      <div class="flex space-x-4 pt-4 border-t border-white/5">
+        <span class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">Settlement Transaction</span>
       </div>
       ` : ''}
     `;
@@ -1149,6 +1287,7 @@ window.showEditTripModal = async function() {
 };
 
 // Load Trips screen history containing Save Template action (F6)
+// Load Trips screen history containing Save Template action (F6)
 async function loadTrips() {
   const trips = await getTrips();
   const tripsList = document.getElementById('trips-list');
@@ -1161,30 +1300,71 @@ async function loadTrips() {
     return;
   }
 
-  trips.forEach(trip => {
+  // Fetch participants for all trips in parallel
+  const allParticipantsList = await Promise.all(trips.map(t => getParticipants(t.id)));
+  const favorites = JSON.parse(localStorage.getItem('tripsplit_favorites') || '[]');
+
+  trips.forEach((trip, index) => {
     const isCurrent = String(currentTripId) === String(trip.id);
-    const card = document.createElement('div');
     const symbol = trip.currencySymbol || '₹';
-    card.className = `premium-card animate-scale-in ${isCurrent ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''}`;
+    const coverPhoto = window.getTripCoverPhoto(trip.tripName);
+    const isFavorite = favorites.includes(String(trip.id));
+    const tripParticipants = allParticipantsList[index] || [];
+    const avatarsHtml = window.renderAvatarsHtml(tripParticipants, 3);
+
+    const card = document.createElement('div');
+    card.className = `relative overflow-hidden rounded-3xl border border-white/5 bg-[#1f1f23] shadow-xl group mb-4 transition-all duration-300 ${isCurrent ? 'ring-2 ring-indigo-500' : ''}`;
+    
     card.innerHTML = `
-      <div class="flex justify-between items-start mb-4">
-        <div>
-          <div class="flex items-center space-x-2">
-            <h4 class="font-bold text-lg text-slate-800">${trip.tripName}</h4>
-            ${isCurrent ? '<span class="bg-indigo-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Active</span>' : ''}
-          </div>
-          <p class="text-sm text-slate-500 mt-1 line-clamp-1">${trip.notes || 'No description provided'}</p>
-          <div class="flex items-center space-x-3 mt-2">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Budget: ${symbol}${trip.estimatedBudget || 0}</p>
-            ${trip.share_id ? `<span class="text-[10px] text-indigo-400 font-black tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">ID: ${trip.share_id}</span>` : ''}
-          </div>
+      <!-- Scenic Cover Photo Banner -->
+      <div class="w-full h-32 bg-cover bg-center relative" style="background-image: url('${coverPhoto}');">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#1f1f23] to-transparent"></div>
+        
+        <!-- Favourites Toggle Heart -->
+        <button onclick="window.toggleFavoriteTrip('${trip.id}', event)" class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors">
+          <svg class="w-4 h-4 ${isFavorite ? 'fill-rose-500 stroke-rose-500' : 'stroke-white'}" fill="${isFavorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+          </svg>
+        </button>
+        
+        <!-- Dynamic Currency & Budget Pill -->
+        <div class="absolute bottom-3 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
+          <span class="text-indigo-400 font-extrabold">${symbol}</span> Budget: ${symbol}${trip.estimatedBudget || 0}
         </div>
       </div>
-      <div class="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
-        <button onclick="selectTrip('${trip.id}')" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors">SELECT</button>
-        <button onclick="duplicateTrip('${trip.id}')" class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors">DUPLICATE</button>
-        <button onclick="saveTripAsTemplate('${trip.id}')" class="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors">📋 TEMPLATE</button>
-        <button onclick="deleteTrip('${trip.id}')" class="px-4 py-2 bg-rose-100 text-rose-600 text-xs font-bold rounded-xl hover:bg-rose-200 transition-colors">DELETE</button>
+      
+      <!-- Content Details -->
+      <div class="p-5">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="font-extrabold text-lg text-white">${trip.tripName}</h4>
+              ${isCurrent ? '<span class="bg-indigo-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Active</span>' : ''}
+              ${trip.share_id ? `<span class="text-[9px] text-indigo-400 font-black tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">ID: ${trip.share_id}</span>` : ''}
+            </div>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-1">${trip.notes || 'No description provided'}</p>
+          </div>
+        </div>
+        
+        <!-- Bottom Row: Overlapping Avatars & Sleek Action buttons -->
+        <div class="flex justify-between items-center pt-4 border-t border-white/5">
+          <!-- Overlapping Crew Avatars -->
+          ${avatarsHtml}
+          
+          <!-- Sleek Mini Option Actions -->
+          <div class="flex items-center gap-2">
+            <button onclick="selectTrip('${trip.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-600/10">SELECT</button>
+            <button onclick="duplicateTrip('${trip.id}')" title="Duplicate Trip" class="p-2 bg-zinc-800 text-emerald-400 hover:text-emerald-300 hover:bg-zinc-700/80 rounded-xl transition-all active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+            </button>
+            <button onclick="saveTripAsTemplate('${trip.id}')" title="Save as Template" class="p-2 bg-zinc-800 text-indigo-400 hover:text-indigo-300 hover:bg-zinc-700/80 rounded-xl transition-all active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            </button>
+            <button onclick="deleteTrip('${trip.id}')" title="Delete Trip" class="p-2 bg-zinc-800 text-rose-500 hover:text-rose-400 hover:bg-zinc-700/80 rounded-xl transition-all active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        </div>
       </div>
     `;
     tripsList.appendChild(card);
@@ -2798,4 +2978,41 @@ window.claimOwnerRole = async function() {
     hideModal();
     // Re-open settings with updated role
     setTimeout(() => showSettings(), 300);
+};
+
+// Share Trip Invite Helper
+window.shareTripInvite = async function() {
+  if (!currentTripId) return;
+  const trip = await getTrip(currentTripId);
+  if (!trip) return;
+  
+  if (!trip.share_id) {
+    if (typeof window.triggerBackgroundSync === 'function') {
+      if (window.showToast) window.showToast('Publishing trip to cloud...', 'info');
+      const shareId = await window.triggerBackgroundSync('share trip');
+      if (shareId) {
+        trip.share_id = shareId;
+      }
+    }
+    if (!trip.share_id) {
+      if (window.showToast) window.showToast('Could not sync. Please connect to the Internet.', 'warning');
+      return;
+    }
+  }
+
+  const message = `Join my trip "${trip.tripName}" on TripSplit!\n\nUse this Trip ID to collaborate live:\n👉 *${trip.share_id}*\n\nTo join:\n1. Open TripSplit\n2. Go to Settings or Profile Tab\n3. Click "Join Trip"\n4. Enter the Trip ID above!\n\nSplit bills, share memories. A Product from Aispace.co.in`;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: `TripSplit Invite: ${trip.tripName}`,
+      text: message
+    }).catch(err => {
+      console.log('Share failed:', err);
+      navigator.clipboard.writeText(message);
+      if (window.showToast) window.showToast('Invite details copied to clipboard!', 'success');
+    });
+  } else {
+    navigator.clipboard.writeText(message);
+    if (window.showToast) window.showToast('Invite details copied to clipboard!', 'success');
+  }
 };
