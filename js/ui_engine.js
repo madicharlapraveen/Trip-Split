@@ -3658,7 +3658,7 @@ window.shareTripInvite = async function() {
     }
   }
 
-  const message = `Join my trip "${trip.tripName}" on TripSplit!\n\n👉 App Link: https://trip-split-e56d3.web.app/\n\nUse this Trip ID to collaborate live:\n👉 *${trip.share_id}*\n\nTo join:\n1. Open TripSplit\n2. Go to Settings or Profile Tab\n3. Click "Join Trip"\n4. Enter the Trip ID above!\n\nSplit bills, share memories. A Product from Aispace.co.in`;
+  const message = `Join my trip "${trip.tripName}" on TripSplit!\n\n👉 Click this link to join directly:\n👉 https://trip-split-e56d3.web.app/?join=${trip.share_id}\n\n(Or use Trip ID: *${trip.share_id}* inside Settings to join manually)\n\nSplit bills, share memories. A Product from Aispace.co.in`;
   
   if (navigator.share) {
     navigator.share({

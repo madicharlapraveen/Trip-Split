@@ -138,6 +138,42 @@ async function initApp() {
   await loadTrips();
   await loadTripsCapsules();
   showScreen('home');
+
+  // Check for dynamic join parameter in the URL (e.g. ?join=SHARE_ID)
+  const urlParams = new URLSearchParams(window.location.search);
+  const joinShareId = urlParams.get('join');
+  if (joinShareId && typeof joinTripFromCloud === 'function') {
+    if (window.showToast) window.showToast('Connecting to trip... ⏳', 'info');
+    try {
+      const existingTrips = await getTrips();
+      const alreadyJoined = existingTrips.find(t => String(t.share_id) === String(joinShareId));
+      
+      let tripId;
+      if (alreadyJoined) {
+        tripId = alreadyJoined.id;
+        if (window.showToast) window.showToast('Already a member of this trip! Opening...', 'success');
+      } else {
+        tripId = await joinTripFromCloud(joinShareId);
+        if (window.showToast) window.showToast('Successfully joined trip automatically! 🎉', 'success');
+      }
+      
+      if (tripId) {
+        currentTripId = tripId;
+        window.currentTripId = tripId;
+        localStorage.setItem('tripsplit_active_trip_id', tripId);
+        
+        await loadHomeData();
+        await loadTrips();
+        await loadTripsCapsules();
+        showScreen('home');
+      }
+    } catch (err) {
+      console.error("Auto-join failed:", err);
+      if (window.showToast) window.showToast('Failed to join trip automatically: ' + err.message, 'danger');
+    } finally {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
   
   // Lightweight first-time onboarding check
   const profileRecord = typeof getUserProfile === 'function' ? await getUserProfile() : null;

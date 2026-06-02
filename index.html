@@ -31,8 +31,11 @@
         // 2. Check if user has active trip data in LocalStorage
         const hasActiveTrip = localStorage.getItem('tripsplit_active_trip_id') !== null;
         
-        if (isStandalone || hasActiveTrip) {
-          window.location.replace('app.html');
+        // 3. Keep query string for join link parameters
+        const hasQuery = window.location.search && window.location.search.includes('join=');
+        
+        if (isStandalone || hasActiveTrip || hasQuery) {
+          window.location.replace('app.html' + window.location.search);
         }
       })();
     </script>
