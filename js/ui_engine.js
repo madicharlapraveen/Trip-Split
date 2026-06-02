@@ -21,8 +21,46 @@ window.toggleAppTheme = function() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 
+// Compress and resize custom trip cover image to highly optimized JPEG
+async function compressCoverImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Premium optimization: limit max size to 800px width (high quality on mobile screens)
+        const maxWidth = 800;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Export as JPEG with 0.6 quality (ultra low filesize, stunning appearance)
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // Dynamic Trip Cover Photo Helper
-window.getTripCoverPhoto = function(tripName) {
+window.getTripCoverPhoto = function(tripName, trip) {
+  if (trip && trip.customCoverPhoto) {
+    return trip.customCoverPhoto;
+  }
   const name = (tripName || '').toLowerCase();
   if (name.includes('beach') || name.includes('sea') || name.includes('goa') || name.includes('bali') || name.includes('island') || name.includes('ocean') || name.includes('vizag') || name.includes('kerala')) {
     return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80';
@@ -1031,7 +1069,7 @@ async function loadHomeData(silentModeSwitch = false) {
   // Dynamic Cover Photo Background for Active Hero Card
   const heroCard = document.querySelector('.hero-card');
   if (heroCard && trip) {
-    const coverPhoto = window.getTripCoverPhoto(trip.tripName);
+    const coverPhoto = window.getTripCoverPhoto(trip.tripName, trip);
     heroCard.style.backgroundImage = `linear-gradient(180deg, rgba(18, 18, 20, 0.3) 0%, rgba(18, 18, 20, 0.9) 100%), url('${coverPhoto}')`;
     heroCard.style.backgroundSize = 'cover';
     heroCard.style.backgroundPosition = 'center';
@@ -1535,6 +1573,22 @@ window.showEditTripModal = async function() {
       </div>
 
       <div>
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trip Cover Image</label>
+        <div class="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <input type="file" id="edit-trip-image" accept="image/*" class="hidden">
+          <button type="button" onclick="document.getElementById('edit-trip-image').click()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+            📷 Select Image
+          </button>
+          <span id="trip-image-status" class="text-xs text-slate-500 font-semibold truncate max-w-[180px]">
+            ${trip.customCoverPhoto ? 'Custom cover image set' : 'Using default scenic cover'}
+          </span>
+          <button type="button" id="remove-trip-image" class="text-xs font-bold text-rose-500 hover:text-rose-700 ml-auto ${trip.customCoverPhoto ? '' : 'hidden'}">
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <div>
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Notes</label>
         <textarea id="edit-trip-notes" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="3">${trip.notes || ''}</textarea>
       </div>
@@ -1545,6 +1599,36 @@ window.showEditTripModal = async function() {
     </form>
   `;
   showModal(content);
+
+  let customCoverPhotoData = trip.customCoverPhoto || null;
+  const imageInput = document.getElementById('edit-trip-image');
+  const imageStatus = document.getElementById('trip-image-status');
+  const removeButton = document.getElementById('remove-trip-image');
+
+  imageInput.addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    imageStatus.textContent = 'Compressing... ⏳';
+    try {
+      customCoverPhotoData = await compressCoverImage(file);
+      imageStatus.textContent = 'Custom cover image ready! ✨';
+      removeButton.classList.remove('hidden');
+      if (window.showToast) window.showToast('Cover image compressed successfully!', 'success');
+    } catch (err) {
+      console.error(err);
+      imageStatus.textContent = 'Error loading image ❌';
+      if (window.showToast) window.showToast('Could not load cover image.', 'danger');
+    }
+  });
+
+  removeButton.addEventListener('click', () => {
+    customCoverPhotoData = null;
+    imageStatus.textContent = 'Default scenic cover restored';
+    removeButton.classList.add('hidden');
+    imageInput.value = '';
+    if (window.showToast) window.showToast('Custom cover image removed.', 'info');
+  });
 
   document.getElementById('edit-trip-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1560,7 +1644,8 @@ window.showEditTripModal = async function() {
         notes, 
         estimatedBudget: budget,
         currency: currencyObj.code,
-        currencySymbol: currencyObj.symbol
+        currencySymbol: currencyObj.symbol,
+        customCoverPhoto: customCoverPhotoData
       });
       hideModal();
       loadHomeData();
@@ -1591,7 +1676,7 @@ async function loadTrips() {
   trips.forEach((trip, index) => {
     const isCurrent = String(currentTripId) === String(trip.id);
     const symbol = trip.currencySymbol || '₹';
-    const coverPhoto = window.getTripCoverPhoto(trip.tripName);
+    const coverPhoto = window.getTripCoverPhoto(trip.tripName, trip);
     const isFavorite = favorites.includes(String(trip.id));
     const tripParticipants = allParticipantsList[index] || [];
     const avatarsHtml = window.renderAvatarsHtml(tripParticipants, 3);
