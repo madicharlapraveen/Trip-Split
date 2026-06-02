@@ -369,7 +369,7 @@ async function loadTripsCapsules() {
     capsule.onclick = () => selectTrip(trip.id);
     capsule.style.cssText = isActive
       ? 'background: var(--primary-gradient); color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.4); transform: scale(1.05);'
-      : 'background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.08);';
+      : 'background: white; color: #64748b; border: 1px solid rgba(79, 70, 229, 0.15); box-shadow: 0 4px 10px rgba(79, 70, 229, 0.05);';
     capsule.className = `flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all`;
     capsule.textContent = trip.tripName;
     container.appendChild(capsule);
