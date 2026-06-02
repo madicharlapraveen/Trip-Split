@@ -2,7 +2,7 @@
   "name": "TripSplit - Travel Expense Split Manager",
   "short_name": "TripSplit",
   "description": "A lightweight offline-first travel expense split manager app",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",

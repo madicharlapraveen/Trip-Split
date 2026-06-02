@@ -10,6 +10,12 @@
       "tailwind.config.js",
       ".github/**"
     ],
+    "rewrites": [
+      {
+        "source": "/app",
+        "destination": "/app.html"
+      }
+    ],
     "headers": [
       {
         "source": "/service-worker.js",

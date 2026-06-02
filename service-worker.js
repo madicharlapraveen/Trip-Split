@@ -1,8 +1,9 @@
-const CACHE_NAME = 'tripsplit-v38-id-fix';
+const CACHE_NAME = 'tripsplit-v39-landing-page';
 const RUNTIME_CACHE = 'tripsplit-runtime-v1';
 const urlsToCache = [
   './',
   './index.html',
+  './app.html',
   './css/style.css',
   './js/app.js',
   './js/db.js',
@@ -49,6 +50,16 @@ self.addEventListener('activate', event => {
 // Fetch Strategy
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+
+  // Custom routing: if the request path is /app, serve app.html from cache
+  if (url.pathname === '/app' || url.pathname === '/app/') {
+    event.respondWith(
+      caches.match('./app.html').then(cachedResponse => {
+        return cachedResponse || fetch(event.request);
+      })
+    );
+    return;
+  }
 
   // Skip cross-origin POST/API requests (like Supabase API) - let them fail naturally if offline
   if (event.request.method !== 'GET' || url.hostname.includes('supabase.co')) {
