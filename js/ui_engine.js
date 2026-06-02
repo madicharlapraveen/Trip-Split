@@ -6,45 +6,17 @@ let currentScreen = 'home';
 window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 
 // ── Theme Engine ─────────────────────────────────────────────────────────────
-// Apply theme immediately (before first paint to prevent flash)
 (function applyAppTheme() {
-  const saved = localStorage.getItem('tripsplit_theme') || 'dark';
-  if (saved === 'light') {
-    document.documentElement.classList.add('light-mode');
-    document.body.classList.add('light-mode');
-  } else {
-    document.documentElement.classList.remove('light-mode');
-    document.body.classList.remove('light-mode');
-  }
-  // Update browser theme-color meta to match
+  localStorage.setItem('tripsplit_theme', 'light');
+  document.documentElement.classList.add('light-mode');
+  document.body.classList.add('light-mode');
+  
   const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', saved === 'light' ? '#f0f4ff' : '#121214');
+  if (metaTheme) metaTheme.setAttribute('content', '#f0f4ff');
 })();
 
 window.toggleAppTheme = function() {
-  const isLight = document.body.classList.toggle('light-mode');
-  
-  // Keep HTML root in sync to prevent flashes on reload
-  if (isLight) {
-    document.documentElement.classList.add('light-mode');
-  } else {
-    document.documentElement.classList.remove('light-mode');
-  }
-  
-  const theme = isLight ? 'light' : 'dark';
-  localStorage.setItem('tripsplit_theme', theme);
-
-  // Update browser status bar color
-  const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', isLight ? '#f0f4ff' : '#121214');
-
-  // Update font explicitly for immediate effect
-  document.body.style.fontFamily = isLight ? "'Inter', sans-serif" : "'Outfit', sans-serif";
-
-  // Show confirmation toast
-  if (window.showToast) {
-    window.showToast(isLight ? '☀️ Light mode on' : '🌙 Dark mode on', 'info');
-  }
+  console.log('Theme is locked to Light Mode.');
 };
 // ─────────────────────────────────────────────────────────────────────────────
 

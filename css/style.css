@@ -5,7 +5,7 @@
 .splash-screen {
     position: fixed;
     inset: 0;
-    background: #121214; /* Solid dark zinc base */
+    background: #f0f4ff; /* Light base */
     z-index: 99999;
     display: flex;
     align-items: center;
@@ -41,7 +41,7 @@
 
 .splash-subtitle {
     font-size: 0.875rem;
-    color: #94a3b8; /* Slate 400 */
+    color: #64748b; /* Slate 500 */
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -72,15 +72,15 @@
     --danger: #ef4444;        /* Rose */
     
     /* Background & Surface */
-    --bg-base: #121214;       /* Solid dark zinc/slate background */
-    --glass-bg: rgba(30, 30, 35, 0.7); /* Translucent dark slate */
-    --glass-bg-solid: #1f1f23; /* Zinc solid card surface */
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+    --bg-base: #f0f4ff;           /* Soft blue-tinted white */
+    --glass-bg: rgba(255, 255, 255, 0.75); /* Translucent white card */
+    --glass-bg-solid: #ffffff;    /* Pure white solid surface */
+    --glass-border: rgba(79, 70, 229, 0.1); /* Soft indigo border */
+    --glass-shadow: 0 8px 32px 0 rgba(79, 70, 229, 0.08);
     
     /* Text */
-    --text-main: #f8fafc;     /* Slate 50 */
-    --text-muted: #94a3b8;    /* Slate 400 */
+    --text-main: #1e1b4b;         /* Deep indigo for headings */
+    --text-muted: #64748b;        /* Slate 500 for sub-text */
     
     /* Animation Timing */
     --transition-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -104,203 +104,7 @@ body.theme-split {
     --secondary: #06b6d4;     /* Cyan */
 }
 
-/* ============================================================
-   LIGHT MODE — Works whether class is on <html> OR <body>
-   The <head> script sets html.light-mode instantly (before body exists).
-   ui_engine.js also sets body.light-mode when scripts load.
-   Both selectors ensure zero flash at every stage of page load.
-   ============================================================ */
-
-/* Instant background on root — prevents dark flash before body renders */
-html.light-mode {
-    background: #f0f4ff;
-}
-
-html.light-mode body,
-body.light-mode {
-    font-family: 'Inter', sans-serif;
-
-    /* Brand colors stay the same — only surfaces change */
-    --bg-base: #f0f4ff;           /* Soft blue-tinted white */
-    --glass-bg: rgba(255, 255, 255, 0.75); /* Translucent white card */
-    --glass-bg-solid: #ffffff;    /* Pure white solid surface */
-    --glass-border: rgba(79, 70, 229, 0.1); /* Soft indigo border */
-    --glass-shadow: 0 8px 32px 0 rgba(79, 70, 229, 0.08);
-    --text-main: #1e1b4b;         /* Deep indigo for headings */
-    --text-muted: #64748b;        /* Slate 500 for sub-text */
-}
-
-/* Light mode ambient blobs */
-html.light-mode body::before,
-body.light-mode::before {
-    background: rgba(124, 58, 237, 0.06);
-}
-html.light-mode body::after,
-body.light-mode::after {
-    background: rgba(79, 70, 229, 0.06);
-}
-
-/* Light mode nav dock */
-html.light-mode .nav-dock,
-body.light-mode .nav-dock {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(79, 70, 229, 0.12);
-    box-shadow: 0 8px 32px rgba(79, 70, 229, 0.12);
-}
-
-/* Light mode FAB shadow */
-html.light-mode .fab,
-body.light-mode .fab {
-    box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
-}
-
-/* Light mode modal */
-html.light-mode .modal-content,
-body.light-mode .modal-content {
-    background: #ffffff;
-    box-shadow: 0 -8px 40px rgba(79, 70, 229, 0.12), 0 0 0 1px rgba(79, 70, 229, 0.08);
-}
-html.light-mode .modal-content::before,
-body.light-mode .modal-content::before {
-    background: rgba(79, 70, 229, 0.15);
-}
-
-/* Light mode inputs */
-html.light-mode input[type="text"],
-html.light-mode input[type="number"],
-html.light-mode input[type="tel"],
-html.light-mode input[type="email"],
-html.light-mode input[type="password"],
-html.light-mode select,
-html.light-mode textarea,
-body.light-mode input[type="text"],
-body.light-mode input[type="number"],
-body.light-mode input[type="tel"],
-body.light-mode input[type="email"],
-body.light-mode input[type="password"],
-body.light-mode select,
-body.light-mode textarea {
-    background-color: #f8faff !important;
-    border: 1px solid rgba(79, 70, 229, 0.2) !important;
-    color: #1e1b4b !important;
-}
-
-/* Light mode utility overrides */
-html.light-mode .bg-white, body.light-mode .bg-white { background-color: #ffffff !important; }
-html.light-mode .bg-slate-50, body.light-mode .bg-slate-50 { background-color: #f8faff !important; }
-html.light-mode .bg-slate-100, body.light-mode .bg-slate-100 { background-color: #eff1ff !important; }
-html.light-mode .bg-slate-200, body.light-mode .bg-slate-200 { background-color: #e0e4f5 !important; }
-html.light-mode .text-slate-900, body.light-mode .text-slate-900 { color: #1e1b4b !important; }
-html.light-mode .text-slate-800, body.light-mode .text-slate-800 { color: #1e1b4b !important; }
-html.light-mode .text-slate-700, body.light-mode .text-slate-700 { color: #312e81 !important; }
-html.light-mode .text-slate-600, body.light-mode .text-slate-600 { color: #64748b !important; }
-html.light-mode .text-slate-500, body.light-mode .text-slate-500 { color: #64748b !important; }
-html.light-mode .text-slate-400, body.light-mode .text-slate-400 { color: #94a3b8 !important; }
-html.light-mode .border-slate-100, body.light-mode .border-slate-100 { border-color: rgba(79, 70, 229, 0.15) !important; }
-html.light-mode .border-slate-200, body.light-mode .border-slate-200 { border-color: rgba(79, 70, 229, 0.2) !important; }
-
-/* Light mode menu list item */
-html.light-mode .menu-list-item,
-body.light-mode .menu-list-item {
-    background: #ffffff;
-    border: 1px solid rgba(79, 70, 229, 0.1);
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.05);
-}
-html.light-mode .menu-list-item:hover,
-body.light-mode .menu-list-item:hover {
-    background: #f0f4ff;
-    border-color: rgba(79, 70, 229, 0.2);
-}
-
-/* Light mode btn-icon (header buttons) */
-html.light-mode .btn-icon,
-body.light-mode .btn-icon {
-    background: #ffffff;
-    border: 1px solid rgba(79, 70, 229, 0.12);
-    color: #4f46e5;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.1);
-}
-
-/* Light mode glass card */
-html.light-mode .glass-card, html.light-mode .premium-card,
-body.light-mode .glass-card, body.light-mode .premium-card {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(79, 70, 229, 0.1);
-    box-shadow: 0 4px 24px rgba(79, 70, 229, 0.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-}
-
-/* Light mode itinerary */
-html.light-mode .itinerary-plate,
-body.light-mode .itinerary-plate {
-    background: #ffffff;
-    border: 1px solid rgba(79, 70, 229, 0.1);
-    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.07);
-}
-html.light-mode .itinerary-bubble::before,
-body.light-mode .itinerary-bubble::before {
-    background: #c7d2fe; /* indigo-200 */
-}
-html.light-mode .itinerary-dot,
-body.light-mode .itinerary-dot {
-    background: white;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
-}
-
-/* Light mode rich notification */
-html.light-mode .rich-notification-card,
-body.light-mode .rich-notification-card {
-    background: rgba(255, 255, 255, 0.97);
-    border: 1px solid rgba(79, 70, 229, 0.15);
-    box-shadow: 0 20px 40px rgba(79, 70, 229, 0.12);
-}
-html.light-mode .rich-notification-title,
-body.light-mode .rich-notification-title { color: #64748b; }
-html.light-mode .rich-notification-headline,
-body.light-mode .rich-notification-headline { color: #1e1b4b; }
-html.light-mode .rich-notification-sub,
-body.light-mode .rich-notification-sub { color: #94a3b8; }
-
-/* Light mode splash screen */
-html.light-mode .splash-screen,
-body.light-mode .splash-screen {
-    background: #f0f4ff;
-}
-
-/* Theme toggle button */
-#theme-toggle-btn {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s var(--transition-bouncy);
-}
-
-#theme-toggle-btn .icon-sun,
-#theme-toggle-btn .icon-moon {
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: absolute;
-}
-
-#theme-toggle-btn .icon-sun {
-    opacity: 0;
-    transform: rotate(90deg) scale(0.5);
-}
-#theme-toggle-btn .icon-moon {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
-}
-
-html.light-mode #theme-toggle-btn .icon-sun,
-body.light-mode #theme-toggle-btn .icon-sun {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
-}
-html.light-mode #theme-toggle-btn .icon-moon,
-body.light-mode #theme-toggle-btn .icon-moon {
-    opacity: 0;
-    transform: rotate(-90deg) scale(0.5);
-}
+/* Universal Base Styles */
 
 * {
     margin: 0;
@@ -340,13 +144,13 @@ body::before, body::after {
 body::before {
     top: -10%; left: -10%;
     width: 50vw; height: 50vw;
-    background: rgba(124, 58, 237, 0.15); /* Purple tint */
+    background: rgba(124, 58, 237, 0.06); /* Soft Purple */
 }
 
 body::after {
     bottom: -10%; right: -10%;
     width: 60vw; height: 60vw;
-    background: rgba(79, 70, 229, 0.15); /* Indigo tint */
+    background: rgba(79, 70, 229, 0.06); /* Soft Indigo */
     animation-delay: -10s;
 }
 
@@ -606,12 +410,12 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 }
 
 .modal-content {
-    background: #1a1a1f;            /* Dark matte sheet */
+    background: #ffffff;            /* Pure white sheet */
     width: 100%;
     max-width: 480px;
     border-radius: 32px 32px 0 0;   /* Rounded only at top — sheet style */
     padding: 24px 24px 40px 24px;   /* Extra bottom padding for home indicator */
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+    box-shadow: 0 -8px 40px rgba(79, 70, 229, 0.12), 0 0 0 1px rgba(79, 70, 229, 0.08);
     transform: translateY(100%);     /* Slide in from bottom */
     opacity: 0;
     transition: all 0.4s var(--transition-bouncy);
@@ -626,7 +430,7 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     display: block;
     width: 40px;
     height: 4px;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(79, 70, 229, 0.15);
     border-radius: 2px;
     margin: 0 auto 20px;
 }
@@ -674,10 +478,10 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 }
 
 .rich-notification-card {
-    background: rgba(20, 20, 26, 0.97);
+    background: rgba(255, 255, 255, 0.97);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(79, 70, 229, 0.15);
     border-radius: 22px;
     padding: 14px 18px;
     display: flex;
@@ -685,7 +489,7 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
     gap: 14px;
     max-width: 400px;
     width: 100%;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+    box-shadow: 0 20px 40px rgba(79, 70, 229, 0.12);
     pointer-events: all;
     cursor: pointer;
 }
@@ -774,27 +578,27 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 .mt-4 { margin-top: 1rem; }
 .p-4 { padding: 1rem; }
 
-/* --- Dynamic JS Color Utilities & Dark-Mode Overrides --- */
-.bg-white { background-color: var(--glass-bg-solid) !important; }
-.bg-slate-50 { background-color: rgba(30, 30, 35, 0.4) !important; }
-.bg-slate-100 { background-color: rgba(45, 45, 50, 0.6) !important; }
-.bg-slate-200 { background-color: rgba(60, 60, 65, 0.8) !important; }
-.text-slate-900 { color: var(--text-main) !important; }
-.text-slate-800 { color: var(--text-main) !important; }
-.text-slate-700 { color: var(--text-main) !important; }
-.text-slate-600 { color: var(--text-muted) !important; }
-.text-slate-500 { color: var(--text-muted) !important; }
-.text-slate-400 { color: var(--text-muted) !important; }
-.border-slate-100 { border-color: var(--glass-border) !important; }
-.border-slate-200 { border-color: var(--glass-border) !important; }
+/* --- Dynamic Color Utilities --- */
+.bg-white { background-color: #ffffff !important; }
+.bg-slate-50 { background-color: #f8faff !important; }
+.bg-slate-100 { background-color: #eff1ff !important; }
+.bg-slate-200 { background-color: #e0e4f5 !important; }
+.text-slate-900 { color: #1e1b4b !important; }
+.text-slate-800 { color: #1e1b4b !important; }
+.text-slate-700 { color: #312e81 !important; }
+.text-slate-600 { color: #64748b !important; }
+.text-slate-500 { color: #64748b !important; }
+.text-slate-400 { color: #94a3b8 !important; }
+.border-slate-100 { border-color: rgba(79, 70, 229, 0.15) !important; }
+.border-slate-200 { border-color: rgba(79, 70, 229, 0.2) !important; }
 
 /* Custom Overrides for standard tailwind components */
-.hover\:bg-indigo-50:hover { background-color: rgba(79, 70, 229, 0.1) !important; }
-.hover\:bg-emerald-50:hover { background-color: rgba(16, 185, 129, 0.1) !important; }
-.bg-indigo-50 { background-color: rgba(79, 70, 229, 0.1) !important; }
-.bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
-.bg-rose-100 { background-color: rgba(239, 68, 68, 0.15) !important; }
-.bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.hover\:bg-indigo-50:hover { background-color: rgba(79, 70, 229, 0.08) !important; }
+.hover\:bg-emerald-50:hover { background-color: rgba(16, 185, 129, 0.08) !important; }
+.bg-indigo-50 { background-color: rgba(79, 70, 229, 0.06) !important; }
+.bg-emerald-100 { background-color: rgba(16, 185, 129, 0.12) !important; }
+.bg-rose-100 { background-color: rgba(239, 68, 68, 0.12) !important; }
+.bg-amber-100 { background-color: rgba(245, 158, 11, 0.12) !important; }
 
 .text-indigo-500 { color: var(--primary) !important; }
 .text-indigo-600 { color: var(--primary-light) !important; }
@@ -809,11 +613,11 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: var(--text-ma
 .text-amber-600 { color: var(--warning) !important; }
 .text-amber-700 { color: var(--warning) !important; }
 
-/* Matte-Dark Form Inputs */
+/* Matte-Light Form Inputs */
 input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="password"], select, textarea {
-    background-color: #242428 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: #f8fafc !important;
+    background-color: #f8faff !important;
+    border: 1px solid rgba(79, 70, 229, 0.2) !important;
+    color: #1e1b4b !important;
     border-radius: 16px !important;
     padding: 12px 16px !important;
     transition: all 0.2s ease !important;
@@ -830,16 +634,17 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="tel"]:focus, i
     justify-content: space-between;
     align-items: center;
     padding: 1.15rem 1.25rem;
-    background: #1f1f23;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #ffffff;
+    border: 1px solid rgba(79, 70, 229, 0.1);
     border-radius: 20px;
     margin-bottom: 0.75rem;
     transition: all 0.2s ease;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.05);
 }
 .menu-list-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: #f0f4ff;
+    border-color: rgba(79, 70, 229, 0.2);
 }
 
 /* Custom green breathing animation for live database indicator */
