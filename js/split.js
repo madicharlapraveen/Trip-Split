@@ -53,36 +53,69 @@ async function calculateSplit() {
   });
 
   // Pre-calculate settlements so they are available for individual card display
-  const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
-  const debtors = balances.filter(p => p.balance < -0.01).sort((a, b) => a.balance - b.balance);
-
   let settlements = [];
-  let i = 0, j = 0;
 
-  // Deep copy for calculation
-  const tempCreditors = creditors.map(c => ({...c}));
-  const tempDebtors = debtors.map(d => ({...d}));
+  // Determine Leader for Single-Payer mode
+  let leaderId = tripObj ? tripObj.leaderId : null;
+  if (leaderId === 'creator' && participants.length > 0) {
+    leaderId = participants[0].id;
+  }
 
-  while (i < tempCreditors.length && j < tempDebtors.length) {
-    const creditor = tempCreditors[i];
-    const debtor = tempDebtors[j];
-    const amount = Math.min(creditor.balance, -debtor.balance);
-
-    if (amount > 0.01) {
-      settlements.push({
-        from: debtor.name,
-        to: creditor.name,
-        amount: amount
+  if (tripObj && tripObj.tripType === 'single_payer' && leaderId) {
+    const leader = balances.find(b => b.id === leaderId);
+    if (leader) {
+      balances.forEach(b => {
+        if (b.id !== leader.id) {
+          if (b.balance < -0.01) {
+            // Member owes the leader
+            settlements.push({
+              from: b.name,
+              to: leader.name,
+              amount: -b.balance
+            });
+          } else if (b.balance > 0.01) {
+            // Member overpaid, leader owes them back
+            settlements.push({
+              from: leader.name,
+              to: b.name,
+              amount: b.balance
+            });
+          }
+        }
       });
+    }
+  }
 
-      creditor.balance -= amount;
-      debtor.balance += amount;
+  // If no settlements generated yet (either multi_payer or leader not found), run standard algorithm
+  if (settlements.length === 0) {
+    const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
+    const debtors = balances.filter(p => p.balance < -0.01).sort((a, b) => a.balance - b.balance);
 
-      if (creditor.balance <= 0.01) i++;
-      if (debtor.balance >= -0.01) j++;
-    } else {
-      if (creditor.balance <= 0.01) i++;
-      if (debtor.balance >= -0.01) j++;
+    let i = 0, j = 0;
+    const tempCreditors = creditors.map(c => ({...c}));
+    const tempDebtors = debtors.map(d => ({...d}));
+
+    while (i < tempCreditors.length && j < tempDebtors.length) {
+      const creditor = tempCreditors[i];
+      const debtor = tempDebtors[j];
+      const amount = Math.min(creditor.balance, -debtor.balance);
+
+      if (amount > 0.01) {
+        settlements.push({
+          from: debtor.name,
+          to: creditor.name,
+          amount: amount
+        });
+
+        creditor.balance -= amount;
+        debtor.balance += amount;
+
+        if (creditor.balance <= 0.01) i++;
+        if (debtor.balance >= -0.01) j++;
+      } else {
+        if (creditor.balance <= 0.01) i++;
+        if (debtor.balance >= -0.01) j++;
+      }
     }
   }
 
@@ -526,35 +559,59 @@ window.renderHomeSettlements = async function() {
     b.balance = b.totalSpent - b.expectedShare;
   });
 
-  const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
-  const debtors = balances.filter(p => p.balance < -0.01).sort((a, b) => a.balance - b.balance);
-
   let settlements = [];
-  let i = 0, j = 0;
 
-  const tempCreditors = creditors.map(c => ({...c}));
-  const tempDebtors = debtors.map(d => ({...d}));
+  // Determine Leader for Single-Payer mode
+  let leaderId = currentTripData ? currentTripData.leaderId : null;
+  if (leaderId === 'creator' && participants.length > 0) {
+    leaderId = participants[0].id;
+  }
 
-  while (i < tempCreditors.length && j < tempDebtors.length) {
-    const creditor = tempCreditors[i];
-    const debtor = tempDebtors[j];
-    const amount = Math.min(creditor.balance, -debtor.balance);
-
-    if (amount > 0.01) {
-      settlements.push({
-        from: debtor.name,
-        to: creditor.name,
-        amount: amount
+  if (currentTripData && currentTripData.tripType === 'single_payer' && leaderId) {
+    const leader = balances.find(b => b.id === leaderId);
+    if (leader) {
+      balances.forEach(b => {
+        if (b.id !== leader.id) {
+          if (b.balance < -0.01) {
+            settlements.push({ from: b.name, to: leader.name, amount: -b.balance });
+          } else if (b.balance > 0.01) {
+            settlements.push({ from: leader.name, to: b.name, amount: b.balance });
+          }
+        }
       });
+    }
+  }
 
-      creditor.balance -= amount;
-      debtor.balance += amount;
+  // Standard multi-payer algorithm fallback
+  if (settlements.length === 0) {
+    const creditors = balances.filter(p => p.balance > 0.01).sort((a, b) => b.balance - a.balance);
+    const debtors = balances.filter(p => p.balance < -0.01).sort((a, b) => a.balance - b.balance);
 
-      if (creditor.balance <= 0.01) i++;
-      if (debtor.balance >= -0.01) j++;
-    } else {
-      if (creditor.balance <= 0.01) i++;
-      if (debtor.balance >= -0.01) j++;
+    let i = 0, j = 0;
+    const tempCreditors = creditors.map(c => ({...c}));
+    const tempDebtors = debtors.map(d => ({...d}));
+
+    while (i < tempCreditors.length && j < tempDebtors.length) {
+      const creditor = tempCreditors[i];
+      const debtor = tempDebtors[j];
+      const amount = Math.min(creditor.balance, -debtor.balance);
+
+      if (amount > 0.01) {
+        settlements.push({
+          from: debtor.name,
+          to: creditor.name,
+          amount: amount
+        });
+
+        creditor.balance -= amount;
+        debtor.balance += amount;
+
+        if (creditor.balance <= 0.01) i++;
+        if (debtor.balance >= -0.01) j++;
+      } else {
+        if (creditor.balance <= 0.01) i++;
+        if (debtor.balance >= -0.01) j++;
+      }
     }
   }
 

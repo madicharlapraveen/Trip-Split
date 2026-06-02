@@ -415,16 +415,7 @@ window.showTripSelectionModal = function() {
       content += '</div>';
       content += '<button onclick="showCreateTripModal()" class="w-full bg-slate-100 text-slate-700 font-bold py-4 rounded-2xl mt-6 hover:bg-slate-200 transition-colors">Create New Trip</button>';
     }
-    showModal(content);
-  });
-};
-
-// Create Trip Modal with currency selector and templates option (F6, F7)
-window.showCreateTripModal = async function() {
-  const templates = typeof getTemplates === 'function' ? await getTemplates() : [];
-  const templatesOptions = templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-
-  const content = `
+      const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">New Trip</h3>
     <form id="create-trip-form" class="space-y-5">
       <div>
@@ -446,18 +437,87 @@ window.showCreateTripModal = async function() {
       </div>
 
       ${templates.length > 0 ? `
-      <div>
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">⚡ Start from Template</label>
-        <select id="create-trip-template" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all">
+      <div class="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+        <label class="block text-xs font-bold text-orange-600 uppercase tracking-wider mb-2">⚡ Start from Template</label>
+        <select id="create-trip-template" class="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all text-orange-900 font-medium">
           <option value="">-- Fresh Trip --</option>
           ${templatesOptions}
         </select>
       </div>
       ` : ''}
 
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trip Style</label>
+        <div class="grid grid-cols-2 gap-3" id="trip-style-container">
+          <label class="cursor-pointer relative">
+            <input type="radio" name="tripType" value="multi_payer" class="peer sr-only" checked>
+            <div class="h-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl peer-checked:border-indigo-500 peer-checked:bg-indigo-50 transition-all">
+              <div class="font-bold text-slate-800 mb-1">👥 Friends Split</div>
+              <div class="text-[11px] text-slate-500 leading-tight">Anyone can pay. Settle with anyone.</div>
+            </div>
+          </label>
+          <label class="cursor-pointer relative">
+            <input type="radio" name="tripType" value="single_payer" class="peer sr-only">
+            <div class="h-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl peer-checked:border-indigo-500 peer-checked:bg-indigo-50 transition-all">
+              <div class="font-bold text-slate-800 mb-1">👑 Leader-Led</div>
+              <div class="text-[11px] text-slate-500 leading-tight">One manager. All owe the leader.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="leader-selection-container" class="hidden mb-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+        <label class="block text-xs font-bold text-indigo-800 uppercase tracking-wider mb-2">Select Trip Leader</label>
+        <select id="trip-leader-select" class="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all">
+          <option value="creator">Me (Creator)</option>
+        </select>
+        <p class="text-[10px] text-indigo-600 mt-2">All expenses and debts will be routed to this person.</p>
+      </div>
+
       <div>
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Notes (Optional)</label>
-        <textarea id="trip-notes-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="3" placeholder="Brief description..."></textarea>
+        <textarea id="trip-notes-input" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all" rows="2" placeholder="Brief description..."></textarea>
+      </div>
+      <div class="flex space-x-3 pt-2">
+        <button type="submit" class="flex-1 btn-primary py-4">Create Trip</button>
+        <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
+      </div>
+    </form>
+  `;
+  showModal(content);
+
+  setTimeout(() => {
+    const tripTypeRadios = document.querySelectorAll('input[name="tripType"]');
+    const leaderContainer = document.getElementById('leader-selection-container');
+    const templateSelect = document.getElementById('create-trip-template');
+    const leaderSelect = document.getElementById('trip-leader-select');
+
+    if (tripTypeRadios) {
+      tripTypeRadios.forEach(r => r.addEventListener('change', (e) => {
+        if (e.target.value === 'single_payer') {
+          leaderContainer.classList.remove('hidden');
+        } else {
+          leaderContainer.classList.add('hidden');
+        }
+      }));
+    }
+
+    if (templateSelect && leaderSelect) {
+      templateSelect.addEventListener('change', async (e) => {
+        const tId = Number(e.target.value);
+        leaderSelect.innerHTML = '<option value="creator">Me (Creator)</option>';
+        if (tId && typeof getTemplates === 'function') {
+          const list = await getTemplates();
+          const t = list.find(x => x.id === tId);
+          if (t && t.crew) {
+             t.crew.forEach((c, idx) => {
+                leaderSelect.innerHTML += \`<option value="template_crew_\${idx}">\${c.name}</option>\`;
+             });
+          }
+        }
+      });
+    }
+  }, 50);on..."></textarea>
       </div>
       <div class="flex space-x-3 pt-4">
         <button type="submit" class="flex-1 btn-primary py-4">Create Trip</button>
@@ -477,6 +537,10 @@ window.showCreateTripModal = async function() {
 
     const templateSelect = document.getElementById('create-trip-template');
     const selectedTemplateId = templateSelect ? Number(templateSelect.value) : null;
+    
+    const tripTypeElement = document.querySelector('input[name="tripType"]:checked');
+    const tripType = tripTypeElement ? tripTypeElement.value : 'multi_payer';
+    const leaderSelection = document.getElementById('trip-leader-select') ? document.getElementById('trip-leader-select').value : 'creator';
 
     if (tripName) {
       let tripId;
@@ -490,20 +554,34 @@ window.showCreateTripModal = async function() {
             estimatedBudget: budget || template.estimatedBudget,
             currency: template.currency || currencyObj.code,
             currencySymbol: template.currencySymbol || currencyObj.symbol,
-            itinerary: template.itinerary || []
+            itinerary: template.itinerary || [],
+            tripType: tripType,
+            isClosed: false,
+            leaderId: 'creator' // Will update below if a specific member was selected
           });
           
+          let actualLeaderId = null;
+
           // Auto add crew from template
           if (template.crew && template.crew.length > 0) {
-            for (const member of template.crew) {
-              await addParticipant({
+            for (let idx = 0; idx < template.crew.length; idx++) {
+              const member = template.crew[idx];
+              const pId = await addParticipant({
                 tripId: tripId,
                 name: member.name,
                 phone: '',
                 familyCount: member.familyCount || 1
               });
+              if (leaderSelection === `template_crew_${idx}`) {
+                 actualLeaderId = pId;
+              }
             }
           }
+          
+          if (actualLeaderId) {
+             await updateTrip(tripId, { leaderId: actualLeaderId });
+          }
+
           if (window.showToast) window.showToast('Created trip from template! Crew loaded. ✅', 'success');
         }
       } else {
@@ -512,7 +590,10 @@ window.showCreateTripModal = async function() {
           notes, 
           estimatedBudget: budget, 
           currency: currencyObj.code, 
-          currencySymbol: currencyObj.symbol 
+          currencySymbol: currencyObj.symbol,
+          tripType: tripType,
+          isClosed: false,
+          leaderId: 'creator'
         });
       }
       
@@ -572,11 +653,13 @@ window.showAddParticipantModal = async function() {
 
 // Add Expense Modal
 window.showAddExpenseModal = async function() {
-    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify expenses.');
     if (!currentTripId) {
         showTripSelectionModal();
         return;
     }
+    const trip = await getTrip(currentTripId);
+    if (trip && trip.isClosed) return alert('This trip is closed. You must reopen it to add new expenses.');
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify expenses.');
 
   getParticipants(currentTripId).then(participants => {
     if (participants.length === 0) {
@@ -1202,6 +1285,55 @@ async function loadHomeData(silentModeSwitch = false) {
         });
         expenseDetails.appendChild(categoryDiv);
       });
+    }
+  }
+
+  // Inject Close Trip CTA for Single-Payer mode
+  const existingCloseCard = document.getElementById('close-trip-card');
+  if (existingCloseCard) existingCloseCard.remove();
+  
+  if (trip && trip.tripType === 'single_payer') {
+    const closeCard = document.createElement('div');
+    closeCard.id = 'close-trip-card';
+    if (trip.isClosed) {
+       closeCard.className = 'premium-card bg-rose-50 border-rose-200 mt-6 mb-2 text-center';
+       closeCard.innerHTML = `
+         <div class="inline-block p-3 bg-rose-100 text-rose-500 rounded-full mb-3">
+           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/></svg>
+         </div>
+         <h4 class="text-sm font-bold text-rose-900 mb-1">Trip Closed & Locked</h4>
+         <p class="text-xs text-rose-600 mb-4">No new expenses can be added.</p>
+         <div class="flex gap-2 justify-center">
+            <button onclick="broadcastDuesWhatsApp()" class="flex-1 max-w-[200px] py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+               Broadcast Dues
+            </button>
+            <button onclick="reopenTrip()" class="px-4 py-3 bg-white border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-all">
+               Reopen
+            </button>
+         </div>
+       `;
+    } else {
+       closeCard.className = 'premium-card bg-slate-900 text-white mt-6 mb-2 border-none';
+       closeCard.innerHTML = `
+         <div class="flex justify-between items-center mb-1">
+            <div>
+               <h4 class="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                 <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                 Lock & Close Trip
+               </h4>
+               <p class="text-[10px] text-slate-400">Lock expenses & generate dues.</p>
+            </div>
+            <button onclick="closeTrip()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-xs font-bold transition-all shadow-md">
+               Close Trip
+            </button>
+         </div>
+       `;
+    }
+    
+    // Find the home-settlements-details container to insert before it
+    const hsd = document.getElementById('home-settlements-details');
+    if (hsd && hsd.parentNode) {
+       hsd.parentNode.insertBefore(closeCard, hsd);
     }
   }
 
@@ -3390,4 +3522,47 @@ window.shareTripInvite = async function() {
     navigator.clipboard.writeText(message);
     if (window.showToast) window.showToast('Invite details copied to clipboard!', 'success');
   }
+};
+
+window.closeTrip = async function() {
+  if (!confirm("Are you sure you want to close this trip? This will lock all new expenses.")) return;
+  await updateTrip(currentTripId, { isClosed: true });
+  if (window.showToast) window.showToast('Trip Closed & Locked 🔒', 'success');
+  loadHomeData();
+};
+
+window.reopenTrip = async function() {
+  if (!confirm("Reopen this trip? This will allow new expenses to be added.")) return;
+  await updateTrip(currentTripId, { isClosed: false });
+  if (window.showToast) window.showToast('Trip Reopened 🔓', 'info');
+  loadHomeData();
+};
+
+window.broadcastDuesWhatsApp = async function() {
+  if (!currentTripId) return;
+  const trip = await getTrip(currentTripId);
+  if (!trip || trip.tripType !== 'single_payer') return;
+  
+  const splitData = await calculateSplit();
+  if (!splitData) return;
+  
+  const settlements = splitData.settlements;
+  const symbol = trip.currencySymbol || '₹';
+  
+  let msg = `*🔒 Trip Closed: ${trip.tripName}*\n`;
+  msg += `Total Expenses: ${symbol}${splitData.totalExpense.toFixed(0)}\n\n`;
+  msg += `*Final Settlement Dues:*\n`;
+  
+  if (settlements.length === 0) {
+      msg += `Everything is perfectly balanced! No payments needed. 🎉\n`;
+  } else {
+      settlements.forEach(s => {
+          msg += `• ${s.from} owes ${symbol}${s.amount.toFixed(0)} to ${s.to}\n`;
+      });
+  }
+  
+  msg += `\nPlease settle your dues at the earliest.`;
+  
+  const encodedMsg = encodeURIComponent(msg);
+  window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
 };
