@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v36-dark-notify';
+const CACHE_NAME = 'tripsplit-v37-theme-toggle';
 const RUNTIME_CACHE = 'tripsplit-runtime-v1';
 const urlsToCache = [
   './',

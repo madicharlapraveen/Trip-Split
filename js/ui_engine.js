@@ -5,6 +5,40 @@ console.log('ui_engine.js loading...');
 let currentScreen = 'home';
 window.currentAppMode = localStorage.getItem('tripsplit_app_mode') || 'split';
 
+// ── Theme Engine ─────────────────────────────────────────────────────────────
+// Apply theme immediately (before first paint to prevent flash)
+(function applyAppTheme() {
+  const saved = localStorage.getItem('tripsplit_theme') || 'dark';
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+  } else {
+    document.body.classList.remove('light-mode');
+  }
+  // Update browser theme-color meta to match
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', saved === 'light' ? '#f0f4ff' : '#121214');
+})();
+
+window.toggleAppTheme = function() {
+  const isLight = document.body.classList.toggle('light-mode');
+  const theme = isLight ? 'light' : 'dark';
+  localStorage.setItem('tripsplit_theme', theme);
+
+  // Update browser status bar color
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', isLight ? '#f0f4ff' : '#121214');
+
+  // Update font on body explicitly for immediate effect
+  document.body.style.fontFamily = isLight ? "'Inter', sans-serif" : "'Outfit', sans-serif";
+
+  // Show confirmation toast
+  if (window.showToast) {
+    window.showToast(isLight ? '☀️ Light mode on' : '🌙 Dark mode on', 'info');
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 // Dynamic Trip Cover Photo Helper
 window.getTripCoverPhoto = function(tripName) {
   const name = (tripName || '').toLowerCase();
