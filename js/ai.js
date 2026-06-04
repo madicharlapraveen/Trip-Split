@@ -4,6 +4,7 @@
  * Step 1: Prepare the prompt and open Gemini
  */
 window.askGeminiForPlan = async function() {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     if (!currentTripId) return;
 
     const trip = await getTrip(currentTripId);
@@ -37,6 +38,7 @@ Please provide a clean list.`;
  * Step 2: Parse the text from Gemini and turn it into bubbles
  */
 window.importGeminiPlan = async function() {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     if (!currentTripId) return;
 
     const text = prompt("Paste the itinerary from Gemini here:");

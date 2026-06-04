@@ -444,6 +444,7 @@ async function calculateSplit() {
 
 // ── Settlement Action: Admin-only Mark as Paid / Undo ────────────────────────
 window.markSettlementPaid = async function(from, to, amount, paid) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify settlements.');
   const trip = await getTrip(currentTripId);
   if (!trip) return;
 

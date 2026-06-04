@@ -225,6 +225,17 @@ window.subscribeToTripUpdates = function(shareId) {
                 isApplyingCloudUpdate = false;
             }
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'permissions', filter: `share_id=eq.${shareId}` }, async (payload) => {
+            const newPerm = payload.new;
+            if (!newPerm) return;
+            const currentDeviceId = getDeviceId();
+            if (String(newPerm.device_id) === String(currentDeviceId)) {
+                console.log("My permission updated in real-time:", newPerm.role);
+                if (typeof syncLocalRoleWithCloud === 'function') {
+                    await syncLocalRoleWithCloud(currentTripId);
+                }
+            }
+        })
         .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
                 if (typeof updateLiveStatusIndicator === 'function') {

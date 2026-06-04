@@ -1046,6 +1046,11 @@ async function loadHomeData(silentModeSwitch = false) {
   const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
   window.currentTripSymbol = tripSymbol;
   const canEdit = trip ? (trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id) : true;
+  const addCrewBtn = document.getElementById('add-crew-btn');
+  if (addCrewBtn) {
+    if (canEdit) addCrewBtn.classList.remove('hidden');
+    else addCrewBtn.classList.add('hidden');
+  }
 
   // Active theme sync
   document.body.className = window.currentAppMode === 'adviser' ? 'theme-adviser' : 'theme-split';
@@ -1347,11 +1352,13 @@ async function loadHomeData(silentModeSwitch = false) {
             </div>
             <div class="flex items-center space-x-3">
                <span class="text-sm font-black text-slate-800">${tripSymbol}${expense.amount.toFixed(0)}</span>
+               ${canEdit ? `
                <div class="opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1">
                   <button onclick="editExpense(${expense.id})" class="text-xs text-indigo-500 hover:text-indigo-700 font-bold">Edit</button>
                   <span class="text-slate-300 text-[10px]">|</span>
                   <button onclick="deleteExpense(${expense.id})" class="text-xs text-rose-500 hover:text-rose-700 font-bold">Delete</button>
                </div>
+               ` : ''}
             </div>
           `;
           categoryDiv.appendChild(expenseDiv);
@@ -1368,7 +1375,10 @@ async function loadHomeData(silentModeSwitch = false) {
   if (trip && trip.tripType === 'single_payer') {
     const closeCard = document.createElement('div');
     closeCard.id = 'close-trip-card';
+    let shouldShow = false;
+
     if (trip.isClosed) {
+       shouldShow = true;
        let buttonsHtml = '';
        
        if (canEdit) {
@@ -1416,7 +1426,8 @@ async function loadHomeData(silentModeSwitch = false) {
             ${buttonsHtml}
          </div>
        `;
-    } else {
+    } else if (canEdit) {
+       shouldShow = true;
        closeCard.className = 'premium-card bg-slate-900 text-white mt-6 mb-2 border-none';
        closeCard.innerHTML = `
          <div class="flex justify-between items-center mb-1">
@@ -1434,10 +1445,12 @@ async function loadHomeData(silentModeSwitch = false) {
        `;
     }
     
-    // Find the home-settlements-details container to insert before it
-    const hsd = document.getElementById('home-settlements-details');
-    if (hsd && hsd.parentNode) {
-       hsd.parentNode.insertBefore(closeCard, hsd);
+    if (shouldShow) {
+        // Find the home-settlements-details container to insert before it
+        const hsd = document.getElementById('home-settlements-details');
+        if (hsd && hsd.parentNode) {
+           hsd.parentNode.insertBefore(closeCard, hsd);
+        }
     }
   }
 
@@ -1547,6 +1560,7 @@ async function loadExpenses() {
 
 // Edit Trip Details modal
 window.showEditTripModal = async function() {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify trip details.');
   if (!currentTripId) return;
   const trip = await getTrip(currentTripId);
   if (!trip) return;
@@ -1632,6 +1646,7 @@ window.showEditTripModal = async function() {
 
   document.getElementById('edit-trip-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify trip details.');
     const tripName = document.getElementById('edit-trip-name').value.trim();
     const budget = parseFloat(document.getElementById('edit-trip-budget').value) || 0;
     const notes = document.getElementById('edit-trip-notes').value.trim();
@@ -1773,6 +1788,7 @@ window.toggleHomeSettlementsDropdown = function() {
 
 // Edit Participant details
 window.editParticipant = async function(participantId) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
   const participant = await getParticipant(participantId);
   if (!participant) return;
 
@@ -1822,6 +1838,7 @@ window.viewParticipantProfile = async function(participantId) {
 
   const trip = await getTrip(currentTripId);
   const tripSymbol = trip ? (trip.currencySymbol || '₹') : '₹';
+  const canEdit = trip ? (trip.myRole === 'owner' || trip.myRole === 'editor' || !trip.share_id) : true;
   const participants = await getParticipants(currentTripId);
   const allExpenses = await getExpenses(currentTripId);
   
@@ -1875,9 +1892,11 @@ window.viewParticipantProfile = async function(participantId) {
             <span class="text-xs font-black ${isSender ? 'text-rose-500' : 'text-emerald-500'}">
               ${isSender ? '-' : '+'}${tripSymbol}${pay.amount.toFixed(2)}
             </span>
+            ${canEdit ? `
             <button onclick="window.deleteDirectPayment(${pay.id}, ${participantId})" class="p-1 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:text-rose-700 rounded-lg transition-colors border border-rose-100 dark:border-rose-500/20" title="Delete Payment">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1898,9 +1917,11 @@ window.viewParticipantProfile = async function(participantId) {
             <p class="text-xs text-slate-400 font-medium mt-0.5">${participant.phone || 'No phone'} • ${participant.familyCount > 0 ? `+${participant.familyCount} family` : 'Individual'}</p>
           </div>
         </div>
+        ${canEdit ? `
         <button onclick="window.toggleParticipantEditForm()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-black rounded-xl transition-all">
           Edit Info
         </button>
+        ` : ''}
       </div>
 
       <!-- Financial Statistics Box -->
@@ -1932,6 +1953,7 @@ window.viewParticipantProfile = async function(participantId) {
         </div>
       </div>
 
+      ${canEdit ? `
       <!-- Record Direct Payment Entry Form -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 mb-6 shadow-sm">
         <h4 class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-3">💸 Record Direct Payment</h4>
@@ -1970,6 +1992,7 @@ window.viewParticipantProfile = async function(participantId) {
           </button>
         </form>
       </div>
+      ` : ''}
 
       <!-- Payment History list -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 shadow-sm max-h-[180px] overflow-y-auto no-scrollbar">
@@ -1982,6 +2005,7 @@ window.viewParticipantProfile = async function(participantId) {
       </div>
     </div>
 
+    ${canEdit ? `
     <!-- Edit Info Form inside Modal (hidden by default) -->
     <div id="participant-edit-form" class="hidden">
       <h3 class="text-xl font-bold mb-6 text-slate-800 dark:text-white">Edit Crew Info</h3>
@@ -2006,75 +2030,86 @@ window.viewParticipantProfile = async function(participantId) {
         </div>
       </form>
     </div>
+    ` : ''}
   `;
   showModal(content);
 
   // Wire up Record Payment form submit
-  document.getElementById('record-direct-payment-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const direction = document.getElementById('payment-direction').value;
-    const peerId = parseInt(document.getElementById('payment-peer').value);
-    const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
-    const method = document.getElementById('payment-method').value;
+  const recordPaymentForm = document.getElementById('record-direct-payment-form');
+  if (recordPaymentForm) {
+    recordPaymentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
+      
+      const direction = document.getElementById('payment-direction').value;
+      const peerId = parseInt(document.getElementById('payment-peer').value);
+      const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
+      const method = document.getElementById('payment-method').value;
 
-    if (amount > 0 && peerId) {
-      const peer = participants.find(p => p.id === peerId);
-      if (!peer) return;
+      if (amount > 0 && peerId) {
+        const peer = participants.find(p => p.id === peerId);
+        if (!peer) return;
 
-      const fromId = direction === 'sent' ? participantId : peerId;
-      const toId = direction === 'sent' ? peerId : participantId;
-      const fromName = direction === 'sent' ? participant.name : peer.name;
-      const toName = direction === 'sent' ? peer.name : participant.name;
+        const fromId = direction === 'sent' ? participantId : peerId;
+        const toId = direction === 'sent' ? peerId : participantId;
+        const fromName = direction === 'sent' ? participant.name : peer.name;
+        const toName = direction === 'sent' ? peer.name : participant.name;
 
-      const settlementKey = `${fromName}-->${toName}`;
+        const settlementKey = `${fromName}-->${toName}`;
 
-      const settlementExpense = {
-        tripId: currentTripId,
-        id: Date.now(),
-        title: `Payment: ${fromName} → ${toName}`,
-        description: `Direct Settle (${method}): ${fromName} → ${toName}`,
-        amount: amount,
-        totalAmount: amount,
-        paidBy: fromId,
-        category: 'Settlement',
-        splitMethod: 'exact',
-        splitBetween: [toId],
-        splits: { [toId]: amount },
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        isSettlement: true,
-        settlementKey: settlementKey
-      };
+        const settlementExpense = {
+          tripId: currentTripId,
+          id: Date.now(),
+          title: `Payment: ${fromName} → ${toName}`,
+          description: `Direct Settle (${method}): ${fromName} → ${toName}`,
+          amount: amount,
+          totalAmount: amount,
+          paidBy: fromId,
+          category: 'Settlement',
+          splitMethod: 'exact',
+          splitBetween: [toId],
+          splits: { [toId]: amount },
+          date: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString(),
+          isSettlement: true,
+          settlementKey: settlementKey
+        };
 
-      const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
-      if (!storageData.expenses) storageData.expenses = [];
-      storageData.expenses.push(settlementExpense);
-      localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+        const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
+        if (!storageData.expenses) storageData.expenses = [];
+        storageData.expenses.push(settlementExpense);
+        localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
 
-      if (typeof triggerBackgroundSync === 'function') {
-        triggerBackgroundSync(`Recorded direct payment from ${fromName} to ${toName}`);
+        if (typeof triggerBackgroundSync === 'function') {
+          triggerBackgroundSync(`Recorded direct payment from ${fromName} to ${toName}`);
+        }
+
+        if (window.showToast) window.showToast('Payment recorded successfully! 💸', 'success');
+
+        await window.viewParticipantProfile(participantId);
+        loadHomeData();
       }
-
-      if (window.showToast) window.showToast('Payment recorded successfully! 💸', 'success');
-
-      await window.viewParticipantProfile(participantId);
-      loadHomeData();
-    }
-  });
+    });
+  }
 
   // Wire up edit info submit
-  document.getElementById('edit-profile-fields-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('edit-part-name').value.trim();
-    const phone = document.getElementById('edit-part-phone').value.trim();
-    const familyCount = parseInt(document.getElementById('edit-part-family').value) || 0;
+  const editProfileForm = document.getElementById('edit-profile-fields-form');
+  if (editProfileForm) {
+    editProfileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
+      
+      const name = document.getElementById('edit-part-name').value.trim();
+      const phone = document.getElementById('edit-part-phone').value.trim();
+      const familyCount = parseInt(document.getElementById('edit-part-family').value) || 0;
 
-    if (name) {
-      await updateParticipant(participantId, { name, phone, familyCount });
-      await window.viewParticipantProfile(participantId);
-      loadHomeData();
-    }
-  });
+      if (name) {
+        await updateParticipant(participantId, { name, phone, familyCount });
+        await window.viewParticipantProfile(participantId);
+        loadHomeData();
+      }
+    });
+  }
 };
 
 window.toggleParticipantEditForm = function() {
@@ -2088,6 +2123,7 @@ window.toggleParticipantEditForm = function() {
 };
 
 window.deleteDirectPayment = async function(paymentId, participantId) {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
   if (confirm('Are you sure you want to delete this payment record?')) {
     const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
     storageData.expenses = storageData.expenses.filter(e => e.id !== paymentId);
@@ -3664,6 +3700,7 @@ window.shareTripInvite = async function() {
 };
 
 window.closeTrip = async function() {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the trip.');
   const content = `
     <h3 class="text-xl font-bold mb-6 text-slate-800">Close & Lock Trip</h3>
     <form id="close-trip-form" class="space-y-4">
@@ -3682,17 +3719,19 @@ window.closeTrip = async function() {
 
   document.getElementById('close-trip-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the trip.');
     const upiId = document.getElementById('leader-upi-id').value.trim();
     if (upiId) {
        await window.updateTrip(currentTripId, { isClosed: true, paymentUpiId: upiId });
        window.hideModal();
        if (window.showToast) window.showToast('Trip Closed & Locked 🔒', 'success');
        window.loadHomeData();
-    }
+     }
   });
 };
 
 window.reopenTrip = async function() {
+  if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the trip.');
   if (!confirm("Reopen this trip? This will allow new expenses to be added.")) return;
   await updateTrip(currentTripId, { isClosed: false });
   if (window.showToast) window.showToast('Trip Reopened 🔓', 'info');

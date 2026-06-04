@@ -183,9 +183,11 @@ async function loadTripNotes() {
                         <a href="https://www.google.com/maps/dir/?api=1&destination=${latNum},${lngNum}&travelmode=driving" target="_blank" class="w-full text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-xl transition-all shadow-sm shadow-indigo-100 no-underline flex items-center justify-center gap-1">
                             🧭 Google Maps directions
                         </a>
+                        ${canEdit ? `
                         <button onclick="toggleVisit(${index}); leafletMap.closePopup();" class="w-full text-center py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[10px] font-black rounded-xl transition-all border border-slate-100">
                             ${item.visited ? '❌ Mark Unvisited' : '✅ Mark Visited'}
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -221,7 +223,7 @@ async function loadTripNotes() {
                     </div>
                     <div class="flex flex-col space-y-2 ml-4">
                         <div class="flex space-x-1.5">
-                            <button onclick="toggleVisit(${index})" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all ${item.visited ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 border border-slate-100'}" title="${item.visited ? 'Mark Unvisited' : 'Mark Visited'}">
+                            <button ${canEdit ? `onclick="toggleVisit(${index})"` : ''} class="w-10 h-10 rounded-xl flex items-center justify-center transition-all ${item.visited ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'} ${canEdit ? 'hover:bg-emerald-50 hover:text-emerald-600' : 'cursor-default'}" title="${item.visited ? (canEdit ? 'Mark Unvisited' : 'Visited') : (canEdit ? 'Mark Visited' : 'Not Visited')}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
                             </button>
                             ${directionsBtnHTML}
@@ -899,6 +901,7 @@ window.showEditPlaceModal = async function(index) {
 };
 
 async function toggleVisit(index) {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     const trip = await getTrip(currentTripId);
     const itinerary = trip.itinerary || [];
     if (itinerary[index]) {
@@ -912,6 +915,7 @@ async function toggleVisit(index) {
 }
 
 async function deletePlace(index) {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     if (confirm('Remove this place from your roadmap?')) {
         const trip = await getTrip(currentTripId);
         const itinerary = trip.itinerary || [];
@@ -927,6 +931,7 @@ async function deletePlace(index) {
 
 // Move a stop up (-1) or down (+1) in the itinerary order
 window.moveStop = async function(index, direction) {
+    if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify the planner.');
     const trip = await getTrip(currentTripId);
     const itinerary = trip.itinerary || [];
     const newIndex = index + direction;
