@@ -390,11 +390,55 @@ window.syncManualCoords = function() {
 // Parse copy-pasted coordinates or mapping links (Google Maps, Apple Maps, OpenStreetMap, Geo URI)
 function parseCoordinatesFromLinkOrText(text) {
     if (!text) return null;
-    text = text.trim();
+    
+    // Normalize curly quotes, double single quotes, and trim
+    let cleanText = text.replace(/[\u201D\u201C\u201F\u201E”‟]/g, '"').replace(/''/g, '"').trim();
+
+    // 1.1 DMS format (e.g. 11°24'36.7"N 76°41'42.0"E or 11° 24' 36.7" N, 76° 41' 42.0" E)
+    const dmsRegex = /(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([NSns])\s*[,\s]*\s*(\d+)\s*°\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"\s*([EWew])/;
+    const dmsMatch = cleanText.match(dmsRegex);
+    if (dmsMatch) {
+        const latDeg = parseFloat(dmsMatch[1]);
+        const latMin = parseFloat(dmsMatch[2]);
+        const latSec = parseFloat(dmsMatch[3]);
+        const latDir = dmsMatch[4].toUpperCase();
+
+        const lngDeg = parseFloat(dmsMatch[5]);
+        const lngMin = parseFloat(dmsMatch[6]);
+        const lngSec = parseFloat(dmsMatch[7]);
+        const lngDir = dmsMatch[8].toUpperCase();
+
+        let lat = latDeg + (latMin / 60) + (latSec / 3600);
+        if (latDir === 'S') lat = -lat;
+
+        let lng = lngDeg + (lngMin / 60) + (lngSec / 3600);
+        if (lngDir === 'W') lng = -lng;
+
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat, lng };
+        }
+    }
+
+    // 1.2 Decimal coordinates with direction suffix (e.g. 11.4102° N, 76.6950° E or 11.4102 N 76.6950 E)
+    const dirCoordsRegex = /^(-?\d+(?:\.\d+)?)\s*°?\s*([NSns])\s*[,\s]+\s*(-?\d+(?:\.\d+)?)\s*°?\s*([EWew])$/;
+    const dirCoordsMatch = cleanText.match(dirCoordsRegex);
+    if (dirCoordsMatch) {
+        let lat = parseFloat(dirCoordsMatch[1]);
+        const latDir = dirCoordsMatch[2].toUpperCase();
+        let lng = parseFloat(dirCoordsMatch[3]);
+        const lngDir = dirCoordsMatch[4].toUpperCase();
+
+        if (latDir === 'S' && lat > 0) lat = -lat;
+        if (lngDir === 'W' && lng > 0) lng = -lng;
+
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat, lng };
+        }
+    }
 
     // 1. Raw coordinates (e.g. "15.2993, 74.1240" or "15.2993 74.1240" or "15.2993,74.1240")
     const rawCoordsRegex = /^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/;
-    const rawMatch = text.match(rawCoordsRegex);
+    const rawMatch = cleanText.match(rawCoordsRegex);
     if (rawMatch) {
         const lat = parseFloat(rawMatch[1]);
         const lng = parseFloat(rawMatch[2]);
@@ -404,8 +448,8 @@ function parseCoordinatesFromLinkOrText(text) {
     }
 
     // 2. Geo URI: "geo:15.2993,74.1240"
-    if (text.startsWith('geo:')) {
-        const geoMatch = text.match(/geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (cleanText.startsWith('geo:')) {
+        const geoMatch = cleanText.match(/geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
         if (geoMatch) {
             return { lat: parseFloat(geoMatch[1]), lng: parseFloat(geoMatch[2]) };
         }
@@ -413,7 +457,7 @@ function parseCoordinatesFromLinkOrText(text) {
 
     // 3. Google Maps share links containing "@lat,lng" (e.g. @15.2993,74.1240)
     const googleAtRegex = /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
-    const atMatch = text.match(googleAtRegex);
+    const atMatch = cleanText.match(googleAtRegex);
     if (atMatch) {
         return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
     }
@@ -651,13 +695,13 @@ window.showAddPlaceModal = async function() {
             <div class="relative">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🔍 Search & Pin Location</label>
                 <div class="flex gap-2">
-                    <input type="text" id="place-search" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="E.g. Eiffel Tower, Taj Mahal...">
+                    <input type="text" id="place-search" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="Search place OR paste Google Maps link / coordinates...">
                     <button type="button" onclick="searchGeocodingLocation()" class="px-5 bg-indigo-50 text-indigo-600 font-black rounded-2xl hover:bg-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs shadow-sm">
                         Find Stop
                     </button>
                 </div>
                 <div id="search-results-list" class="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-48 overflow-y-auto no-scrollbar z-50"></div>
-                <div id="search-status" class="text-[10px] text-slate-400 font-bold mt-1.5 px-1">Search to automatically map pins and route directions!</div>
+                <div id="search-status" class="text-[10px] text-slate-400 font-bold mt-1.5 px-1">Search by name, paste coordinates (e.g. 11.4102, 76.6950 or 11°24'36"N 76°41'42"E), or paste a Google Maps link!</div>
                 <input type="hidden" id="place-lat" value="">
                 <input type="hidden" id="place-lng" value="">
                 
@@ -785,7 +829,7 @@ window.showEditPlaceModal = async function(index) {
             <div class="relative">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🔍 Search & Update Pin Location</label>
                 <div class="flex gap-2">
-                    <input type="text" id="place-search" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="E.g. Eiffel Tower..." value="${item.placeName}">
+                    <input type="text" id="place-search" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="Search place OR paste Google Maps link / coordinates..." value="${item.placeName}">
                     <button type="button" onclick="searchGeocodingLocation()" class="px-5 bg-indigo-50 text-indigo-600 font-black rounded-2xl hover:bg-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs shadow-sm">
                         Find Stop
                     </button>
