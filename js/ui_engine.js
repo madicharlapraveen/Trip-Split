@@ -2597,10 +2597,19 @@ window.handleStartLinkEmail = async function() {
     try {
         const existingProfile = await window.getProfileByEmail(email);
         if (existingProfile && existingProfile.device_id !== getDeviceId()) {
-            alert("This email address is already linked to an existing account. To recover your existing trips, please use 'Restore Account' instead.");
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `<span>Link & Sync Account</span>`;
+            const confirmRestore = confirm("This email address is already linked to a TripSplit account.\n\nWould you like to recover your existing trips and restore this account on this device?");
+            if (confirmRestore) {
+                await window.sendEmailOTP(email);
+                window.syncFlowState.email = email;
+                window.syncFlowState.flowType = 'restore';
+                window.syncFlowState.mode = 'otp';
+                window.renderSyncCard();
+                if (window.showToast) window.showToast('OTP verification code sent for restoring account!', 'info');
+            } else {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<span>Link & Sync Account</span>`;
+                }
             }
             return;
         }
