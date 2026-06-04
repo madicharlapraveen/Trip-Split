@@ -682,7 +682,7 @@ async function searchGeocodingLocation() {
             }
         } catch (err) {
             console.error('Failed to resolve Google Maps short link:', err);
-            statusDiv.innerHTML = `⚠️ Failed to resolve short link automatically. <br><span class="text-[9px] text-red-500 font-bold">Please search by name or enter raw coordinates (e.g. 15.2993, 74.1240).</span>`;
+            statusDiv.innerHTML = `⚠️ Failed to resolve short link automatically. <br><span class="text-[10px] text-red-500 font-bold block mb-1">CORS or bot protection blocked resolution.</span><span class="text-[9px] text-slate-500">💡 Tip: Search by name, or long-press the location in Google Maps to copy the raw coordinates (e.g. 11.3709, 76.6590) and paste them here directly!</span>`;
             if (window.showToast) window.showToast('Could not resolve Google Maps share link', 'error');
             return;
         }

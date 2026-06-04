@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tripsplit-v39-landing-page';
+const CACHE_NAME = 'tripsplit-v40-landing-page';
 const RUNTIME_CACHE = 'tripsplit-runtime-v1';
 const urlsToCache = [
   './',
