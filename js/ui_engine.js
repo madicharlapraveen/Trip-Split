@@ -2855,18 +2855,6 @@ window.showSettings = async function() {
                 </button>
                 ` : ''}
 
-                ${isViewer && trip && trip.share_id ? `
-                <button onclick="claimOwnerRole()" class="w-full flex items-center justify-between p-4 bg-amber-50 hover:bg-amber-100 rounded-2xl transition-all group border border-amber-200">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-2 bg-amber-100 text-amber-600 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-all">👑</div>
-                        <div>
-                            <span class="font-bold text-amber-700 block">I Created This Trip</span>
-                            <span class="text-[10px] text-amber-500">If you are the trip creator, tap to reclaim Admin access</span>
-                        </div>
-                    </div>
-                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                ` : ''}
 
                 <button onclick="showJoinTripModal()" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all group">
                     <div class="flex items-center space-x-3">

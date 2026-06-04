@@ -27,7 +27,7 @@ TripSplit implements a role-based permission system to allow group collaboration
 
 | Role | Allowed Actions | UI Experience |
 |------|-----------------|---------------|
-| 👑 **Owner / Admin** | • Edit trip details (budget, dates, names)<br>• Add/edit/delete participants<br>• Add/edit/delete expenses<br>• Create/delete presets & templates<br>• Mark settlements as Paid / Revert to Pending | Full read/write access. Can reclaim original admin credentials via "Claim Owner Role" in Settings. |
+| 👑 **Owner / Admin** | • Edit trip details (budget, dates, names)<br>• Add/edit/delete participants<br>• Add/edit/delete expenses<br>• Create/delete presets & templates<br>• Mark settlements as Paid / Revert to Pending | Full read/write access. Role is automatically set on creation and synchronized with matching client Device ID. |
 | ✍️ **Editor** | • Add/edit/delete expenses<br>• Add/edit participants<br>• View & toggle Settlement Plan statuses | Write access to operational items. Allowed to mark transactions as Paid or Undo to Pending. |
 | 👁️ **Viewer** | • Read-only access to all tabs (Home, List, Plan, Me)<br>• View interactive charts & stats | Read-only. Action buttons are hidden or disabled. Toggle settlement buttons are replaced with static `⏳ Pending` or `✅ Paid` badges. |
 
