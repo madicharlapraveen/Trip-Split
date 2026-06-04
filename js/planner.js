@@ -574,7 +574,7 @@ async function searchGeocodingLocation() {
     resultsDiv.classList.add('hidden');
 
     // Friendly helper for shortened CORS-blocked URLs
-    if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
+    if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps') || query.includes('share.google')) {
         statusDiv.textContent = 'Resolving Google Maps share link... 🌐⏳';
         try {
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(query)}`;
