@@ -575,8 +575,117 @@ async function searchGeocodingLocation() {
 
     // Friendly helper for shortened CORS-blocked URLs
     if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
-        statusDiv.innerHTML = `⚠️ Shortened links require absolute coordinates (e.g. 15.2993, 74.1240) or search text! <br><span class="text-[9px] text-slate-400">Please paste full Google Maps URLs or direct lat/lng coordinates.</span>`;
-        return;
+        statusDiv.textContent = 'Resolving Google Maps share link... 🌐⏳';
+        try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(query)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) {
+                throw new Error(`Proxy request failed: ${response.statusText}`);
+            }
+            const data = await response.json();
+            const html = data.contents || '';
+
+            let lat = null;
+            let lng = null;
+
+            // Strategy 1: Find og:url meta tag
+            const ogUrlMatch = html.match(/<meta\s+property="og:url"\s+content="([^"]+)"/i) || 
+                               html.match(/<meta\s+content="([^"]+)"\s+property="og:url"/i) ||
+                               html.match(/property="og:url"\s+content="([^"]+)"/i) ||
+                               html.match(/content="([^"]+)"\s+property="og:url"/i);
+            
+            if (ogUrlMatch && ogUrlMatch[1]) {
+                const ogUrl = ogUrlMatch[1];
+                const parsed = parseCoordinatesFromLinkOrText(ogUrl);
+                if (parsed) {
+                    lat = parsed.lat;
+                    lng = parsed.lng;
+                }
+            }
+
+            // Strategy 2: Look for @lat,lng directly in the HTML
+            if (lat === null || lng === null) {
+                const atMatch = html.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (atMatch) {
+                    lat = parseFloat(atMatch[1]);
+                    lng = parseFloat(atMatch[2]);
+                }
+            }
+
+            // Strategy 3: Look for markers or center in static map URLs
+            if (lat === null || lng === null) {
+                const staticMatch = html.match(/markers=([-?\d.]+)%2C([-?\d.]+)/i) || 
+                                    html.match(/markers=([-?\d.]+),([-?\d.]+)/i) ||
+                                    html.match(/center=([-?\d.]+)%2C([-?\d.]+)/i) ||
+                                    html.match(/center=([-?\d.]+),([-?\d.]+)/i);
+                if (staticMatch) {
+                    lat = parseFloat(staticMatch[1]);
+                    lng = parseFloat(staticMatch[2]);
+                }
+            }
+
+            // Strategy 4: Look for any place URL format inside the HTML
+            if (lat === null || lng === null) {
+                const pathCoordsRegex = /\/place\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
+                const pathMatch = html.match(pathCoordsRegex);
+                if (pathMatch) {
+                    lat = parseFloat(pathMatch[1]);
+                    lng = parseFloat(pathMatch[2]);
+                }
+            }
+
+            if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+                statusDiv.innerHTML = `📍 Link resolved to: <span class="text-indigo-600 font-black">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>. Reverse geocoding name... 🌐`;
+                try {
+                    const revResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`, {
+                        headers: {
+                            'Accept-Language': 'en'
+                        }
+                    });
+                    const res = await revResponse.json();
+                    
+                    if (res && res.display_name) {
+                        const shortName = res.display_name.split(',')[0] || 'Pinned Location';
+                        document.getElementById('place-search').value = shortName;
+                        document.getElementById('place-name').value = shortName;
+                        document.getElementById('place-lat').value = lat;
+                        document.getElementById('place-lng').value = lng;
+                        
+                        // Update manual inputs if visible
+                        const latManual = document.getElementById('place-lat-manual');
+                        const lngManual = document.getElementById('place-lng-manual');
+                        if (latManual) latManual.value = lat;
+                        if (lngManual) lngManual.value = lng;
+                        
+                        statusDiv.innerHTML = `📍 Pinned to: <span class="text-indigo-600 font-black">${shortName}</span> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
+                        if (window.showToast) window.showToast(`Location detected: ${shortName}!`, 'success');
+                    } else {
+                        const fallbackName = `Custom Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                        document.getElementById('place-search').value = fallbackName;
+                        document.getElementById('place-name').value = fallbackName;
+                        document.getElementById('place-lat').value = lat;
+                        document.getElementById('place-lng').value = lng;
+                        statusDiv.innerHTML = `📍 Pinned to custom coordinates ✅`;
+                    }
+                } catch (err) {
+                    const fallbackName = `Custom Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                    document.getElementById('place-search').value = fallbackName;
+                    document.getElementById('place-name').value = fallbackName;
+                    document.getElementById('place-lat').value = lat;
+                    document.getElementById('place-lng').value = lng;
+                    statusDiv.innerHTML = `📍 Pinned to custom coordinates (offline fallback) ✅`;
+                    console.error(err);
+                }
+                return;
+            } else {
+                throw new Error("Could not extract coordinates from link page content.");
+            }
+        } catch (err) {
+            console.error('Failed to resolve Google Maps short link:', err);
+            statusDiv.innerHTML = `⚠️ Failed to resolve short link automatically. <br><span class="text-[9px] text-red-500 font-bold">Please search by name or enter raw coordinates (e.g. 15.2993, 74.1240).</span>`;
+            if (window.showToast) window.showToast('Could not resolve Google Maps share link', 'error');
+            return;
+        }
     }
 
     // Direct Coordinates & Map Links Auto-Parsing and Reverse Geocoding
