@@ -2278,8 +2278,9 @@ window.loadMyData = async function() {
         let myExpectedShare = 0;
 
         expenses.forEach(e => {
+          if (e.isSettlement) return; // skip settlements
           // Paid by Me
-          if (e.paidBy === me.id) {
+          if (String(e.paidBy) === String(me.id)) {
             myTotalSpent += (e.totalAmount || e.amount || 0);
           }
           
@@ -2288,8 +2289,8 @@ window.loadMyData = async function() {
           if (!Array.isArray(splitBetweenIds) || splitBetweenIds.length === 0) {
             splitBetweenIds = participants.map(p => p.id);
           }
-          if (splitBetweenIds.includes(me.id)) {
-            const splitParticipants = participants.filter(p => splitBetweenIds.includes(p.id));
+          if (splitBetweenIds.map(String).includes(String(me.id))) {
+            const splitParticipants = participants.filter(p => splitBetweenIds.map(String).includes(String(p.id)));
             const totalSplitFamily = splitParticipants.reduce((sum, p) => sum + (p.familyCount || 1), 0);
             if (totalSplitFamily > 0) {
               const costPerHead = (e.totalAmount || e.amount || 0) / totalSplitFamily;
@@ -2326,24 +2327,34 @@ window.loadMyData = async function() {
         `;
 
         // Expenses filter details
-        const myExpenses = expenses.filter(e => e.paidBy === me.id);
+        const myExpenses = expenses.filter(e => !e.isSettlement && String(e.paidBy) === String(me.id));
         const myExpensesList = document.getElementById('my-expenses-list');
         const myExpensesItems = document.getElementById('my-expenses-items');
         
         if (myExpensesList && myExpensesItems) {
+          myExpensesList.classList.remove('hidden');
           if (myExpenses.length > 0) {
-            myExpensesList.classList.remove('hidden');
-            myExpensesItems.innerHTML = myExpenses.map(e => `
-              <div class="flex justify-between items-center py-3 border-b border-slate-50 last:border-b-0">
-                <div>
-                  <p class="text-sm font-bold text-slate-700">${e.title}</p>
-                  <p class="text-[10px] text-slate-400">${new Date(e.createdAt).toLocaleDateString()} • ${e.category}</p>
+            const catEmoji = { Food:'🍽️', Fuel:'⛽', Hotel:'🏨', Shopping:'🛍️', Tickets:'🎟️', Emergency:'🚨', Miscellaneous:'📦', Others:'💼' };
+            myExpensesItems.innerHTML = myExpenses.map(e => {
+              const emoji = catEmoji[e.category] || '💼';
+              const hasAdv = e.advancePay && e.advancePay > 0;
+              const rem = hasAdv ? ((e.totalPay || e.amount) - e.advancePay) : null;
+              return `
+                <div class="flex justify-between items-start py-3 border-b border-slate-50 last:border-b-0">
+                  <div class="flex items-center space-x-2.5">
+                    <span class="text-base">${emoji}</span>
+                    <div>
+                      <p class="text-sm font-bold text-slate-700">${e.title || e.description || 'Expense'}</p>
+                      <p class="text-[10px] text-slate-400">${new Date(e.createdAt).toLocaleDateString()} • ${e.category || 'Others'}</p>
+                      ${hasAdv ? `<p class="text-[9px] mt-0.5"><span class="text-emerald-500 font-bold">Paid: ${symbol}${e.advancePay.toFixed(0)}</span> <span class="text-slate-300">|</span> <span class="text-rose-400 font-bold">Due: ${symbol}${rem.toFixed(0)}</span></p>` : ''}
+                    </div>
+                  </div>
+                  <span class="text-sm font-black text-slate-800">${symbol}${(e.amount || 0).toFixed(0)}</span>
                 </div>
-                <span class="text-sm font-black text-slate-800">${symbol}${e.amount.toFixed(0)}</span>
-              </div>
-            `).join('');
+              `;
+            }).join('');
           } else {
-            myExpensesList.classList.add('hidden');
+            myExpensesItems.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">No expenses recorded for you in this trip yet.</p>`;
           }
         }
       }

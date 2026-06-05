@@ -577,137 +577,105 @@ async function searchGeocodingLocation() {
     if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps') || query.includes('share.google')) {
         statusDiv.textContent = 'Resolving Google Maps share link... 🌐⏳';
 
-        // --- share.google handler: follow redirect, extract place name, geocode ---
+        // --- share.google handler ---
+        // Redirect chain: share.google/CODE → google.com/share.google?q=CODE → google search?q=PlaceName
+        // Strategy: fetch step-2 redirect page (tiny HTML), extract place name from HREF, geocode it.
         if (query.includes('share.google')) {
             try {
-                // Step 1: fetch the share.google page via allorigins
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(query)}`;
+                // Extract code from URL (e.g. https://share.google/APJ4IbLpe8vGHz39R → APJ4IbLpe8vGHz39R)
+                const codeMatch = query.match(/share\.google\/([A-Za-z0-9_\-]+)/);
+                if (!codeMatch) throw new Error('Invalid share.google link format');
+                const code = codeMatch[1];
+
+                // Fetch the intermediate redirect page via allorigins
+                // This is a tiny 301 HTML page (< 600 bytes) not the full Google Search page
+                const step2Url = `https://www.google.com/share.google?q=${code}`;
+                statusDiv.textContent = 'Resolving Google share link... 🔍';
+
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(step2Url)}`;
                 const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
                 if (!response.ok) throw new Error('Proxy failed');
                 const data = await response.json();
 
-                // allorigins may give us the final URL via status.url (if it followed all redirects)
-                const finalUrl = (data.status && data.status.url) ? data.status.url : '';
                 const html = data.contents || '';
+                const finalUrl = (data.status && data.status.url) ? data.status.url : '';
 
                 let placeName = null;
-                let lat = null, lng = null;
 
-                // Helper to extract place name from any Google Search URL
-                function extractPlaceName(url) {
-                    const m = url.match(/[?&]q=([^&\s"'<>]+)/i);
-                    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
-                }
-
-                // Try the final URL first (if allorigins followed all redirects)
-                placeName = extractPlaceName(finalUrl);
-
-                // Try the embedded redirect URL inside the HTML body
-                // share.google → www.google.com/share.google → google.com/search?q=...
-                if (!placeName) {
-                    // Look for the second redirect embedded in HTML as href link
-                    const hrefMatch = html.match(/HREF="([^"]*google\.com\/search[^"]*)"/i) ||
-                                      html.match(/href="([^"]*google\.com\/search[^"]*)"/i) ||
-                                      html.match(/(https?:\/\/www\.google\.com\/search[^\s"'<>]+)/i);
-                    if (hrefMatch && hrefMatch[1]) {
-                        const redirectUrl = hrefMatch[1].replace(/&amp;/g, '&');
-                        placeName = extractPlaceName(redirectUrl);
-                        
-                        // If we got a redirectUrl but couldn't extract name, try fetching that URL too
-                        if (!placeName && redirectUrl) {
-                            try {
-                                const step2Proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(redirectUrl)}`;
-                                const res2 = await fetch(step2Proxy, { signal: AbortSignal.timeout(10000) });
-                                if (res2.ok) {
-                                    const data2 = await res2.json();
-                                    const finalUrl2 = (data2.status && data2.status.url) ? data2.status.url : '';
-                                    placeName = extractPlaceName(finalUrl2) || extractPlaceName(data2.contents || '');
-                                }
-                            } catch(e2) { /* ignore */ }
+                // Extract q= from the redirect HREF in the HTML body
+                // Expected HTML: <A HREF="https://www.google.com/search?...&q=Green+bliss+villa&...">here</A>
+                const hrefMatches = html.matchAll(/href="([^"]+)"/gi);
+                for (const m of hrefMatches) {
+                    const url = m[1].replace(/&amp;/g, '&');
+                    const qm = url.match(/[?&]q=([^&\s"'<>]+)/i);
+                    if (qm && qm[1] && !qm[1].includes('%') && qm[1].length < 200) {
+                        const candidate = decodeURIComponent(qm[1].replace(/\+/g, ' '));
+                        // Filter out Google UI strings (e.g. query params that aren't place names)
+                        if (candidate.length > 1 && !/^[a-z]{1,3}$/.test(candidate)) {
+                            placeName = candidate;
+                            break;
                         }
                     }
                 }
 
-                // Fallback: scan full HTML for any ?q= pattern from google search links
+                // Fallback: check finalUrl from allorigins status
+                if (!placeName && finalUrl) {
+                    const qm = finalUrl.match(/[?&]q=([^&\s"'<>]+)/i);
+                    if (qm) placeName = decodeURIComponent(qm[1].replace(/\+/g, ' '));
+                }
+
+                // Fallback: scan raw HTML for any q= in a google search URL
                 if (!placeName) {
-                    const htmlQMatch = html.match(/google\.com\/search[^"'<\s]*[?&]q=([^&"'<\s]+)/i);
-                    if (htmlQMatch && htmlQMatch[1]) {
-                        placeName = decodeURIComponent(htmlQMatch[1].replace(/\+/g, ' '));
-                    }
+                    const rawQMatch = html.match(/google\.com\/search[^"'<\s]*[?&]q=([^&"'<\s]{2,100})/i);
+                    if (rawQMatch) placeName = decodeURIComponent(rawQMatch[1].replace(/\+/g, ' '));
                 }
 
-                // Try @lat,lng in final URL or HTML
-                const atMatch = (finalUrl + html).match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                if (atMatch) {
-                    lat = parseFloat(atMatch[1]);
-                    lng = parseFloat(atMatch[2]);
-                }
+                if (!placeName) throw new Error('Could not extract place name from share link.');
 
-                if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-                    // We have coordinates - reverse geocode them
-                    statusDiv.innerHTML = `📍 Coordinates found: <span class="text-indigo-600 font-black">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>. Looking up name... 🌐`;
-                    const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`, { headers: { 'Accept-Language': 'en' } });
-                    const revData = await revRes.json();
-                    const shortName = (revData && revData.display_name) ? revData.display_name.split(',')[0] : (placeName || `Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-                    document.getElementById('place-search').value = shortName;
-                    document.getElementById('place-name').value = shortName;
-                    document.getElementById('place-lat').value = lat;
-                    document.getElementById('place-lng').value = lng;
+                // Geocode the place name via Nominatim
+                statusDiv.innerHTML = `🔍 Found: <span class="text-indigo-600 font-black">${placeName}</span>. Searching location...`;
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=1&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'en' }
+                });
+                const geoData = await geoRes.json();
+
+                if (geoData && geoData.length > 0) {
+                    const best = geoData[0];
+                    const foundLat = parseFloat(best.lat);
+                    const foundLng = parseFloat(best.lon);
+                    const foundName = best.display_name ? best.display_name.split(',')[0] : placeName;
+
+                    document.getElementById('place-search').value = foundName;
+                    document.getElementById('place-name').value = foundName;
+                    document.getElementById('place-lat').value = foundLat;
+                    document.getElementById('place-lng').value = foundLng;
                     const latManual = document.getElementById('place-lat-manual');
                     const lngManual = document.getElementById('place-lng-manual');
-                    if (latManual) latManual.value = lat;
-                    if (lngManual) lngManual.value = lng;
-                    statusDiv.innerHTML = `📍 Pinned: <span class="text-indigo-600 font-black">${shortName}</span> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
-                    if (window.showToast) window.showToast(`Location: ${shortName}`, 'success');
+                    if (latManual) latManual.value = foundLat;
+                    if (lngManual) lngManual.value = foundLng;
+
+                    statusDiv.innerHTML = `📍 Pinned: <span class="text-indigo-600 font-black">${foundName}</span> (${foundLat.toFixed(4)}, ${foundLng.toFixed(4)}) ✅`;
+                    if (window.showToast) window.showToast(`Location: ${foundName}`, 'success');
                     return;
-                }
-
-                if (placeName) {
-                    // Forward the extracted place name to normal geocoding search
-                    statusDiv.innerHTML = `🔍 Found: <span class="text-indigo-600 font-black">${placeName}</span>. Searching location... 🌐`;
-                    const geoResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=1&addressdetails=1`, {
-                        headers: { 'Accept-Language': 'en' }
-                    });
-                    const geoResults = await geoResponse.json();
-
-                    if (geoResults && geoResults.length > 0) {
-                        const best = geoResults[0];
-                        const foundLat = parseFloat(best.lat);
-                        const foundLng = parseFloat(best.lon);
-                        const foundName = best.display_name ? best.display_name.split(',')[0] : placeName;
-
-                        document.getElementById('place-search').value = foundName;
-                        document.getElementById('place-name').value = foundName;
-                        document.getElementById('place-lat').value = foundLat;
-                        document.getElementById('place-lng').value = foundLng;
-                        const latManual = document.getElementById('place-lat-manual');
-                        const lngManual = document.getElementById('place-lng-manual');
-                        if (latManual) latManual.value = foundLat;
-                        if (lngManual) lngManual.value = foundLng;
-
-                        statusDiv.innerHTML = `📍 Pinned: <span class="text-indigo-600 font-black">${foundName}</span> (${foundLat.toFixed(4)}, ${foundLng.toFixed(4)}) ✅`;
-                        if (window.showToast) window.showToast(`Location: ${foundName}`, 'success');
-                        return;
-                    } else {
-                        // Nominatim didn't find it — let user search by name
-                        document.getElementById('place-search').value = placeName;
-                        query = placeName;
-                        statusDiv.textContent = `Searching for "${placeName}"...`;
-                        // Fall through to normal geocoding below
-                    }
                 } else {
-                    throw new Error('Could not extract place name or coordinates from share.google link.');
+                    // Nominatim couldn't find it — show place name as text and let user manually pick
+                    document.getElementById('place-search').value = placeName;
+                    query = placeName;
+                    statusDiv.innerHTML = `🔍 Searching for "<span class="text-indigo-600 font-bold">${placeName}</span>"...`;
+                    // Fall through to normal geocoding below
                 }
             } catch (err) {
                 console.error('share.google resolve failed:', err);
-                statusDiv.innerHTML = `⚠️ Couldn't resolve share link automatically. <span class="text-[10px] text-slate-500 block mt-1">💡 Try searching by name, or paste coordinates directly (e.g. 12.9716, 77.5946)</span>`;
+                statusDiv.innerHTML = `⚠️ Couldn't resolve share link.<span class="text-[10px] text-slate-500 block mt-1">💡 Copy the place name from Google Maps and search directly, or paste coordinates (e.g. 12.9716, 77.5946)</span>`;
                 if (window.showToast) window.showToast('Could not resolve share link', 'error');
                 return;
             }
         }
 
 
+
         // --- maps.app.goo.gl / goo.gl/maps handler: use AllOrigins to fetch HTML and extract @lat,lng ---
+
         if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
             try {
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(query)}`;
