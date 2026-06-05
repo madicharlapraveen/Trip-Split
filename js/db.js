@@ -365,11 +365,11 @@ async function getExpenses(tripId) {
 }
 
 async function getExpense(id) {
-    return data.expenses.find(e => e.id === id);
+    return data.expenses.find(e => String(e.id) === String(id));
 }
 
 async function updateExpense(id, updates) {
-    const index = data.expenses.findIndex(e => e.id === id);
+    const index = data.expenses.findIndex(e => String(e.id) === String(id));
     if (index !== -1) {
         // Ensure description stays in sync with title
         if (updates.title && !updates.description) {
@@ -386,11 +386,11 @@ async function updateExpense(id, updates) {
 }
 
 async function deleteExpenseFromDB(id) {
-    const expense = data.expenses.find(e => e.id === id);
+    const expense = data.expenses.find(e => String(e.id) === String(id));
     if (expense) {
         touchTrip(expense.tripId);
     }
-    data.expenses = data.expenses.filter(e => e.id !== id);
+    data.expenses = data.expenses.filter(e => String(e.id) !== String(id));
     saveData(`deleted expense "${expense ? expense.title : 'Unknown'}"`);
 }
 
