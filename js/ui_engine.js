@@ -1870,6 +1870,33 @@ window.viewParticipantProfile = async function(participantId) {
   const otherParticipants = participants.filter(p => p.id !== participantId);
   const otherOptionsHtml = otherParticipants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
+  // Expenses paid by this participant in this trip
+  const myExpenses = travelExpenses.filter(e => String(e.paidBy) === String(participantId));
+  let myExpensesHtml = '';
+  if (myExpenses.length > 0) {
+    const categoryEmoji = { Food:'🍽️', Fuel:'⛽', Hotel:'🏨', Shopping:'🛍️', Tickets:'🎟️', Emergency:'🚨', Miscellaneous:'📦', Others:'💼' };
+    myExpensesHtml = myExpenses.map(exp => {
+      const emoji = categoryEmoji[exp.category] || '💼';
+      const hasAdvance = exp.advancePay && exp.advancePay > 0;
+      const remaining = hasAdvance ? ((exp.totalPay || exp.amount) - exp.advancePay) : null;
+      return `
+        <div class="flex justify-between items-start py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+          <div class="flex items-center space-x-2.5">
+            <span class="text-base">${emoji}</span>
+            <div>
+              <p class="text-xs font-bold text-slate-700 dark:text-slate-200">${exp.title || exp.description || 'Expense'}</p>
+              <p class="text-[9px] text-slate-400 mt-0.5">${exp.category || 'Others'} • ${new Date(exp.createdAt).toLocaleDateString()}</p>
+              ${hasAdvance ? `<p class="text-[9px] mt-0.5"><span class="text-emerald-500 font-bold">Paid: ${tripSymbol}${exp.advancePay.toFixed(0)}</span> <span class="text-slate-300">|</span> <span class="text-rose-400 font-bold">Due: ${tripSymbol}${remaining.toFixed(0)}</span></p>` : ''}
+            </div>
+          </div>
+          <span class="text-xs font-black text-slate-800 dark:text-white">${tripSymbol}${exp.amount.toFixed(0)}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    myExpensesHtml = `<p class="text-xs text-slate-400 dark:text-slate-500 italic text-center py-3">No expenses paid yet in this trip.</p>`;
+  }
+
   let paymentsHistoryHtml = '';
   if (allMyPayments.length > 0) {
     paymentsHistoryHtml = allMyPayments.map(pay => {
@@ -1893,7 +1920,7 @@ window.viewParticipantProfile = async function(participantId) {
               ${isSender ? '-' : '+'}${tripSymbol}${pay.amount.toFixed(2)}
             </span>
             ${canEdit ? `
-            <button onclick="window.deleteDirectPayment(${pay.id}, ${participantId})" class="p-1 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:text-rose-700 rounded-lg transition-colors border border-rose-100 dark:border-rose-500/20" title="Delete Payment">
+            <button onclick="window.deleteDirectPayment('${pay.id}', '${participantId}')" class="p-1 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:text-rose-700 rounded-lg transition-colors border border-rose-100 dark:border-rose-500/20" title="Delete Payment">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
             ` : ''}
@@ -1993,6 +2020,15 @@ window.viewParticipantProfile = async function(participantId) {
         </form>
       </div>
       ` : ''}
+
+      <!-- My Expenses in this Trip -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 mb-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">🧾 Expenses Paid (${myExpenses.length})</h4>
+          <span class="text-xs font-black text-indigo-500">${tripSymbol}${totalSpentOnTravel.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="space-y-0 max-h-[200px] overflow-y-auto no-scrollbar">${myExpensesHtml}</div>
+      </div>
 
       <!-- Payment History list -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-4 shadow-sm max-h-[180px] overflow-y-auto no-scrollbar">
