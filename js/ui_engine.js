@@ -1845,33 +1845,35 @@ window.viewParticipantProfile = async function(participantId) {
   const travelExpenses = allExpenses.filter(e => !e.isSettlement);
   const settlements = allExpenses.filter(e => e.isSettlement);
 
-  const totalSpentOnTravel = travelExpenses
-    .filter(e => e.paidBy === participantId)
-    .reduce((sum, e) => sum + e.amount, 0);
+  const pid = String(participantId); // normalise to string for all comparisons
 
-  const totalTravelCost = travelExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalSpentOnTravel = travelExpenses
+    .filter(e => String(e.paidBy) === pid)
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  const totalTravelCost = travelExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const perPersonShare = participants.length > 0 ? (totalTravelCost / participants.length) : 0;
   
   const sentPaymentsTotal = settlements
-    .filter(e => e.paidBy === participantId)
-    .reduce((sum, e) => sum + e.amount, 0);
+    .filter(e => String(e.paidBy) === pid)
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const receivedPaymentsTotal = settlements
-    .filter(e => e.isSettlement && e.splitBetween && e.splitBetween.includes(participantId))
-    .reduce((sum, e) => sum + e.amount, 0);
+    .filter(e => e.splitBetween && e.splitBetween.map(String).includes(pid))
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const netBalance = (totalSpentOnTravel + sentPaymentsTotal) - (perPersonShare + receivedPaymentsTotal);
   const isCreditor = netBalance >= 0;
 
-  const mySentPayments = settlements.filter(e => e.paidBy === participantId);
-  const myReceivedPayments = settlements.filter(e => e.isSettlement && e.splitBetween && e.splitBetween.includes(participantId));
+  const mySentPayments = settlements.filter(e => String(e.paidBy) === pid);
+  const myReceivedPayments = settlements.filter(e => e.splitBetween && e.splitBetween.map(String).includes(pid));
   const allMyPayments = [...mySentPayments, ...myReceivedPayments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const otherParticipants = participants.filter(p => p.id !== participantId);
+  const otherParticipants = participants.filter(p => String(p.id) !== pid);
   const otherOptionsHtml = otherParticipants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
   // Expenses paid by this participant in this trip
-  const myExpenses = travelExpenses.filter(e => String(e.paidBy) === String(participantId));
+  const myExpenses = travelExpenses.filter(e => String(e.paidBy) === pid);
   let myExpensesHtml = '';
   if (myExpenses.length > 0) {
     const categoryEmoji = { Food:'🍽️', Fuel:'⛽', Hotel:'🏨', Shopping:'🛍️', Tickets:'🎟️', Emergency:'🚨', Miscellaneous:'📦', Others:'💼' };
@@ -1900,10 +1902,10 @@ window.viewParticipantProfile = async function(participantId) {
   let paymentsHistoryHtml = '';
   if (allMyPayments.length > 0) {
     paymentsHistoryHtml = allMyPayments.map(pay => {
-      const isSender = pay.paidBy === participantId;
+      const isSender = String(pay.paidBy) === pid;
       const peerName = isSender 
-        ? (participants.find(p => p.id === pay.splitBetween[0])?.name || 'Unknown')
-        : (participants.find(p => p.id === pay.paidBy)?.name || 'Unknown');
+        ? (participants.find(p => String(p.id) === String(pay.splitBetween?.[0]))?.name || 'Unknown')
+        : (participants.find(p => String(p.id) === String(pay.paidBy))?.name || 'Unknown');
       
       const paymentMethod = pay.description && pay.description.includes('Cash') ? '💵 Cash' : '💳 UPI / Transfer';
 

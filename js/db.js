@@ -315,8 +315,8 @@ async function getParticipants(tripId) {
     
     return tripParticipants.map(p => {
         const totalSpent = tripExpenses
-            .filter(e => e.paidBy === p.id)
-            .reduce((sum, e) => sum + e.amount, 0);
+            .filter(e => String(e.paidBy) === String(p.id) && !e.isSettlement)
+            .reduce((sum, e) => sum + (e.amount || 0), 0);
         return { ...p, totalSpent };
     });
 }
@@ -340,7 +340,7 @@ async function deleteParticipantFromDB(id) {
         touchTrip(participant.tripId);
     }
     data.participants = data.participants.filter(p => p.id !== id);
-    data.expenses = data.expenses.filter(e => e.paidBy !== id);
+    data.expenses = data.expenses.filter(e => e.paidBy !== id && String(e.paidBy) !== String(id));
     saveData(`removed member "${participant ? participant.name : 'Unknown'}"`);
 }
 

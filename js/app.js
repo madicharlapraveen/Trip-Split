@@ -514,7 +514,7 @@ async function deleteParticipant(participantId) {
   if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
   if (confirm('Are you sure you want to delete this participant? This will also remove their expenses.')) {
     const expenses = await getExpenses(currentTripId);
-    const participantExpenses = expenses.filter(e => e.paidBy === participantId);
+    const participantExpenses = expenses.filter(e => String(e.paidBy) === String(participantId));
     for (const expense of participantExpenses) {
       await deleteExpenseFromDB(expense.id);
     }
