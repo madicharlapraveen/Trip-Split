@@ -473,10 +473,10 @@ async function editExpense(expenseId) {
       const advancePay = parseFloat(document.getElementById('expense-advance-edit').value) || 0;
       const amount = totalPay; // Maintain compatibility
       let category = document.getElementById('expense-category').value;
-      const paidBy = Number(document.getElementById('expense-paid-by').value);
+      const paidBy = document.getElementById('expense-paid-by').value;
 
       const splitCheckboxes = document.querySelectorAll('input[name="split-participant"]:checked');
-      const splitBetween = Array.from(splitCheckboxes).map(cb => Number(cb.value));
+      const splitBetween = Array.from(splitCheckboxes).map(cb => cb.value);
 
       if (splitBetween.length === 0) {
         alert('You must select at least one person to split with.');

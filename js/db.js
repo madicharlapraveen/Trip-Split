@@ -510,27 +510,27 @@ async function importDataFromCSV(csvString) {
 
         if (row.dataType === 'trip') {
             newData.trips.push({
-                id: Number(row.id),
+                id: String(row.id),
                 tripName: row.tripName,
                 notes: row.notes,
                 createdAt: row.createdAt
             });
         } else if (row.dataType === 'participant') {
             newData.participants.push({
-                id: Number(row.id),
-                tripId: Number(row.tripId),
+                id: String(row.id),
+                tripId: String(row.tripId),
                 name: row.name,
                 phone: row.phone,
                 familyCount: Number(row.familyCount)
             });
         } else if (row.dataType === 'expense') {
             newData.expenses.push({
-                id: Number(row.id),
-                tripId: Number(row.tripId),
+                id: String(row.id),
+                tripId: String(row.tripId),
                 title: row.title,
                 amount: Number(row.amount),
                 category: row.category,
-                paidBy: Number(row.paidBy),
+                paidBy: String(row.paidBy),
                 createdAt: row.createdAt
             });
         }

@@ -98,7 +98,7 @@ window.deletePresetAndRefresh = function(tripId, presetId) {
 
 window.addPresetFromModal = function() {
   const category = document.getElementById('preset-category').value;
-  const checked = Array.from(document.querySelectorAll('.preset-check:checked')).map(cb => Number(cb.dataset.id));
+  const checked = Array.from(document.querySelectorAll('.preset-check:checked')).map(cb => String(cb.dataset.id));
   if (checked.length === 0) {
     if (window.showToast) window.showToast('Select at least one person', 'error');
     return;

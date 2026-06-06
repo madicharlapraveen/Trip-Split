@@ -865,7 +865,7 @@ window.showAddExpenseModal = async function() {
         const preset = getPresetForCategory(currentTripId, val);
         if (preset) {
           document.querySelectorAll('input[name="add-split-participant"]').forEach(cb => {
-            cb.checked = preset.participantIds.includes(Number(cb.value));
+            cb.checked = preset.participantIds.map(String).includes(String(cb.value));
           });
           if (window.showToast) window.showToast(`Preset auto-applied for ${val} ⚡`, 'success');
         }
@@ -878,10 +878,10 @@ window.showAddExpenseModal = async function() {
       let totalAmount = parseFloat(document.getElementById('expense-total').value);
       let advancePay = parseFloat(document.getElementById('expense-advance').value) || 0;
       let category = document.getElementById('expense-category').value;
-      const paidBy = Number(document.getElementById('expense-paid-by').value);
+      const paidBy = document.getElementById('expense-paid-by').value;
 
       const splitCheckboxes = document.querySelectorAll('input[name="add-split-participant"]:checked');
-      const splitBetween = Array.from(splitCheckboxes).map(cb => Number(cb.value));
+      const splitBetween = Array.from(splitCheckboxes).map(cb => cb.value);
 
       if (splitBetween.length === 0) {
         alert('You must select at least one person to split with.');
