@@ -578,212 +578,37 @@ async function searchGeocodingLocation() {
         statusDiv.textContent = 'Resolving Google Maps share link... 🌐⏳';
 
         // --- share.google handler ---
-        // Redirect chain: share.google/CODE → google.com/share.google?q=CODE → google search?q=PlaceName
-        // Strategy: fetch step-2 redirect page (tiny HTML), extract place name from HREF, geocode it.
         if (query.includes('share.google')) {
-            try {
-                // Extract code from URL (e.g. https://share.google/APJ4IbLpe8vGHz39R → APJ4IbLpe8vGHz39R)
-                const codeMatch = query.match(/share\.google\/([A-Za-z0-9_\-]+)/);
-                if (!codeMatch) throw new Error('Invalid share.google link format');
-                const code = codeMatch[1];
-
-                // Fetch the intermediate redirect page via allorigins
-                // This is a tiny 301 HTML page (< 600 bytes) not the full Google Search page
-                const step2Url = `https://www.google.com/share.google?q=${code}`;
-                statusDiv.textContent = 'Resolving Google share link... 🔍';
-
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(step2Url)}`;
-                const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
-                if (!response.ok) throw new Error('Proxy failed');
-                const data = await response.json();
-
-                const html = data.contents || '';
-                const finalUrl = (data.status && data.status.url) ? data.status.url : '';
-
-                let placeName = null;
-
-                // Extract q= from the redirect HREF in the HTML body
-                // Expected HTML: <A HREF="https://www.google.com/search?...&q=Green+bliss+villa&...">here</A>
-                const hrefMatches = html.matchAll(/href="([^"]+)"/gi);
-                for (const m of hrefMatches) {
-                    const url = m[1].replace(/&amp;/g, '&');
-                    const qm = url.match(/[?&]q=([^&\s"'<>]+)/i);
-                    if (qm && qm[1] && !qm[1].includes('%') && qm[1].length < 200) {
-                        const candidate = decodeURIComponent(qm[1].replace(/\+/g, ' '));
-                        // Filter out Google UI strings (e.g. query params that aren't place names)
-                        if (candidate.length > 1 && !/^[a-z]{1,3}$/.test(candidate)) {
-                            placeName = candidate;
-                            break;
-                        }
-                    }
-                }
-
-                // Fallback: check finalUrl from allorigins status
-                if (!placeName && finalUrl) {
-                    const qm = finalUrl.match(/[?&]q=([^&\s"'<>]+)/i);
-                    if (qm) placeName = decodeURIComponent(qm[1].replace(/\+/g, ' '));
-                }
-
-                // Fallback: scan raw HTML for any q= in a google search URL
-                if (!placeName) {
-                    const rawQMatch = html.match(/google\.com\/search[^"'<\s]*[?&]q=([^&"'<\s]{2,100})/i);
-                    if (rawQMatch) placeName = decodeURIComponent(rawQMatch[1].replace(/\+/g, ' '));
-                }
-
-                if (!placeName) throw new Error('Could not extract place name from share link.');
-
-                // Geocode the place name via Nominatim
-                statusDiv.innerHTML = `🔍 Found: <span class="text-indigo-600 font-black">${placeName}</span>. Searching location...`;
-                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}&limit=1&addressdetails=1`, {
-                    headers: { 'Accept-Language': 'en' }
-                });
-                const geoData = await geoRes.json();
-
-                if (geoData && geoData.length > 0) {
-                    const best = geoData[0];
-                    const foundLat = parseFloat(best.lat);
-                    const foundLng = parseFloat(best.lon);
-                    const foundName = best.display_name ? best.display_name.split(',')[0] : placeName;
-
-                    document.getElementById('place-search').value = foundName;
-                    document.getElementById('place-name').value = foundName;
-                    document.getElementById('place-lat').value = foundLat;
-                    document.getElementById('place-lng').value = foundLng;
-                    const latManual = document.getElementById('place-lat-manual');
-                    const lngManual = document.getElementById('place-lng-manual');
-                    if (latManual) latManual.value = foundLat;
-                    if (lngManual) lngManual.value = foundLng;
-
-                    statusDiv.innerHTML = `📍 Pinned: <span class="text-indigo-600 font-black">${foundName}</span> (${foundLat.toFixed(4)}, ${foundLng.toFixed(4)}) ✅`;
-                    if (window.showToast) window.showToast(`Location: ${foundName}`, 'success');
-                    return;
-                } else {
-                    // Nominatim couldn't find it — show place name as text and let user manually pick
-                    document.getElementById('place-search').value = placeName;
-                    query = placeName;
-                    statusDiv.innerHTML = `🔍 Searching for "<span class="text-indigo-600 font-bold">${placeName}</span>"...`;
-                    // Fall through to normal geocoding below
-                }
-            } catch (err) {
-                console.error('share.google resolve failed:', err);
-                statusDiv.innerHTML = `⚠️ Couldn't resolve share link.<span class="text-[10px] text-slate-500 block mt-1">💡 Copy the place name from Google Maps and search directly, or paste coordinates (e.g. 12.9716, 77.5946)</span>`;
-                if (window.showToast) window.showToast('Could not resolve share link', 'error');
-                return;
-            }
+            statusDiv.innerHTML = `
+                <div class="p-3 bg-rose-50 rounded-xl border border-rose-100 mb-2">
+                    <p class="text-sm font-bold text-rose-600 flex items-center gap-2">
+                        <span>⚠️</span> Google blocked automatic link reading
+                    </p>
+                    <p class="text-xs text-rose-500 mt-1 leading-relaxed">
+                        Google no longer allows third-party apps to read Maps share links automatically. 
+                        Please type the <strong>Name of the Place</strong> (e.g., "Green Bliss Villa") directly into the search bar.
+                    </p>
+                </div>
+            `;
+            if (window.showToast) window.showToast('Google blocked automatic link resolution', 'error');
+            return;
         }
 
-
-
-        // --- maps.app.goo.gl / goo.gl/maps handler: use AllOrigins to fetch HTML and extract @lat,lng ---
-
+        // --- maps.app.goo.gl / goo.gl/maps handler ---
         if (query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
-            try {
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(query)}`;
-                const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-                if (!response.ok) {
-                    throw new Error(`Proxy request failed: ${response.statusText}`);
-                }
-                const data = await response.json();
-                const html = data.contents || '';
-
-                let lat = null;
-                let lng = null;
-
-                // Strategy 1: Find og:url meta tag
-                const ogUrlMatch = html.match(/<meta\s+property="og:url"\s+content="([^"]+)"/i) || 
-                                   html.match(/<meta\s+content="([^"]+)"\s+property="og:url"/i) ||
-                                   html.match(/property="og:url"\s+content="([^"]+)"/i) ||
-                                   html.match(/content="([^"]+)"\s+property="og:url"/i);
-                
-                if (ogUrlMatch && ogUrlMatch[1]) {
-                    const ogUrl = ogUrlMatch[1];
-                    const parsed = parseCoordinatesFromLinkOrText(ogUrl);
-                    if (parsed) {
-                        lat = parsed.lat;
-                        lng = parsed.lng;
-                    }
-                }
-
-                // Strategy 2: Look for @lat,lng directly in the HTML
-                if (lat === null || lng === null) {
-                    const atMatch = html.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                    if (atMatch) {
-                        lat = parseFloat(atMatch[1]);
-                        lng = parseFloat(atMatch[2]);
-                    }
-                }
-
-                // Strategy 3: Look for markers or center in static map URLs
-                if (lat === null || lng === null) {
-                    const staticMatch = html.match(/markers=(-?[\d.]+)%2C(-?[\d.]+)/i) || 
-                                        html.match(/markers=(-?[\d.]+),(-?[\d.]+)/i) ||
-                                        html.match(/center=(-?[\d.]+)%2C(-?[\d.]+)/i) ||
-                                        html.match(/center=(-?[\d.]+),(-?[\d.]+)/i);
-                    if (staticMatch) {
-                        lat = parseFloat(staticMatch[1]);
-                        lng = parseFloat(staticMatch[2]);
-                    }
-                }
-
-                // Strategy 4: Look for any place URL format inside the HTML
-                if (lat === null || lng === null) {
-                    const pathCoordsRegex = /\/place\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
-                    const pathMatch = html.match(pathCoordsRegex);
-                    if (pathMatch) {
-                        lat = parseFloat(pathMatch[1]);
-                        lng = parseFloat(pathMatch[2]);
-                    }
-                }
-
-                if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-                    statusDiv.innerHTML = `📍 Link resolved to: <span class="text-indigo-600 font-black">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>. Reverse geocoding name... 🌐`;
-                    try {
-                        const revResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`, {
-                            headers: { 'Accept-Language': 'en' }
-                        });
-                        const res = await revResponse.json();
-                        
-                        if (res && res.display_name) {
-                            const shortName = res.display_name.split(',')[0] || 'Pinned Location';
-                            document.getElementById('place-search').value = shortName;
-                            document.getElementById('place-name').value = shortName;
-                            document.getElementById('place-lat').value = lat;
-                            document.getElementById('place-lng').value = lng;
-                            
-                            const latManual = document.getElementById('place-lat-manual');
-                            const lngManual = document.getElementById('place-lng-manual');
-                            if (latManual) latManual.value = lat;
-                            if (lngManual) lngManual.value = lng;
-                            
-                            statusDiv.innerHTML = `📍 Pinned to: <span class="text-indigo-600 font-black">${shortName}</span> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
-                            if (window.showToast) window.showToast(`Location detected: ${shortName}!`, 'success');
-                        } else {
-                            const fallbackName = `Custom Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-                            document.getElementById('place-search').value = fallbackName;
-                            document.getElementById('place-name').value = fallbackName;
-                            document.getElementById('place-lat').value = lat;
-                            document.getElementById('place-lng').value = lng;
-                            statusDiv.innerHTML = `📍 Pinned to custom coordinates ✅`;
-                        }
-                    } catch (err) {
-                        const fallbackName = `Custom Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`; 
-                        document.getElementById('place-search').value = fallbackName;
-                        document.getElementById('place-name').value = fallbackName;
-                        document.getElementById('place-lat').value = lat;
-                        document.getElementById('place-lng').value = lng;
-                        statusDiv.innerHTML = `📍 Pinned to custom coordinates (offline fallback) ✅`;
-                        console.error(err);
-                    }
-                    return;
-                } else {
-                    throw new Error("Could not extract coordinates from link page content.");
-                }
-            } catch (err) {
-                console.error('Failed to resolve Google Maps short link:', err);
-                statusDiv.innerHTML = `⚠️ Failed to resolve short link automatically. <br><span class="text-[10px] text-red-500 font-bold block mb-1">CORS or bot protection blocked resolution.</span><span class="text-[9px] text-slate-500">💡 Tip: Search by name, or long-press the location in Google Maps to copy the raw coordinates (e.g. 11.3709, 76.6590) and paste them here directly!</span>`;
-                if (window.showToast) window.showToast('Could not resolve Google Maps share link', 'error');
-                return;
-            }
+            statusDiv.innerHTML = `
+                <div class="p-3 bg-rose-50 rounded-xl border border-rose-100 mb-2">
+                    <p class="text-sm font-bold text-rose-600 flex items-center gap-2">
+                        <span>⚠️</span> Google blocked automatic link reading
+                    </p>
+                    <p class="text-xs text-rose-500 mt-1 leading-relaxed">
+                        Google no longer allows third-party apps to read Maps share links automatically. 
+                        Please type the <strong>Name of the Place</strong> (e.g., "Green Bliss Villa") directly into the search bar.
+                    </p>
+                </div>
+            `;
+            if (window.showToast) window.showToast('Google blocked automatic link resolution', 'error');
+            return;
         }
     }
 
