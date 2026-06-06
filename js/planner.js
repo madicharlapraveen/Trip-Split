@@ -717,41 +717,42 @@ window.showAddPlaceModal = async function() {
     }
 
     const content = `
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-extrabold text-slate-800">Add Next Stop</h3>
             <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form id="add-place-form" class="space-y-5">
-            <!-- Search & Geolocation Pin -->
-            <div class="relative">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🔍 Search & Pin Location</label>
-                <div class="flex gap-2">
-                    <input type="text" id="place-search" class="flex-1 p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="Search place OR paste Google Maps link / coordinates...">
-                    <button type="button" onclick="searchGeocodingLocation()" class="px-5 bg-indigo-50 text-indigo-600 font-black rounded-2xl hover:bg-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs shadow-sm">
-                        Find Stop
-                    </button>
+        <form id="add-place-form" class="space-y-4">
+            <!-- Live Search with Autocomplete -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🔍 Search Location</label>
+                <div class="relative">
+                    <input type="text" id="place-search"
+                        class="w-full p-4 pr-12 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold"
+                        placeholder="Type any place name, address, landmark..."
+                        autocomplete="off">
+                    <div id="place-search-spinner" class="absolute right-4 top-1/2 -translate-y-1/2 hidden">
+                        <div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <!-- Autocomplete dropdown -->
+                    <div id="place-autocomplete-list" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-52 overflow-y-auto z-50">
+                    </div>
                 </div>
-                <div id="search-results-list" class="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-48 overflow-y-auto no-scrollbar z-50"></div>
-                <div id="search-status" class="text-[10px] text-slate-400 font-bold mt-1.5 px-1">Search by name, paste coordinates (e.g. 11.4102, 76.6950 or 11°24'36"N 76°41'42"E), or paste a Google Maps link!</div>
+                <div id="search-status" class="text-[10px] text-slate-400 font-semibold mt-1.5 px-1 min-h-[18px]">
+                    Type to search • Or click anywhere on the map below to drop a pin
+                </div>
                 <input type="hidden" id="place-lat" value="">
                 <input type="hidden" id="place-lng" value="">
-                
-                <div class="mt-2.5 flex justify-between items-center px-1">
-                    <span class="text-[9px] text-slate-400 font-semibold">Offline or place not found?</span>
-                    <button type="button" onclick="toggleManualCoords()" class="text-[9px] text-indigo-600 font-bold hover:underline transition-all">
-                        🛠️ Enter Coordinates Manually
-                    </button>
-                </div>
-                <div id="manual-coords-inputs" class="grid grid-cols-2 gap-3 mt-3 hidden animate-scale-in">
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Latitude</label>
-                        <input type="number" step="any" id="place-lat-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 11.4102" oninput="syncManualCoords()">
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Longitude</label>
-                        <input type="number" step="any" id="place-lng-manual" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. 76.6950" oninput="syncManualCoords()">
+            </div>
+
+            <!-- Interactive Mini Map Picker -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🗺️ Or Click on Map to Pin</label>
+                <div id="picker-map-container" style="height: 220px; border-radius: 16px; overflow: hidden; background: #e5e7eb; position: relative;">
+                    <div id="picker-map" style="height: 100%; width: 100%;"></div>
+                    <div id="picker-map-hint" class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[9px] font-bold px-3 py-1.5 rounded-full pointer-events-none">
+                        Tap anywhere to place pin
                     </div>
                 </div>
             </div>
@@ -771,7 +772,7 @@ window.showAddPlaceModal = async function() {
                 <textarea id="place-notes" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" rows="2" placeholder="Any reminder details?"></textarea>
             </div>
 
-            <div class="flex space-x-3 pt-4">
+            <div class="flex space-x-3 pt-2">
                 <button type="submit" class="flex-1 btn-primary py-4 rounded-2xl">Add to Roadmap</button>
                 <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
             </div>
@@ -779,23 +780,190 @@ window.showAddPlaceModal = async function() {
     `;
     showModal(content);
 
-    // Support keyboard search on Enter key inside search box
-    document.getElementById('place-search').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            searchGeocodingLocation();
-        }
-    });
+    // --- Initialize the mini picker map ---
+    let pickerMap = null;
+    let pickerMarker = null;
 
-    // Clear coordinates when the user starts typing a new query in the search box
-    document.getElementById('place-search').addEventListener('input', () => {
+    function setPinOnPickerMap(lat, lng, name) {
+        if (!pickerMap) return;
+        if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+        const icon = L.divIcon({
+            className: '',
+            html: `<div style="width:28px;height:28px;background:#4f46e5;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(79,70,229,0.5);display:flex;align-items:center;justify-content:center;">
+                     <svg width="12" height="12" fill="white" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                   </div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14]
+        });
+        pickerMarker = L.marker([lat, lng], { icon }).addTo(pickerMap);
+        if (name) pickerMarker.bindPopup(`<b class="text-xs">${name}</b>`).openPopup();
+        document.getElementById('place-lat').value = lat;
+        document.getElementById('place-lng').value = lng;
+        document.getElementById('picker-map-hint').style.display = 'none';
+    }
+
+    setTimeout(() => {
+        const el = document.getElementById('picker-map');
+        if (!el || pickerMap) return;
+
+        // Default center: last known itinerary point or India
+        let defaultCenter = [20.5937, 78.9629];
+        let defaultZoom = 5;
+        if (typeof currentTripId !== 'undefined') {
+            getTrip(currentTripId).then(trip => {
+                if (trip && trip.itinerary && trip.itinerary.length > 0) {
+                    const last = trip.itinerary[trip.itinerary.length - 1];
+                    if (last.lat && last.lng) {
+                        pickerMap.setView([parseFloat(last.lat), parseFloat(last.lng)], 13);
+                    }
+                }
+            });
+        }
+
+        pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pickerMap);
+        L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
+        pickerMap.setView(defaultCenter, defaultZoom);
+
+        // Click anywhere to pin
+        pickerMap.on('click', async (e) => {
+            const { lat, lng } = e.latlng;
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.textContent = 'Reverse geocoding... 🌐';
+            setPinOnPickerMap(lat, lng, null);
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
+                const data = await res.json();
+                const name = data.display_name ? data.display_name.split(',').slice(0, 2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                document.getElementById('place-search').value = name;
+                document.getElementById('place-name').value = name.split(',')[0];
+                if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
+                setPinOnPickerMap(lat, lng, name.split(',')[0]);
+            } catch(err) {
+                const name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                document.getElementById('place-search').value = name;
+                if (statusDiv) statusDiv.textContent = `📍 Pinned at ${name}`;
+            }
+        });
+    }, 100);
+
+    // --- Live Autocomplete Search ---
+    let searchDebounce = null;
+    const searchInput = document.getElementById('place-search');
+    const autocompleteList = document.getElementById('place-autocomplete-list');
+    const spinner = document.getElementById('place-search-spinner');
+
+    function hideAutocomplete() {
+        autocompleteList.classList.add('hidden');
+        autocompleteList.innerHTML = '';
+    }
+
+    async function doAutocomplete(query) {
+        if (query.length < 2) { hideAutocomplete(); return; }
+
+        // Check if it's coordinates
+        const parsed = parseCoordinatesFromLinkOrText(query);
+        if (parsed) {
+            const { lat, lng } = parsed;
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.textContent = 'Resolving coordinates... 🌐';
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
+                const data = await res.json();
+                const name = data.display_name ? data.display_name.split(',').slice(0,2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                document.getElementById('place-name').value = name.split(',')[0];
+                document.getElementById('place-lat').value = lat;
+                document.getElementById('place-lng').value = lng;
+                if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
+                if (pickerMap) { pickerMap.setView([lat, lng], 15); setPinOnPickerMap(lat, lng, name.split(',')[0]); }
+            } catch(e) {
+                document.getElementById('place-lat').value = lat;
+                document.getElementById('place-lng').value = lng;
+            }
+            hideAutocomplete();
+            return;
+        }
+
+        // Detect Google Maps / share links
+        if (query.includes('share.google') || query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.innerHTML = `⚠️ <b>Google share links are blocked by Google.</b> Please type the place name instead (e.g. "Green Bliss Villa").`;
+            hideAutocomplete();
+            return;
+        }
+
+        spinner.classList.remove('hidden');
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`, { headers: { 'Accept-Language': 'en' } });
+            const results = await res.json();
+            spinner.classList.add('hidden');
+
+            if (!results || results.length === 0) {
+                autocompleteList.innerHTML = `<div class="px-4 py-3 text-xs text-slate-400 italic">No results found. Try a different name.</div>`;
+                autocompleteList.classList.remove('hidden');
+                return;
+            }
+
+            autocompleteList.innerHTML = results.map((r, i) => {
+                const typeEmoji = { city: '🏙️', town: '🏘️', village: '🌾', hotel: '🏨', restaurant: '🍽️', tourism: '🏛️', natural: '🌿', amenity: '📌' }[r.type] || '📍';
+                const shortName = r.display_name.split(',').slice(0, 2).join(', ');
+                const country = r.display_name.split(',').pop().trim();
+                return `<div class="autocomplete-item px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors" data-idx="${i}">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-base flex-shrink-0">${typeEmoji}</span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-800 truncate">${shortName}</p>
+                            <p class="text-[10px] text-slate-400 truncate">${country}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            autocompleteList.classList.remove('hidden');
+
+            // Click on a result
+            autocompleteList.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+                el.addEventListener('mousedown', (ev) => {
+                    ev.preventDefault();
+                    const r = results[i];
+                    const lat = parseFloat(r.lat);
+                    const lng = parseFloat(r.lon);
+                    const name = r.display_name.split(',').slice(0, 2).join(', ');
+                    searchInput.value = name;
+                    document.getElementById('place-name').value = r.display_name.split(',')[0];
+                    document.getElementById('place-lat').value = lat;
+                    document.getElementById('place-lng').value = lng;
+                    const statusDiv = document.getElementById('search-status');
+                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${r.display_name.split(',')[0]}</b> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
+                    if (pickerMap) {
+                        pickerMap.setView([lat, lng], 15);
+                        setPinOnPickerMap(lat, lng, r.display_name.split(',')[0]);
+                    }
+                    hideAutocomplete();
+                });
+            });
+        } catch (err) {
+            spinner.classList.add('hidden');
+            hideAutocomplete();
+        }
+    }
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        const q = searchInput.value.trim();
         document.getElementById('place-lat').value = '';
         document.getElementById('place-lng').value = '';
-        const statusDiv = document.getElementById('search-status');
-        if (statusDiv) {
-            statusDiv.innerHTML = `⚠️ Search query changed. Tap <b>Find Stop</b> or submit to update location pin!`;
-        }
+        if (!q) { hideAutocomplete(); return; }
+        searchDebounce = setTimeout(() => doAutocomplete(q), 400);
     });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hideAutocomplete();
+        if (e.key === 'Enter') { e.preventDefault(); doAutocomplete(searchInput.value.trim()); }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!autocompleteList.contains(e.target) && e.target !== searchInput) hideAutocomplete();
+    }, { once: false });
+
 
     document.getElementById('add-place-form').addEventListener('submit', async (e) => {
         e.preventDefault();
