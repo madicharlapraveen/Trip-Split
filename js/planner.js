@@ -897,54 +897,236 @@ window.showAddPlaceModal = async function() {
             const results = await res.json();
             spinner.classList.add('hidden');
 
-            if (!results || results.length === 0) {
-                autocompleteList.innerHTML = `<div class="px-4 py-3 text-xs text-slate-400 italic">No results found. Try a different name.</div>`;
-                autocompleteList.classList.remove('hidden');
-                return;
-            }
+    // Helper to handle selecting a search result
+    function selectResult(lat, lng, displayName) {
+        const firstName = displayName.split(',')[0].trim();
+        searchInput.value = displayName.split(',').slice(0, 2).join(', ');
+        document.getElementById('place-name').value = firstName;
+        document.getElementById('place-lat').value = lat;
+        document.getElementById('place-lng').value = lng;
+        const statusDiv = document.getElementById('search-status');
+        if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${firstName}</b> (${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}) ✅`;
+        if (pickerMap) {
+            pickerMap.setView([lat, lng], 16);
+            setPinOnPickerMap(lat, lng, firstName);
+        }
+        hideAutocomplete();
+    }
 
-            autocompleteList.innerHTML = results.map((r, i) => {
-                const typeEmoji = { city: '🏙️', town: '🏘️', village: '🌾', hotel: '🏨', restaurant: '🍽️', tourism: '🏛️', natural: '🌿', amenity: '📌' }[r.type] || '📍';
-                const shortName = r.display_name.split(',').slice(0, 2).join(', ');
-                const country = r.display_name.split(',').pop().trim();
-                return `<div class="autocomplete-item px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors" data-idx="${i}">
-                    <div class="flex items-center gap-2.5">
-                        <span class="text-base flex-shrink-0">${typeEmoji}</span>
-                        <div class="min-w-0">
-                            <p class="text-sm font-bold text-slate-800 truncate">${shortName}</p>
-                            <p class="text-[10px] text-slate-400 truncate">${country}</p>
-                        </div>
+    function renderResults(results, source) {
+        if (!results || results.length === 0) return false;
+        const typeEmoji = { city:'🏙️', town:'🏘️', village:'🌾', hotel:'🏨', restaurant:'🍽️', 
+                            tourism:'🏛️', natural:'🌿', amenity:'📌', suburb:'🏘️', county:'🗺️' };
+        autocompleteList.innerHTML = results.map((r, i) => {
+            const emoji = typeEmoji[r.type] || typeEmoji[r.class] || '📍';
+            const name1 = r.display_name.split(',').slice(0, 2).join(', ');
+            const country = r.display_name.split(',').pop().trim();
+            const badge = source === 'photon' ? '' : '';
+            return `<div class="autocomplete-item px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors" data-idx="${i}" data-lat="${r.lat}" data-lng="${r.lon || r.lng}" data-name="${r.display_name.replace(/"/g,'&quot;')}">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base flex-shrink-0">${emoji}</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold text-slate-800 truncate">${name1}</p>
+                        <p class="text-[10px] text-slate-400 truncate">${country}</p>
                     </div>
-                </div>`;
-            }).join('');
-            autocompleteList.classList.remove('hidden');
-
-            // Click on a result
-            autocompleteList.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-                el.addEventListener('mousedown', (ev) => {
-                    ev.preventDefault();
-                    const r = results[i];
-                    const lat = parseFloat(r.lat);
-                    const lng = parseFloat(r.lon);
-                    const name = r.display_name.split(',').slice(0, 2).join(', ');
-                    searchInput.value = name;
-                    document.getElementById('place-name').value = r.display_name.split(',')[0];
-                    document.getElementById('place-lat').value = lat;
-                    document.getElementById('place-lng').value = lng;
-                    const statusDiv = document.getElementById('search-status');
-                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${r.display_name.split(',')[0]}</b> (${lat.toFixed(4)}, ${lng.toFixed(4)}) ✅`;
-                    if (pickerMap) {
-                        pickerMap.setView([lat, lng], 15);
-                        setPinOnPickerMap(lat, lng, r.display_name.split(',')[0]);
-                    }
-                    hideAutocomplete();
-                });
+                </div>
+            </div>`;
+        }).join('');
+        autocompleteList.classList.remove('hidden');
+        autocompleteList.querySelectorAll('.autocomplete-item').forEach(el => {
+            el.addEventListener('mousedown', ev => {
+                ev.preventDefault();
+                selectResult(parseFloat(el.dataset.lat), parseFloat(el.dataset.lng), el.dataset.name);
             });
-        } catch (err) {
-            spinner.classList.add('hidden');
+        });
+        return true;
+    }
+
+    function showNotFoundState(query) {
+        const googleMapsSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+        autocompleteList.innerHTML = `
+            <div class="px-4 pt-3 pb-2">
+                <p class="text-xs font-bold text-rose-500 mb-1">⚠️ "${query}" not found in OpenStreetMap</p>
+                <p class="text-[10px] text-slate-500 mb-3 leading-relaxed">Small local places may not be in the database. Try these options:</p>
+                <div class="space-y-2">
+                    <button id="hint-add-city" class="w-full text-left px-3 py-2.5 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors">
+                        💡 Add your city name — e.g. "<span class="font-black">${query}, Chennai</span>"
+                    </button>
+                    <button id="hint-open-gmaps" class="w-full text-left px-3 py-2.5 bg-orange-50 rounded-xl text-xs font-bold text-orange-700 hover:bg-orange-100 transition-colors">
+                        🗺️ Search on Google Maps → copy the coordinates
+                    </button>
+                    <button id="hint-use-map" class="w-full text-left px-3 py-2.5 bg-emerald-50 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors">
+                        📍 Use the map below — zoom in and tap the location
+                    </button>
+                </div>
+            </div>`;
+        autocompleteList.classList.remove('hidden');
+
+        document.getElementById('hint-add-city')?.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            searchInput.value = query + ', ';
+            searchInput.focus();
             hideAutocomplete();
+        });
+
+        document.getElementById('hint-open-gmaps')?.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            // Show Google Maps in the picker map area as an iframe overlay
+            const container = document.getElementById('picker-map-container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="position:relative;height:100%;width:100%;">
+                        <iframe src="${googleMapsSearchUrl}" style="width:100%;height:100%;border:0;" allow="geolocation" loading="lazy"></iframe>
+                        <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);color:white;font-size:10px;font-weight:bold;padding:6px 10px;text-align:center;">
+                            📋 Find the place → long-press → copy coordinates → paste in search bar above
+                        </div>
+                        <button onclick="restorePickerMap()" style="position:absolute;top:8px;right:8px;background:#4f46e5;color:white;border:none;border-radius:8px;padding:4px 10px;font-size:10px;font-weight:bold;cursor:pointer;z-index:999;">
+                            ↩ Back to Map
+                        </button>
+                    </div>`;
+            }
+            hideAutocomplete();
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.innerHTML = `📋 Find on Google Maps → long press → copy coordinates → paste in search`;
+        });
+
+        document.getElementById('hint-use-map')?.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            hideAutocomplete();
+            const hint = document.getElementById('picker-map-hint');
+            if (hint) {
+                hint.style.display = '';
+                hint.style.background = 'rgba(79,70,229,0.85)';
+                hint.textContent = '👆 Zoom in and tap your location!';
+            }
+            if (pickerMap) pickerMap.invalidateSize();
+        });
+    }
+
+    // Restore the Leaflet map after Google Maps iframe
+    window.restorePickerMap = function() {
+        const container = document.getElementById('picker-map-container');
+        if (!container) return;
+        container.innerHTML = `
+            <div id="picker-map" style="height: 100%; width: 100%;"></div>
+            <div id="picker-map-hint" class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[9px] font-bold px-3 py-1.5 rounded-full pointer-events-none">Tap anywhere to place pin</div>`;
+        pickerMap = null;
+        pickerMarker = null;
+        setTimeout(() => {
+            const el = document.getElementById('picker-map');
+            if (!el) return;
+            pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pickerMap);
+            L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
+            pickerMap.setView([20.5937, 78.9629], 5);
+            pickerMap.on('click', async (e) => {
+                const { lat, lng } = e.latlng;
+                const statusDiv = document.getElementById('search-status');
+                if (statusDiv) statusDiv.textContent = 'Reverse geocoding... 🌐';
+                setPinOnPickerMap(lat, lng, null);
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
+                    const data = await res.json();
+                    const name = data.display_name ? data.display_name.split(',').slice(0, 2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    document.getElementById('place-search').value = name;
+                    document.getElementById('place-name').value = name.split(',')[0];
+                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
+                    setPinOnPickerMap(lat, lng, name.split(',')[0]);
+                } catch(err) {
+                    const name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    document.getElementById('place-search').value = name;
+                    if (statusDiv) statusDiv.textContent = `📍 Pinned at ${name}`;
+                }
+            });
+        }, 100);
+    };
+
+    async function doAutocomplete(query) {
+        if (query.length < 2) { hideAutocomplete(); return; }
+
+        // Check if it's raw coordinates or a Google Maps URL with @lat,lng
+        const parsed = parseCoordinatesFromLinkOrText(query);
+        if (parsed) {
+            const { lat, lng } = parsed;
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.textContent = 'Resolving coordinates... 🌐';
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
+                const data = await res.json();
+                const name = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                document.getElementById('place-name').value = name.split(',')[0];
+                document.getElementById('place-lat').value = lat;
+                document.getElementById('place-lng').value = lng;
+                if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
+                if (pickerMap) { pickerMap.setView([lat, lng], 15); setPinOnPickerMap(lat, lng, name.split(',')[0]); }
+            } catch(e) {
+                document.getElementById('place-lat').value = lat;
+                document.getElementById('place-lng').value = lng;
+            }
+            hideAutocomplete();
+            return;
+        }
+
+        // Detect Google Maps share links — inform user
+        if (query.includes('share.google') || query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
+            const statusDiv = document.getElementById('search-status');
+            if (statusDiv) statusDiv.innerHTML = `⚠️ <b>Google share links are blocked by Google.</b> Type the place name instead.`;
+            hideAutocomplete();
+            return;
+        }
+
+        spinner.classList.remove('hidden');
+        const statusDiv = document.getElementById('search-status');
+        if (statusDiv) statusDiv.textContent = 'Searching...';
+
+        let found = false;
+
+        try {
+            // SOURCE 1: Nominatim (OpenStreetMap)
+            const r1 = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1&accept-language=en`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const d1 = await r1.json();
+            if (d1 && d1.length > 0) {
+                found = renderResults(d1, 'nominatim');
+            }
+        } catch(e) { /* try next source */ }
+
+        if (!found) {
+            try {
+                // SOURCE 2: Photon by Komoot — uses OSM data with better local POI coverage
+                const r2 = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=en`);
+                const d2 = await r2.json();
+                if (d2.features && d2.features.length > 0) {
+                    // Convert Photon format to Nominatim-like format
+                    const converted = d2.features.map(f => {
+                        const p = f.properties;
+                        const parts = [p.name, p.street, p.city, p.state, p.country].filter(Boolean);
+                        return {
+                            display_name: parts.join(', '),
+                            lat: f.geometry.coordinates[1],
+                            lon: f.geometry.coordinates[0],
+                            lng: f.geometry.coordinates[0],
+                            type: p.osm_value || 'place',
+                            class: p.osm_key || 'place'
+                        };
+                    });
+                    found = renderResults(converted, 'photon');
+                }
+            } catch(e) { /* try next source */ }
+        }
+
+        spinner.classList.add('hidden');
+
+        if (!found) {
+            if (statusDiv) statusDiv.innerHTML = `⚠️ Not found in map database`;
+            showNotFoundState(query);
+        } else {
+            if (statusDiv) statusDiv.textContent = 'Select a result below, or click on the map';
         }
     }
+
 
     searchInput.addEventListener('input', () => {
         clearTimeout(searchDebounce);
