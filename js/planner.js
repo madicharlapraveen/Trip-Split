@@ -718,67 +718,108 @@ window.showAddPlaceModal = async function() {
 
     const content = `
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-extrabold text-slate-800">Add Next Stop</h3>
+            <h3 class="text-xl font-extrabold text-slate-800">📍 Add Stop</h3>
             <button onclick="hideModal()" class="text-slate-400 hover:text-slate-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form id="add-place-form" class="space-y-4">
-            <!-- Live Search with Autocomplete -->
+        <form id="add-place-form" class="space-y-3">
+
+            <!-- Unified Search Bar -->
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🔍 Search Location</label>
-                <div class="relative">
-                    <input type="text" id="place-search"
-                        class="w-full p-4 pr-12 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold"
-                        placeholder="Type any place name, address, landmark..."
-                        autocomplete="off">
-                    <div id="place-search-spinner" class="absolute right-4 top-1/2 -translate-y-1/2 hidden">
-                        <div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="relative flex gap-2">
+                    <div class="relative flex-1">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        </span>
+                        <input type="text" id="place-search"
+                            class="w-full pl-10 pr-10 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-400 focus:bg-white focus:ring-0 outline-none transition-all text-sm font-semibold"
+                            placeholder="Search any place, restaurant, hotel..."
+                            autocomplete="off">
+                        <div id="place-search-spinner" class="absolute right-3.5 top-1/2 -translate-y-1/2 hidden">
+                            <div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
                     </div>
-                    <!-- Autocomplete dropdown -->
-                    <div id="place-autocomplete-list" class="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-52 overflow-y-auto z-50">
-                    </div>
+                    <button type="button" id="btn-switch-gmaps" title="Search on Google Maps"
+                        class="px-3.5 py-3.5 bg-white border-2 border-slate-100 rounded-2xl hover:border-orange-300 hover:bg-orange-50 transition-all flex-shrink-0" >
+                        <img src="https://www.google.com/favicon.ico" class="w-4 h-4" alt="G">
+                    </button>
                 </div>
-                <div id="search-status" class="text-[10px] text-slate-400 font-semibold mt-1.5 px-1 min-h-[18px]">
-                    Type to search • Or click anywhere on the map below to drop a pin
+                <!-- Autocomplete dropdown -->
+                <div id="place-autocomplete-list" class="relative">
+                    <div id="place-autocomplete-inner" class="absolute left-0 right-0 top-0 bg-white rounded-2xl shadow-2xl border border-slate-100 hidden max-h-52 overflow-y-auto z-50 mt-1"></div>
+                </div>
+                <div id="search-status" class="text-[10px] text-slate-400 font-semibold mt-1 px-1 min-h-[16px]">
+                    Type to search any place • Tap 🌐 to search on Google Maps
                 </div>
                 <input type="hidden" id="place-lat" value="">
                 <input type="hidden" id="place-lng" value="">
             </div>
 
-            <!-- Interactive Mini Map Picker -->
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🗺️ Or Click on Map to Pin</label>
-                <div id="picker-map-container" style="height: 220px; border-radius: 16px; overflow: hidden; background: #e5e7eb; position: relative;">
-                    <div id="picker-map" style="height: 100%; width: 100%;"></div>
-                    <div id="picker-map-hint" class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[9px] font-bold px-3 py-1.5 rounded-full pointer-events-none">
-                        Tap anywhere to place pin
+            <!-- Map Area: switches between OSM picker and Google Maps embed -->
+            <div id="map-section">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" id="map-label">🗺️ Tap map to pin</label>
+                    <div class="flex gap-1">
+                        <button type="button" id="btn-osm-view" onclick="switchToOSMView()"
+                            class="px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-100 text-indigo-700 transition-all">OSM</button>
+                        <button type="button" id="btn-gmaps-view" onclick="switchToGoogleView(document.getElementById('place-search').value)"
+                            class="px-2 py-1 rounded-lg text-[10px] font-bold bg-white border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-700 transition-all">Google Maps</button>
                     </div>
+                </div>
+                <div id="picker-map-container" style="height:230px;border-radius:16px;overflow:hidden;background:#e5e7eb;position:relative;">
+                    <div id="picker-map" style="height:100%;width:100%;"></div>
+                    <div id="picker-map-hint" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:white;font-size:10px;font-weight:700;padding:5px 12px;border-radius:999px;pointer-events:none;white-space:nowrap;">
+                        Tap anywhere to pin location
+                    </div>
+                </div>
+                <!-- Coordinate paste box (shows when in Google Maps view) -->
+                <div id="coord-paste-box" class="hidden mt-2">
+                    <div class="flex gap-2 items-center">
+                        <input type="text" id="coord-paste-input"
+                            class="flex-1 px-3 py-2.5 bg-amber-50 border-2 border-amber-200 rounded-xl text-xs font-semibold focus:border-amber-400 focus:ring-0 outline-none transition-all"
+                            placeholder="Paste coordinates or Google Maps URL here...">
+                        <button type="button" id="coord-paste-btn"
+                            class="px-3 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-all flex-shrink-0">Pin It</button>
+                    </div>
+                    <p class="text-[9px] text-amber-600 font-semibold mt-1 px-1">
+                        📋 On Google Maps: tap a place → tap "Share" → copy link, or long-press → copy coordinates
+                    </p>
                 </div>
             </div>
 
+            <!-- Place name, Time, Notes -->
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Custom Display Name</label>
-                <input type="text" id="place-name" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="E.g. Eiffel Tower" required>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Display Name <span class="text-rose-400">*</span></label>
+                <input type="text" id="place-name" class="w-full p-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="E.g. Valarmathi Mess" required>
             </div>
             
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Time / Day schedule</label>
-                <input type="text" id="place-time" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="E.g. 10:00 AM or Day 1">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Time / Day</label>
+                    <input type="text" id="place-time" class="w-full p-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="10:00 AM">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
+                    <input type="text" id="place-notes-short" class="w-full p-3.5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" placeholder="Any notes...">
+                </div>
             </div>
-            
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Guidelines / Notes</label>
-                <textarea id="place-notes" class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-semibold" rows="2" placeholder="Any reminder details?"></textarea>
-            </div>
+            <input type="hidden" id="place-notes" value="">
 
-            <div class="flex space-x-3 pt-2">
-                <button type="submit" class="flex-1 btn-primary py-4 rounded-2xl">Add to Roadmap</button>
-                <button type="button" onclick="hideModal()" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold">Cancel</button>
+            <div class="flex space-x-3 pt-1">
+                <button type="submit" class="flex-1 btn-primary py-4 rounded-2xl text-sm">Add to Roadmap ➜</button>
+                <button type="button" onclick="hideModal()" class="px-6 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold text-sm">✕</button>
             </div>
         </form>
     `;
     showModal(content);
+
+    // Sync notes short → hidden
+    document.getElementById('place-notes-short')?.addEventListener('input', function() {
+        const h = document.getElementById('place-notes');
+        if (h) h.value = this.value;
+    });
+
 
     // --- Initialize the mini picker map ---
     let pickerMap = null;
@@ -798,33 +839,117 @@ window.showAddPlaceModal = async function() {
         if (name) pickerMarker.bindPopup(`<b class="text-xs">${name}</b>`).openPopup();
         document.getElementById('place-lat').value = lat;
         document.getElementById('place-lng').value = lng;
-        document.getElementById('picker-map-hint').style.display = 'none';
+        const hint = document.getElementById('picker-map-hint');
+        if (hint) hint.style.display = 'none';
     }
 
-    setTimeout(() => {
+    // Switch to Google Maps embed view
+    window.switchToGoogleView = function(query) {
+        const q = (query || '').trim() || 'India';
+        const gmapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed&hl=en`;
+        const container = document.getElementById('picker-map-container');
+        if (container) {
+            container.innerHTML = `
+                <iframe src="${gmapsUrl}" style="width:100%;height:100%;border:0;" allowfullscreen loading="lazy"></iframe>
+                <button onclick="window.switchToOSMView()" style="position:absolute;top:8px;left:8px;background:rgba(79,70,229,0.92);color:white;border:none;border-radius:10px;padding:5px 11px;font-size:10px;font-weight:700;cursor:pointer;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,0.3);">← OSM Map</button>
+                <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:white;font-size:9px;font-weight:700;padding:4px 8px;border-radius:8px;">Google Maps</div>`;
+        }
+        document.getElementById('coord-paste-box')?.classList.remove('hidden');
+        const lbl = document.getElementById('map-label');
+        if (lbl) lbl.textContent = '🔍 Find on Google Maps';
+        const osmBtn = document.getElementById('btn-osm-view');
+        const gBtn = document.getElementById('btn-gmaps-view');
+        if (osmBtn) { osmBtn.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-white border border-slate-200 text-slate-500 transition-all'; }
+        if (gBtn) { gBtn.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-orange-100 text-orange-700 transition-all'; }
+        pickerMap = null; pickerMarker = null;
+        const statusDiv = document.getElementById('search-status');
+        if (statusDiv) statusDiv.innerHTML = `🗺️ Find the place on Google Maps above → paste the URL or coordinates in the box below`;
+    };
+
+    // Switch back to OSM map
+    window.switchToOSMView = function() {
+        const container = document.getElementById('picker-map-container');
+        if (container) {
+            container.innerHTML = `
+                <div id="picker-map" style="height:100%;width:100%;"></div>
+                <div id="picker-map-hint" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:white;font-size:10px;font-weight:700;padding:5px 12px;border-radius:999px;pointer-events:none;white-space:nowrap;">Tap anywhere to pin location</div>`;
+        }
+        document.getElementById('coord-paste-box')?.classList.add('hidden');
+        const lbl = document.getElementById('map-label');
+        if (lbl) lbl.textContent = '🗺️ Tap map to pin';
+        const osmBtn = document.getElementById('btn-osm-view');
+        const gBtn = document.getElementById('btn-gmaps-view');
+        if (osmBtn) { osmBtn.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-indigo-100 text-indigo-700 transition-all'; }
+        if (gBtn) { gBtn.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-white border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-700 transition-all'; }
+        pickerMap = null; pickerMarker = null;
+        setTimeout(() => initPickerMap(), 100);
+    };
+
+    // Wire the Google Maps button
+    document.getElementById('btn-switch-gmaps')?.addEventListener('click', () => {
+        const q = document.getElementById('place-search').value.trim();
+        window.switchToGoogleView(q);
+    });
+
+    // Wire the coord paste button
+    document.getElementById('coord-paste-btn')?.addEventListener('click', async () => {
+        const raw = document.getElementById('coord-paste-input').value.trim();
+        if (!raw) return;
+        const parsed = parseCoordinatesFromLinkOrText(raw);
+        const statusDiv = document.getElementById('search-status');
+        if (parsed) {
+            const { lat, lng } = parsed;
+            window.switchToOSMView();
+            setTimeout(async () => {
+                if (statusDiv) statusDiv.textContent = 'Reverse geocoding... 🌐';
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
+                    const data = await res.json();
+                    const name = data.display_name ? data.display_name.split(',').slice(0,2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    document.getElementById('place-search').value = name;
+                    document.getElementById('place-name').value = name.split(',')[0];
+                    document.getElementById('place-lat').value = lat;
+                    document.getElementById('place-lng').value = lng;
+                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
+                    setPinOnPickerMap(lat, lng, name.split(',')[0]);
+                } catch(e) {
+                    document.getElementById('place-lat').value = lat;
+                    document.getElementById('place-lng').value = lng;
+                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned at ${lat.toFixed(4)}, ${lng.toFixed(4)} ✅`;
+                    setPinOnPickerMap(lat, lng, null);
+                }
+            }, 350);
+        } else {
+            if (statusDiv) statusDiv.innerHTML = `⚠️ Could not parse coordinates. Try format: <b>12.9716, 77.5946</b>`;
+        }
+    });
+
+    // Allow pressing Enter on the paste input
+    document.getElementById('coord-paste-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('coord-paste-btn')?.click(); }
+    });
+
+    function initPickerMap() {
         const el = document.getElementById('picker-map');
         if (!el || pickerMap) return;
 
-        // Default center: last known itinerary point or India
         let defaultCenter = [20.5937, 78.9629];
-        let defaultZoom = 5;
+        pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pickerMap);
+        L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
+        pickerMap.setView(defaultCenter, 5);
+
         if (typeof currentTripId !== 'undefined') {
             getTrip(currentTripId).then(trip => {
                 if (trip && trip.itinerary && trip.itinerary.length > 0) {
                     const last = trip.itinerary[trip.itinerary.length - 1];
-                    if (last.lat && last.lng) {
+                    if (last.lat && last.lng && pickerMap) {
                         pickerMap.setView([parseFloat(last.lat), parseFloat(last.lng)], 13);
                     }
                 }
             });
         }
 
-        pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pickerMap);
-        L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
-        pickerMap.setView(defaultCenter, defaultZoom);
-
-        // Click anywhere to pin
         pickerMap.on('click', async (e) => {
             const { lat, lng } = e.latlng;
             const statusDiv = document.getElementById('search-status');
@@ -844,17 +969,21 @@ window.showAddPlaceModal = async function() {
                 if (statusDiv) statusDiv.textContent = `📍 Pinned at ${name}`;
             }
         });
-    }, 100);
+    }
+
+    setTimeout(() => initPickerMap(), 100);
 
     // --- Live Autocomplete Search ---
     let searchDebounce = null;
     const searchInput = document.getElementById('place-search');
-    const autocompleteList = document.getElementById('place-autocomplete-list');
+    const autocompleteList = document.getElementById('place-autocomplete-inner');
     const spinner = document.getElementById('place-search-spinner');
 
     function hideAutocomplete() {
-        autocompleteList.classList.add('hidden');
-        autocompleteList.innerHTML = '';
+        if (autocompleteList) {
+            autocompleteList.classList.add('hidden');
+            autocompleteList.innerHTML = '';
+        }
     }
 
     async function doAutocomplete(query) {
@@ -943,103 +1072,29 @@ window.showAddPlaceModal = async function() {
     }
 
     function showNotFoundState(query) {
-        const googleMapsSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
-        autocompleteList.innerHTML = `
-            <div class="px-4 pt-3 pb-2">
-                <p class="text-xs font-bold text-rose-500 mb-1">⚠️ "${query}" not found in OpenStreetMap</p>
-                <p class="text-[10px] text-slate-500 mb-3 leading-relaxed">Small local places may not be in the database. Try these options:</p>
-                <div class="space-y-2">
+        // Auto-switch to Google Maps to find the place
+        hideAutocomplete();
+        window.switchToGoogleView(query);
+        // Show a quick hint in autocomplete about adding city name
+        if (autocompleteList) {
+            autocompleteList.innerHTML = `
+                <div class="px-4 pt-3 pb-3">
+                    <p class="text-xs font-bold text-orange-600 mb-2">🗺️ Showing on Google Maps</p>
+                    <p class="text-[10px] text-slate-500 mb-2 leading-relaxed">"${query}" not in OpenStreetMap. Use Google Maps above to find it, then paste the URL/coordinates in the box below the map.</p>
                     <button id="hint-add-city" class="w-full text-left px-3 py-2.5 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors">
-                        💡 Add your city name — e.g. "<span class="font-black">${query}, Chennai</span>"
+                        💡 Try: <span class="font-black">${query}, [City Name]</span>
                     </button>
-                    <button id="hint-open-gmaps" class="w-full text-left px-3 py-2.5 bg-orange-50 rounded-xl text-xs font-bold text-orange-700 hover:bg-orange-100 transition-colors">
-                        🗺️ Search on Google Maps → copy the coordinates
-                    </button>
-                    <button id="hint-use-map" class="w-full text-left px-3 py-2.5 bg-emerald-50 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors">
-                        📍 Use the map below — zoom in and tap the location
-                    </button>
-                </div>
-            </div>`;
-        autocompleteList.classList.remove('hidden');
-
-        document.getElementById('hint-add-city')?.addEventListener('mousedown', ev => {
-            ev.preventDefault();
-            searchInput.value = query + ', ';
-            searchInput.focus();
-            hideAutocomplete();
-        });
-
-        document.getElementById('hint-open-gmaps')?.addEventListener('mousedown', ev => {
-            ev.preventDefault();
-            // Show Google Maps in the picker map area as an iframe overlay
-            const container = document.getElementById('picker-map-container');
-            if (container) {
-                container.innerHTML = `
-                    <div style="position:relative;height:100%;width:100%;">
-                        <iframe src="${googleMapsSearchUrl}" style="width:100%;height:100%;border:0;" allow="geolocation" loading="lazy"></iframe>
-                        <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);color:white;font-size:10px;font-weight:bold;padding:6px 10px;text-align:center;">
-                            📋 Find the place → long-press → copy coordinates → paste in search bar above
-                        </div>
-                        <button onclick="restorePickerMap()" style="position:absolute;top:8px;right:8px;background:#4f46e5;color:white;border:none;border-radius:8px;padding:4px 10px;font-size:10px;font-weight:bold;cursor:pointer;z-index:999;">
-                            ↩ Back to Map
-                        </button>
-                    </div>`;
-            }
-            hideAutocomplete();
-            const statusDiv = document.getElementById('search-status');
-            if (statusDiv) statusDiv.innerHTML = `📋 Find on Google Maps → long press → copy coordinates → paste in search`;
-        });
-
-        document.getElementById('hint-use-map')?.addEventListener('mousedown', ev => {
-            ev.preventDefault();
-            hideAutocomplete();
-            const hint = document.getElementById('picker-map-hint');
-            if (hint) {
-                hint.style.display = '';
-                hint.style.background = 'rgba(79,70,229,0.85)';
-                hint.textContent = '👆 Zoom in and tap your location!';
-            }
-            if (pickerMap) pickerMap.invalidateSize();
-        });
+                </div>`;
+            autocompleteList.classList.remove('hidden');
+            document.getElementById('hint-add-city')?.addEventListener('mousedown', ev => {
+                ev.preventDefault();
+                searchInput.value = query + ', ';
+                searchInput.focus();
+                hideAutocomplete();
+            });
+        }
     }
 
-    // Restore the Leaflet map after Google Maps iframe
-    window.restorePickerMap = function() {
-        const container = document.getElementById('picker-map-container');
-        if (!container) return;
-        container.innerHTML = `
-            <div id="picker-map" style="height: 100%; width: 100%;"></div>
-            <div id="picker-map-hint" class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[9px] font-bold px-3 py-1.5 rounded-full pointer-events-none">Tap anywhere to place pin</div>`;
-        pickerMap = null;
-        pickerMarker = null;
-        setTimeout(() => {
-            const el = document.getElementById('picker-map');
-            if (!el) return;
-            pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pickerMap);
-            L.control.zoom({ position: 'bottomright' }).addTo(pickerMap);
-            pickerMap.setView([20.5937, 78.9629], 5);
-            pickerMap.on('click', async (e) => {
-                const { lat, lng } = e.latlng;
-                const statusDiv = document.getElementById('search-status');
-                if (statusDiv) statusDiv.textContent = 'Reverse geocoding... 🌐';
-                setPinOnPickerMap(lat, lng, null);
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
-                    const data = await res.json();
-                    const name = data.display_name ? data.display_name.split(',').slice(0, 2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                    document.getElementById('place-search').value = name;
-                    document.getElementById('place-name').value = name.split(',')[0];
-                    if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
-                    setPinOnPickerMap(lat, lng, name.split(',')[0]);
-                } catch(err) {
-                    const name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                    document.getElementById('place-search').value = name;
-                    if (statusDiv) statusDiv.textContent = `📍 Pinned at ${name}`;
-                }
-            });
-        }, 100);
-    };
 
     async function doAutocomplete(query) {
         if (query.length < 2) { hideAutocomplete(); return; }
