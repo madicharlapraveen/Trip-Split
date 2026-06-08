@@ -1959,7 +1959,7 @@ window.viewParticipantProfile = async function(participantId) {
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
             <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Total Spent</span>
-            <p class="text-sm font-black text-slate-800 dark:text-white mt-1">${tripSymbol}${totalSpentOnTravel.toLocaleString('en-IN')}</p>
+            <p class="text-sm font-black text-slate-800 dark:text-white mt-1">${tripSymbol}${(totalSpentOnTravel + sentPaymentsTotal).toLocaleString('en-IN')}</p>
           </div>
           <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
             <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Expected Share</span>

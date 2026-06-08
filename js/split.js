@@ -25,18 +25,35 @@ async function calculateSplit() {
     myExpenses: []  // list of expenses this person paid
   }));
 
-  // Step 1: Calculate total expenses and per-person share
-  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.totalAmount || exp.amount || 0), 0);
+  // Step 1: Calculate total group expenses (excluding settlements) and per-person share
+  const totalExpense = expenses.reduce((sum, exp) => {
+    return sum + (exp.isSettlement ? 0 : (exp.totalAmount || exp.amount || 0));
+  }, 0);
   const totalMembers = participants.length;
   const perPersonShare = totalMembers > 0 ? totalExpense / totalMembers : 0;
   const totalParticipants = totalMembers; // Alias for UI compatibility
 
-  // Step 2: Calculate how much each participant actually paid
+  // Step 2: Calculate how much each participant actually paid (Net Out-of-Pocket)
   expenses.forEach(e => {
-    const payer = balances.find(p => p.id === e.paidBy);
-    if (payer) {
-      payer.totalSpent += (e.totalAmount || e.amount || 0);
-      payer.myExpenses.push(e); // track this expense under their name
+    const amount = e.totalAmount || e.amount || 0;
+    const payer = balances.find(p => String(p.id) === String(e.paidBy));
+    
+    if (e.isSettlement) {
+      // Direct payment (Settlement)
+      const receiverId = e.splitBetween && e.splitBetween[0];
+      const receiver = balances.find(p => String(p.id) === String(receiverId));
+      
+      // Payer's net out-of-pocket increases
+      if (payer) payer.totalSpent += amount;
+      
+      // Receiver's net out-of-pocket decreases
+      if (receiver) receiver.totalSpent -= amount;
+    } else {
+      // Normal Group Expense
+      if (payer) {
+        payer.totalSpent += amount;
+        payer.myExpenses.push(e); // track this group expense under their name
+      }
     }
   });
 
