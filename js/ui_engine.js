@@ -2080,12 +2080,12 @@ window.viewParticipantProfile = async function(participantId) {
       if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
       
       const direction = document.getElementById('payment-direction').value;
-      const peerId = parseInt(document.getElementById('payment-peer').value);
+      const peerId = document.getElementById('payment-peer').value;
       const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
       const method = document.getElementById('payment-method').value;
 
       if (amount > 0 && peerId) {
-        const peer = participants.find(p => p.id === peerId);
+        const peer = participants.find(p => String(p.id) === String(peerId));
         if (!peer) return;
 
         const fromId = direction === 'sent' ? participantId : peerId;
