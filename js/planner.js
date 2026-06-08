@@ -970,8 +970,12 @@ window.showAddPlaceModal = async function() {
             }
         });
     }
-
-    setTimeout(() => initPickerMap(), 100);
+    // Wait for modal slide-in animation (~400ms) before Leaflet measures container size
+    // Leaflet computing size during animation (0x0) causes blank grey tiles
+    setTimeout(() => {
+        initPickerMap();
+        setTimeout(() => { if (pickerMap) pickerMap.invalidateSize(); }, 150);
+    }, 500);
 
     // --- Live Autocomplete Search ---
     let searchDebounce = null;

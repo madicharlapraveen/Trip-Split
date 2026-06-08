@@ -186,8 +186,8 @@ window.showScreen = function(screenId) {
   if (screenId === 'expenses') loadExpenses();
   if (screenId === 'plan') {
     loadTripNotes();
-    // Force leaflet to recalculate after becoming visible
-    setTimeout(() => { if (window.leafletMap) window.leafletMap.invalidateSize(); }, 250);
+    // Force leaflet to recalculate after tab becomes visible (wait for CSS transition to complete)
+    setTimeout(() => { if (window.leafletMap) window.leafletMap.invalidateSize(); }, 400);
   }
   if (screenId === 'split') calculateSplit();
   if (screenId === 'trips') loadTrips();
