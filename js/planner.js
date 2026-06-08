@@ -990,45 +990,6 @@ window.showAddPlaceModal = async function() {
         }
     }
 
-    async function doAutocomplete(query) {
-        if (query.length < 2) { hideAutocomplete(); return; }
-
-        // Check if it's coordinates
-        const parsed = parseCoordinatesFromLinkOrText(query);
-        if (parsed) {
-            const { lat, lng } = parsed;
-            const statusDiv = document.getElementById('search-status');
-            if (statusDiv) statusDiv.textContent = 'Resolving coordinates... 🌐';
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17`, { headers: { 'Accept-Language': 'en' } });
-                const data = await res.json();
-                const name = data.display_name ? data.display_name.split(',').slice(0,2).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                document.getElementById('place-name').value = name.split(',')[0];
-                document.getElementById('place-lat').value = lat;
-                document.getElementById('place-lng').value = lng;
-                if (statusDiv) statusDiv.innerHTML = `📍 Pinned: <b>${name.split(',')[0]}</b> ✅`;
-                if (pickerMap) { pickerMap.setView([lat, lng], 15); setPinOnPickerMap(lat, lng, name.split(',')[0]); }
-            } catch(e) {
-                document.getElementById('place-lat').value = lat;
-                document.getElementById('place-lng').value = lng;
-            }
-            hideAutocomplete();
-            return;
-        }
-
-        // Detect Google Maps / share links
-        if (query.includes('share.google') || query.includes('maps.app.goo.gl') || query.includes('goo.gl/maps')) {
-            const statusDiv = document.getElementById('search-status');
-            if (statusDiv) statusDiv.innerHTML = `⚠️ <b>Google share links are blocked by Google.</b> Please type the place name instead (e.g. "Green Bliss Villa").`;
-            hideAutocomplete();
-            return;
-        }
-
-        spinner.classList.remove('hidden');
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`, { headers: { 'Accept-Language': 'en' } });
-            const results = await res.json();
-            spinner.classList.add('hidden');
 
     // Helper to handle selecting a search result
     function selectResult(lat, lng, displayName) {
