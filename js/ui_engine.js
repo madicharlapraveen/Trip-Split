@@ -2113,10 +2113,7 @@ window.viewParticipantProfile = async function(participantId) {
           settlementKey: settlementKey
         };
 
-        const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
-        if (!storageData.expenses) storageData.expenses = [];
-        storageData.expenses.push(settlementExpense);
-        localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+        await addExpense(settlementExpense);
 
         if (typeof triggerBackgroundSync === 'function') {
           triggerBackgroundSync(`Recorded direct payment from ${fromName} to ${toName}`);
@@ -2163,9 +2160,7 @@ window.toggleParticipantEditForm = function() {
 window.deleteDirectPayment = async function(paymentId, participantId) {
   if (!(await canEditCurrentTrip())) return alert('You are a Viewer and cannot modify participants.');
   if (confirm('Are you sure you want to delete this payment record?')) {
-    const storageData = JSON.parse(localStorage.getItem('tripsplit_data'));
-    storageData.expenses = storageData.expenses.filter(e => e.id !== paymentId);
-    localStorage.setItem('tripsplit_data', JSON.stringify(storageData));
+    await deleteExpenseFromDB(paymentId);
 
     if (typeof triggerBackgroundSync === 'function') {
       triggerBackgroundSync(`Deleted payment record`);
